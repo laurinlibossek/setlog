@@ -7,7 +7,9 @@ import { usesWeight } from './calc.js';
 
 export const wUnit = () => S.settings.unit;
 export const dUnit = () => S.settings.distUnit;
-export const lenUnit = () => (S.settings.distUnit === 'mi' ? 'in' : 'cm');
+export const lenUnit = () => S.settings.sizeUnit || (S.settings.distUnit === 'mi' ? 'in' : 'cm');
+/** Unit for body weight (Measure), which can differ from the lifting unit. */
+export const bwUnit = () => S.settings.bodyUnit || S.settings.unit;
 
 /** 62.5 -> "62.5" in the user's unit (no unit label) */
 export function w(kg, frac) {

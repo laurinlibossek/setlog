@@ -3,9 +3,12 @@ import { html, useState } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
   S, useStore, stats, setSetting, setProfile, setMeta, importBatch, addWorkoutNotes, replaceAllData, checkPersisted, APP_VERSION,
+  bodyweightAt,
   isPreview, hasSampleData, clearSampleData,
 } from '../store.js';
-import { PR_LABEL, workoutVolume } from '../calc.js';
+import {
+  PR_LABEL, workoutVolume, FORMULAS, DEFAULT_WARMUP,
+} from '../calc.js';
 import { BarChart } from '../charts.js';
 import {
   Screen, push, openDialog, confirmDialog, promptDialog, toast, Seg, Switch, Cell,
@@ -13,7 +16,9 @@ import {
 import {
   fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, parseNum,
 } from '../util.js';
-import { metricValue, volume } from '../format.js';
+import {
+  metricValue, volume, bwUnit, lenUnit,
+} from '../format.js';
 import { weeklyCounts, weekStreak } from './history.js';
 import {
   parseStrongCSV, backupJSON, parseBackup, exportCSV, saveFile, pickFile, dateStamp,
@@ -217,6 +222,64 @@ async function doDeleteAll() {
 // ---------- settings ----------
 const REST = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 
+const warmupText = (wu) => [wu.barReps > 0 ? `Bar × ${wu.barReps}` : null, ...wu.steps.map(([p, r]) => `${fmtNum(p, 0)}% × ${r}`)]
+  .filter(Boolean).join(', ') || 'None';
+
+function WarmupDialog({ close }) {
+  const cur = S.settings.warmup || DEFAULT_WARMUP;
+  const [bar, setBar] = useState(String(cur.barReps || 0));
+  const [steps, setSteps] = useState(cur.steps.map(([p, r]) => [String(p), String(r)]));
+  const edit = (i, k, v) => setSteps(steps.map((row, j) => (j === i ? (k === 0 ? [v, row[1]] : [row[0], v]) : row)));
+  const save = (e) => {
+    e.preventDefault();
+    const clean = steps.map(([p, r]) => [parseNum(p), Math.round(parseNum(r) || 0)])
+      .filter(([p, r]) => p > 0 && p < 100 && r > 0).sort((a, b) => a[0] - b[0]);
+    setSetting('warmup', { barReps: Math.max(0, Math.round(parseNum(bar) || 0)), steps: clean });
+    close(true);
+  };
+  const reset = () => { setBar(String(DEFAULT_WARMUP.barReps)); setSteps(DEFAULT_WARMUP.steps.map(([p, r]) => [String(p), String(r)])); };
+  return html`<form class="dialog" onSubmit=${save}>
+    <h3>Warm-up sets</h3>
+    <p class="small">Used by ⋯ → Add warm-up sets, based on your first working set.</p>
+    <div class="wu-row"><span class="grow">Empty bar first</span>
+      <input class="input tnum" inputmode="numeric" aria-label="Reps with the empty bar" value=${bar} onInput=${(e) => setBar(e.target.value)} /><span class="muted">reps</span></div>
+    ${steps.map(([p, r], i) => html`<div class="wu-row" key=${i}>
+      <input class="input tnum" inputmode="decimal" aria-label=${`Step ${i + 1} percent`} value=${p} onInput=${(e) => edit(i, 0, e.target.value)} /><span class="muted">%  ×</span>
+      <input class="input tnum" inputmode="numeric" aria-label=${`Step ${i + 1} reps`} value=${r} onInput=${(e) => edit(i, 1, e.target.value)} /><span class="muted grow">reps</span>
+      <button type="button" class="icon-btn" aria-label=${`Remove step ${i + 1}`} onClick=${() => setSteps(steps.filter((_, j) => j !== i))}><${Icon} name="x" /></button>
+    </div>`)}
+    <div class="row" style="gap:8px">
+      <button type="button" class="btn btn-sm btn-tinted" id="wu-add" onClick=${() => setSteps([...steps, ['', '']])}><${Icon} name="plus" />Add step</button>
+      <button type="button" class="btn btn-sm btn-ghost" onClick=${reset}>Reset</button>
+    </div>
+    <div class="btns two">
+      <button type="button" class="btn" onClick=${() => close(false)}>Cancel</button>
+      <button type="submit" class="btn btn-primary" id="wu-save">Save</button>
+    </div>
+  </form>`;
+}
+
+const toDateInput = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function HistoryStartDialog({ close }) {
+  const [v, setV] = useState(S.settings.historyStart ? toDateInput(S.settings.historyStart) : '');
+  const save = (e) => {
+    e.preventDefault();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    if (!m) { toast('Pick a date'); return; }
+    setSetting('historyStart', new Date(+m[1], +m[2] - 1, +m[3]).getTime());
+    close(true);
+  };
+  return html`<form class="dialog" onSubmit=${save}>
+    <h3>Start history from</h3>
+    <p class="small">Older workouts stay in History but don’t count for previous values, records or charts.</p>
+    <input class="input" type="date" id="history-start" value=${v} max=${toDateInput(Date.now())} onInput=${(e) => setV(e.target.value)} />
+    <div class="btns">
+      <button type="submit" class="btn btn-primary" id="history-start-save">Save</button>
+      <button type="button" class="btn" id="history-start-all" onClick=${() => { setSetting('historyStart', null); close(true); }}>Use all workouts</button>
+    </div>
+  </form>`;
+}
+
 export function SettingsScreen() {
   useStore('settings', 'meta', 'workouts');
   const st = S.settings;
@@ -231,15 +294,22 @@ export function SettingsScreen() {
     set('plates', [...new Set(plates)].sort((a, b) => b - a));
   };
   const persisted = S.persisted;
+  const setBw = (key, v) => {
+    set(key, v);
+    if (v && bodyweightAt() === null) toast('Log your body weight in Measure — until then it counts as 0');
+  };
   return html`<${Screen} nav=${{ back: '', title: 'Settings' }}>
     <h1 class="large-title" style="font-size:28px">Settings</h1>
 
     <div class="section"><span class="section-title">Units</span></div>
     <div class="group">
-      <div class="cell"><div class="cell-main"><div class="cell-title">Weight</div></div>
-        <div style="width:150px"><${Seg} id="set-unit" value=${st.unit} onChange=${(v) => set('unit', v)} options=${[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} /></div></div>
-      <div class="cell"><div class="cell-main"><div class="cell-title">Distance</div></div>
-        <div style="width:150px"><${Seg} value=${st.distUnit} onChange=${(v) => set('distUnit', v)} options=${[{ value: 'km', label: 'km' }, { value: 'mi', label: 'mi' }]} /></div></div>
+      ${[
+        ['Lifting weight', 'set-unit', st.unit, (v) => set('unit', v), ['kg', 'lb']],
+        ['Distance', 'set-dist', st.distUnit, (v) => set('distUnit', v), ['km', 'mi']],
+        ['Body weight', 'set-bodyunit', bwUnit(), (v) => set('bodyUnit', v), ['kg', 'lb']],
+        ['Body measurements', 'set-sizeunit', lenUnit(), (v) => set('sizeUnit', v), ['cm', 'in']],
+      ].map(([label, id, value, onChange, opts]) => html`<div class="cell" key=${id}><div class="cell-main"><div class="cell-title">${label}</div></div>
+        <div style="width:150px"><${Seg} id=${id} value=${value} onChange=${onChange} options=${opts.map((o) => ({ value: o, label: o }))} /></div></div>`)}
     </div>
 
     <div class="section"><span class="section-title">Workouts</span></div>
@@ -251,19 +321,35 @@ export function SettingsScreen() {
         <${Switch} checked=${st.sound} label="Timer sound" onChange=${(v) => { set('sound', v); if (v) { unlockAudio(); beep(); } }} /></div>
       <div class="cell"><div class="cell-main"><div class="cell-title">Keep screen on</div><div class="cell-sub">While a workout is running, so the timer can signal</div></div>
         <${Switch} checked=${st.keepAwake} label="Keep screen on" onChange=${(v) => set('keepAwake', v)} /></div>
-      <div class="cell"><div class="cell-main"><div class="cell-title">Example templates</div><div class="cell-sub">Push/Pull/Legs, 5×5 and Full Body under Start workout</div></div>
-        <${Switch} checked=${st.showExamples !== false} label="Example templates" id="set-examples" onChange=${(v) => set('showExamples', v)} /></div>
+      <label class="cell"><div class="cell-main"><div class="cell-title">Previous values</div></div>
+        <select id="set-prev" value=${st.prevSource || 'any'} onChange=${(e) => set('prevSource', e.target.value)}>
+          <option value="any">Any workout</option><option value="template">Same template</option></select></label>
+      <${Cell} id="set-warmup" title="Warm-up sets" value=${warmupText(st.warmup || DEFAULT_WARMUP)} onClick=${() => openDialog((close) => html`<${WarmupDialog} close=${close} />`)} />
       <div class="cell"><div class="cell-main"><div class="cell-title">Ask to update templates</div><div class="cell-sub">When a finished workout differs from its template</div></div>
         <${Switch} checked=${st.askTemplateUpdate !== false} label="Ask to update templates" id="set-ask-template" onChange=${(v) => set('askTemplateUpdate', v)} /></div>
+      <div class="cell"><div class="cell-main"><div class="cell-title">Example templates</div></div>
+        <${Switch} checked=${st.showExamples !== false} label="Example templates" id="set-examples" onChange=${(v) => set('showExamples', v)} /></div>
       <label class="cell"><div class="cell-main"><div class="cell-title">Weekly goal</div></div>
         <select value=${String(st.weeklyGoal)} onChange=${(e) => set('weeklyGoal', +e.target.value)}>
           ${[1, 2, 3, 4, 5, 6, 7].map((n) => html`<option value=${String(n)}>${n} per week</option>`)}</select></label>
       <label class="cell"><div class="cell-main"><div class="cell-title">Week starts on</div></div>
         <select value=${String(st.weekStart)} onChange=${(e) => set('weekStart', +e.target.value)}>
           <option value="1">Monday</option><option value="0">Sunday</option><option value="6">Saturday</option></select></label>
+    </div>
+
+    <div class="section"><span class="section-title">Stats</span></div>
+    <div class="group">
       <label class="cell"><div class="cell-main"><div class="cell-title">1RM formula</div></div>
-        <select value=${st.formula} onChange=${(e) => set('formula', e.target.value)}>
-          <option value="epley">Epley</option><option value="brzycki">Brzycki</option></select></label>
+        <select id="set-formula" value=${st.formula} onChange=${(e) => set('formula', e.target.value)}>
+          ${FORMULAS.map((f) => html`<option value=${f.id}>${f.label}</option>`)}</select></label>
+      <div class="cell"><div class="cell-main"><div class="cell-title">Count dumbbells twice</div><div class="cell-sub">For volume</div></div>
+        <${Switch} checked=${!!st.dumbbellTwice} label="Count dumbbells twice" id="set-db2" onChange=${(v) => set('dumbbellTwice', v)} /></div>
+      <div class="cell"><div class="cell-main"><div class="cell-title">Body weight in volume</div><div class="cell-sub">Weighted bodyweight exercises</div></div>
+        <${Switch} checked=${!!st.bwWeighted} label="Body weight in weighted bodyweight volume" id="set-bw-weighted" onChange=${(v) => setBw('bwWeighted', v)} /></div>
+      <div class="cell"><div class="cell-main"><div class="cell-title">Body weight in volume</div><div class="cell-sub">Assisted bodyweight exercises</div></div>
+        <${Switch} checked=${!!st.bwAssisted} label="Body weight in assisted bodyweight volume" id="set-bw-assisted" onChange=${(v) => setBw('bwAssisted', v)} /></div>
+      <${Cell} id="set-history-start" title="Start history from" value=${st.historyStart ? fmt.short(st.historyStart) : 'All workouts'}
+        onClick=${() => openDialog((close) => html`<${HistoryStartDialog} close=${close} />`)} />
     </div>
 
     <div class="section"><span class="section-title">Plates</span></div>

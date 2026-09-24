@@ -8,17 +8,17 @@ import {
   S, previousSets, stats, startRest, updateExercise, addEntries, touchActive,
 } from './store.js';
 import {
-  usesWeight, setIsValid, est1RM, warmupSets, hasLoadRecords,
+  usesWeight, setIsValid, est1RM, warmupSets, hasLoadRecords, countsVolume, setVolume, isWorking,
 } from './calc.js';
 import { newSetDraft, setToDraft, draftToSet, weightToInput } from './drafts.js';
 import {
-  setText, setLabels, SET_TYPE_NAME, wUnit, dUnit,
+  setText, setLabels, SET_TYPE_NAME, wUnit, dUnit, volume as fmtVolume, w as fmtW,
 } from './format.js';
 import {
   uid, fmtDigits, fmtClock, parseNum, fmtNum,
 } from './util.js';
 import {
-  actionSheet, promptDialog, toast, openScreenModal, NavBar, useForce, push, closeSheet,
+  actionSheet, promptDialog, toast, openScreenModal, openDialog, NavBar, useForce, push, closeSheet,
 } from './ui.js';
 import { pickExercises } from './pickers.js';
 import { openTools } from './tools.js';
@@ -32,6 +32,9 @@ function fieldsFor(cat) {
   if (cat === 'cardio') return ['d', 't'];
   return ['t'];
 }
+
+/** The template a draft belongs to (for "previous values from the same template"). */
+const draftTemplateId = (draft) => (draft.kind === 'template' ? draft.id : draft.templateId || null);
 
 export function restFor(entry, ex) {
   if (entry.restSec !== null && entry.restSec !== undefined) return entry.restSec;
@@ -72,7 +75,7 @@ export function pendingSets(draft) {
     const ex = S.exercises.get(entry.exerciseId);
     if (!ex) continue;
     const fields = fieldsFor(ex.category);
-    const rows = computePrev(entry, previousSets(entry.exerciseId));
+    const rows = computePrev(entry, previousSets(entry.exerciseId, { templateId: draftTemplateId(draft) }));
     entry.sets.forEach((set, i) => {
       if (set.done || !fields.some((f) => String(set[f] || '').trim())) return;
       const filled = { ...set };
@@ -119,7 +122,7 @@ function ExerciseBlock({
   const [shakeId, setShakeId] = useState(null);
   if (!ex) return null;
   const cat = ex.category;
-  const prevSets = previousSets(entry.exerciseId, { before, excludeWorkoutId });
+  const prevSets = previousSets(entry.exerciseId, { before, excludeWorkoutId, templateId: draftTemplateId(draft) });
   const rows = computePrev(entry, prevSets);
   const labels = setLabels(entry.sets);
   const showCheck = mode === 'active';
@@ -302,7 +305,7 @@ function ExerciseBlock({
     const st = S.settings;
     const kg = st.unit === 'lb' ? src * 0.45359237 : src;
     const ws = warmupSets(kg, st.bar * (st.unit === 'lb' ? 0.45359237 : 1),
-      st.plates.map((p) => (st.unit === 'lb' ? p * 0.45359237 : p)), cat === 'barbell');
+      st.plates.map((p) => (st.unit === 'lb' ? p * 0.45359237 : p)), cat === 'barbell', st.warmup);
     if (!ws.length) { toast('That weight is too light for warm-up sets'); return; }
     const existing = entry.sets.filter((s) => s.type === 'warmup' && !s.done);
     entry.sets = entry.sets.filter((s) => !existing.includes(s));
@@ -310,6 +313,16 @@ function ExerciseBlock({
     entry.sets.unshift(...newSets);
     onChange();
     toast(`${ws.length} warm-up sets added`);
+  };
+
+  const focusOpts = focusOptions(cat);
+  const focus = focusOpts.includes(entry.focus) ? entry.focus : null;
+  const focusVals = focusOpts.length ? focusValues(entry, rows, cat, prevSets) : null;
+  const pickFocus = async () => {
+    const v = await openDialog((close) => html`<${FocusDialog} close=${close} options=${focusOpts} values=${focusVals} current=${focus} />`);
+    if (v === undefined) return;
+    entry.focus = v || null;
+    onChange();
   };
 
   const wLabel = (cat === 'assisted_bw' ? '−' : cat === 'weighted_bw' ? '+' : '') + wUnit().toUpperCase();
@@ -321,6 +334,9 @@ function ExerciseBlock({
     <div class="ex-head">
       <button class="ex-title" onClick=${menu}>${ex.name}</button>
       ${showCheck && entry.sets.length > 0 && html`<span class="muted small tnum" style="margin-right:2px">${doneCount}/${entry.sets.length}</span>`}
+      ${focusOpts.length > 0 && html`<button class=${'focus-btn' + (focus ? ' on' : '')} onClick=${pickFocus}
+        aria-label=${focus ? `${FOCUS_LABEL[focus]}: ${fmtFocus(focus, focusVals)}` : `Focus metric for ${ex.name}`}>
+        <${Icon} name="trend" />${focus && html`<span class="tnum">${fmtFocus(focus, focusVals)}</span>`}</button>`}
       <button class="icon-btn accent" onClick=${menu} aria-label=${`Options for ${ex.name}`}><${Icon} name="more" /></button>
     </div>
     ${(ssLetter || (rest && showCheck)) && html`<div class="ex-tags">
@@ -341,6 +357,58 @@ function ExerciseBlock({
     </div>
     <button class="btn btn-sm btn-block add-set" onClick=${addSet}><${Icon} name="plus" />Add set</button>
   </section>`;
+}
+
+// ---------- focus metric ----------
+// One number per exercise the user wants to push (Strong's "focus metric").
+// It's worked out from the sets as they stand (typed values, else the grey
+// placeholders) and compared with the previous session.
+const FOCUS_LABEL = {
+  volume: 'Total volume', volumeChange: 'Volume increase', reps: 'Total reps', weightPerRep: 'Weight/rep', repsChange: 'Reps increase',
+};
+function focusOptions(cat) {
+  if (usesWeight(cat) && countsVolume(cat)) return ['volume', 'volumeChange', 'reps', 'weightPerRep'];
+  if (cat === 'reps' || cat === 'assisted_bw') return ['reps', 'repsChange'];
+  return [];
+}
+function focusValues(entry, rows, cat, prevSets) {
+  const st = S.settings;
+  const now = Date.now();
+  const cur = entry.sets.map((s, i) => draftToSet({ ...s, w: s.w || rows[i].ph.w, r: s.r || rows[i].ph.r }, st))
+    .filter((s) => isWorking(s) && s.r > 0);
+  const prev = (prevSets || []).filter((s) => isWorking(s) && s.r > 0);
+  const sum = (list, f) => list.reduce((a, s) => a + f(s), 0);
+  const vol = sum(cur, (s) => setVolume(s, cat, now));
+  const pvol = sum(prev, (s) => setVolume(s, cat, now));
+  const reps = sum(cur, (s) => s.r);
+  const preps = sum(prev, (s) => s.r);
+  return {
+    volume: vol,
+    volumeChange: pvol > 0 && vol > 0 ? (vol - pvol) / pvol : null,
+    reps,
+    weightPerRep: reps > 0 && vol > 0 ? vol / reps : null,
+    repsChange: preps > 0 && reps > 0 ? (reps - preps) / preps : null,
+  };
+}
+function fmtFocus(key, v) {
+  const x = v[key];
+  if (x === null || x === undefined) return '—';
+  if (key === 'volume') return fmtVolume(x);
+  if (key === 'reps') return `${fmtNum(x, 0)} rep${x === 1 ? '' : 's'}`;
+  if (key === 'weightPerRep') return `${fmtW(x, 1)} ${wUnit()}`;
+  const pct = Math.round(x * 100);
+  return `${pct > 0 ? '+' : pct < 0 ? '−' : '±'}${Math.abs(pct)}%`;
+}
+function FocusDialog({ close, options, values, current }) {
+  const [help, setHelp] = useState(false);
+  return html`<div class="dialog focus-dialog" role="dialog" aria-label="Set a focus metric">
+    <div class="focus-head"><h3>Set a focus metric</h3>
+      <button class="icon-btn" aria-label="What is this?" onClick=${() => setHelp(!help)}><span class="q">?</span></button></div>
+    ${help && html`<p class="small">The number you want to push for this exercise. It shows next to the name and updates as you log; increases compare with last time. Tap it again to turn it off.</p>`}
+    <div class="focus-list">${options.map((k) => html`<button class=${'focus-row' + (current === k ? ' on' : '')} key=${k}
+      onClick=${() => close(current === k ? '' : k)}><span class="grow">${FOCUS_LABEL[k]}</span>
+      <span class="tnum">${fmtFocus(k, values)}</span>${current === k && html`<${Icon} name="check" />`}</button>`)}</div>
+  </div>`;
 }
 
 /** Would this checked set beat the stored records? (live PR hint while training) */

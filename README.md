@@ -34,7 +34,7 @@ Most workout trackers put their best features behind a subscription or want an a
 
 ## How it works
 
-Start a workout from a template or from scratch. Every set shows what you did last time, and the rest timer starts when you check a set off. New personal records are flagged as you set them. When you finish a workout that differs from its template, Setlog asks whether to save the changes to the template.
+Start a workout from a template or from scratch; once you have a routine, the start screen suggests the template that's probably next. Every set shows what you did last time, and the rest timer starts when you check a set off. New personal records are flagged as you set them. When you finish a workout that differs from its template, Setlog asks whether to save the changes to the template.
 
 Over time, every exercise gets its own charts, records and history.
 
@@ -42,6 +42,7 @@ Over time, every exercise gets its own charts, records and history.
 - Tap ✓ on an empty set to log last time's numbers.
 - Tap a set's number to make it a warm-up, drop or failure set. Swipe a set left to delete it.
 - Tap an exercise's name for notes, supersets, warm-up sets, its rest timer and the plate calculator. A pinned note shows up every time you do that exercise.
+- The chart button next to an exercise sets a focus metric (volume, volume increase, reps or weight per rep) that updates as you log.
 - To share a template, use its ⋯ → **Share**. On iPhone the other person pastes the link under Templates ⋯ → **Add shared template**, because the home screen app keeps its data separate from Safari.
 
 ## Install it on your phone

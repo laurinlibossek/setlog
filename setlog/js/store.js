@@ -4,15 +4,17 @@ import * as db from './db.js';
 import { useEffect, useReducer } from './lib.js';
 import { SEED_EXERCISES, SEED_VERSION } from './seed.js';
 import { buildSampleData } from './demo.js';
-import { buildStats, prsForNewWorkout, workoutVolume } from './calc.js';
 import {
-  uid, debounce, workoutNameForTime, slug,
+  buildStats, prsForNewWorkout, workoutVolume, configureCalc, DEFAULT_WARMUP,
+} from './calc.js';
+import {
+  uid, debounce, workoutNameForTime, slug, DAY,
 } from './util.js';
 import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
 } from './drafts.js';
 
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',
@@ -24,6 +26,14 @@ export const DEFAULT_SETTINGS = {
   askTemplateUpdate: true,
   templateSort: 'name',
   formula: 'epley',
+  dumbbellTwice: false,
+  bwWeighted: false,
+  bwAssisted: false,
+  historyStart: null, // ms; workouts before it are ignored for previous values, records and charts
+  prevSource: 'any', // 'any' | 'template'
+  warmup: DEFAULT_WARMUP,
+  bodyUnit: null, // null = same as the lifting unit
+  sizeUnit: null, // null = cm with km, in with mi
   weekStart: 1,
   weeklyGoal: 3,
   theme: 'system',
@@ -144,6 +154,7 @@ function applyData(data) {
   S.meta = { ...(data.kv?.meta || {}) };
   S.active = data.kv?.active || null;
   statsKey = '';
+  syncCalc();
 }
 
 async function ensureSeed() {
@@ -192,25 +203,49 @@ export function clearSampleData() {
 }
 
 // ---------- derived stats ----------
+/** Body weight (kg) on or before `at`; the earliest one if `at` is before all of them. */
+export function bodyweightAt(at = Date.now()) {
+  let earliest = null;
+  for (const m of S.measurements) { // newest first
+    if (m.type !== 'bodyweight') continue;
+    if (m.at <= at) return m.value;
+    earliest = m.value;
+  }
+  return earliest;
+}
+function syncCalc() {
+  const st = S.settings;
+  configureCalc({
+    formula: st.formula, dumbbellTwice: !!st.dumbbellTwice, bwWeighted: !!st.bwWeighted, bwAssisted: !!st.bwAssisted, bodyweightAt,
+  });
+}
 let statsCache = null;
 let statsKey = '';
 export function stats() {
-  const key = `${S.v.workouts || 0}:${S.v.exercises || 0}:${S.settings.formula}`;
+  const st = S.settings;
+  syncCalc();
+  const key = [S.v.workouts || 0, S.v.exercises || 0, st.formula, st.dumbbellTwice, st.bwWeighted, st.bwAssisted,
+    st.historyStart, st.bwWeighted || st.bwAssisted ? S.v.measurements || 0 : 0].join(':');
   if (key !== statsKey || !statsCache) {
-    statsCache = buildStats(S.workouts, S.exercises, S.settings.formula);
+    const from = st.historyStart || 0;
+    statsCache = buildStats(from ? S.workouts.filter((w) => w.startedAt >= from) : S.workouts, S.exercises, st.formula);
     statsKey = key;
   }
   return statsCache;
 }
 
-/** Sets from the most recent earlier session of an exercise. */
-export function previousSets(exerciseId, { before = Infinity, excludeWorkoutId = null } = {}) {
+/**
+ * Sets from the most recent earlier session of an exercise. With the "same
+ * template" setting, sessions from the same template come first.
+ */
+export function previousSets(exerciseId, { before = Infinity, excludeWorkoutId = null, templateId = null } = {}) {
   const sessions = stats().byExercise.get(exerciseId);
   if (!sessions) return null;
-  for (const s of sessions) {
-    if (s.workoutId === excludeWorkoutId) continue;
-    if (s.startedAt < before) return s.entry.sets;
+  const ok = (s) => s.workoutId !== excludeWorkoutId && s.startedAt < before;
+  if (templateId && S.settings.prevSource === 'template') {
+    for (const s of sessions) if (ok(s) && s.templateId === templateId) return s.entry.sets;
   }
+  for (const s of sessions) if (ok(s)) return s.entry.sets;
   return null;
 }
 
@@ -228,6 +263,7 @@ export function setSetting(key, value) {
     touchActive();
   }
   saveKV('settings', { ...S.settings });
+  syncCalc();
   emit('settings');
 }
 export function setProfile(patch) {
@@ -370,6 +406,7 @@ export function copyTemplate(src, patch = {}) {
       notes: e.notes,
       supersetId: e.supersetId,
       restSec: e.restSec,
+      focus: e.focus,
       sets: e.sets.map((s) => {
         const o = { type: s.type || 'normal' };
         for (const k of ['w', 'r', 'd', 't']) if (s[k] !== null && s[k] !== undefined) o[k] = s[k];
@@ -544,6 +581,7 @@ export function updateTemplateFromWorkout(templateId, workout, { valuesOnly = fa
       if (notes) out.notes = notes;
       if (e.supersetId) out.supersetId = e.supersetId;
       if (e.restSec !== null && e.restSec !== undefined) out.restSec = e.restSec;
+      if (e.focus) out.focus = e.focus;
       return out;
     });
   }
@@ -556,6 +594,57 @@ export function restoreTemplateExercises(templateId, exercises) {
   if (!t) return;
   t.exercises = exercises;
   saveTemplate(t);
+}
+
+// ---------- suggested workout ----------
+/**
+ * Guess which template comes next from the last four months: what usually
+ * follows the most recent template, and what is usually done on this weekday.
+ * Returns { template, why: { kind: 'after'|'weekday'|'due', ... } } or null.
+ */
+export function suggestTemplate(now = Date.now()) {
+  const live = new Map(S.templates.filter((t) => !t.archived).map((t) => [t.id, t]));
+  const seq = S.workouts
+    .filter((w) => w.templateId && live.has(w.templateId) && w.startedAt < now && w.startedAt >= now - 120 * DAY)
+    .sort((a, b) => a.startedAt - b.startedAt);
+  if (seq.length < 2) return null;
+  const last = seq[seq.length - 1];
+  const ids = [...new Set(seq.map((w) => w.templateId))];
+
+  // what followed the last template before (newer transitions weigh more)
+  const after = new Map();
+  let afterTotal = 0, k = 0;
+  for (let i = seq.length - 2; i >= 0; i--) {
+    if (seq[i].templateId !== last.templateId) continue;
+    const wgt = 0.8 ** k++;
+    after.set(seq[i + 1].templateId, (after.get(seq[i + 1].templateId) || 0) + wgt);
+    afterTotal += wgt;
+  }
+  // what is usually done on this weekday (last 8 weeks)
+  const today = new Date(now).getDay();
+  const onDay = new Map();
+  let dayTotal = 0;
+  for (const w of seq) {
+    if (w.startedAt < now - 56 * DAY || new Date(w.startedAt).getDay() !== today) continue;
+    onDay.set(w.templateId, (onDay.get(w.templateId) || 0) + 1);
+    dayTotal++;
+  }
+  const lastDone = new Map(seq.map((w) => [w.templateId, w.startedAt]));
+  let best = null;
+  for (const id of ids) {
+    const a = afterTotal ? (after.get(id) || 0) / afterTotal : 0;
+    const d = dayTotal >= 2 ? (onDay.get(id) || 0) / dayTotal : 0;
+    // tie-breaker: the longer it hasn't been done, the more likely it's due
+    const due = (now - lastDone.get(id)) / (120 * DAY) * 0.1;
+    const score = 0.6 * a + 0.4 * d + due;
+    if (!best || score > best.score) best = { id, score, a, d };
+  }
+  const template = live.get(best.id);
+  let why;
+  if (best.d >= 0.6 && (onDay.get(best.id) || 0) >= 2 && best.d >= best.a) why = { kind: 'weekday', day: today };
+  else if (best.a > 0) why = { kind: 'after', name: live.get(last.templateId).name };
+  else why = { kind: 'due', at: lastDone.get(best.id) };
+  return { template, why };
 }
 
 // ---------- measurements ----------

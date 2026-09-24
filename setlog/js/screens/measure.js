@@ -12,22 +12,22 @@ import {
 import {
   fmt, relDay, fmtNum, parseNum, kgTo, toKg, DAY, toLocalInput, fromLocalInput, roundW,
 } from '../util.js';
-import { wUnit, lenUnit } from '../format.js';
+import { bwUnit, lenUnit } from '../format.js';
 
 const IN_PER_CM = 1 / 2.54;
 function unitOf(def) {
-  if (def.kind === 'weight') return wUnit();
+  if (def.kind === 'weight') return bwUnit();
   if (def.kind === 'percent') return '%';
   if (def.kind === 'kcal') return 'kcal';
   return lenUnit();
 }
 function toDisplay(def, v) {
-  if (def.kind === 'weight') return roundW(kgTo(v, wUnit()), wUnit());
+  if (def.kind === 'weight') return roundW(kgTo(v, bwUnit()), bwUnit());
   if (def.kind === 'length') return lenUnit() === 'in' ? Math.round(v * IN_PER_CM * 10) / 10 : Math.round(v * 10) / 10;
   return v;
 }
 function fromDisplay(def, v) {
-  if (def.kind === 'weight') return toKg(v, wUnit());
+  if (def.kind === 'weight') return toKg(v, bwUnit());
   if (def.kind === 'length') return lenUnit() === 'in' ? v / IN_PER_CM : v;
   return v;
 }

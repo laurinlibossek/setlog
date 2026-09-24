@@ -47,6 +47,7 @@ export function entryToDraft(e, st, { asTemplateTargets = false } = {}) {
     showNotes: !!e.notes,
     supersetId: e.supersetId || null,
     restSec: e.restSec ?? null,
+    focus: e.focus || null,
     sets: e.sets.map((s) => (asTemplateTargets
       ? newSetDraft(s.type || 'normal', { tpl: { w: s.w ?? null, r: s.r ?? null, d: s.d ?? null, t: s.t ?? null } })
       : setToDraft(s, st))),
@@ -84,6 +85,7 @@ export function draftEntries(draft, st, exById, { onlyDone = false, keepEmpty = 
     if (e.notes && e.notes.trim()) entry.notes = e.notes.trim();
     if (e.supersetId) entry.supersetId = e.supersetId;
     if (e.restSec !== null && e.restSec !== undefined) entry.restSec = e.restSec;
+    if (e.focus) entry.focus = e.focus;
     out.push(entry);
   }
   // drop superset ids that no longer group two or more entries

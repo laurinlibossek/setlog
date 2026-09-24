@@ -5,7 +5,7 @@ import {
   S, useStore, stats, exerciseList, updateExercise, deleteExercise, mergeExercise, exerciseUsage,
 } from '../store.js';
 import {
-  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking,
+  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking, formulaLabel,
 } from '../calc.js';
 import { BODY_PARTS, BODY_PART_LABEL, CATEGORY_LABEL } from '../seed.js';
 import { editExercise, pickExercises, matchExercise } from '../pickers.js';
@@ -227,7 +227,7 @@ function ExCharts({ ex, sessions }) {
         emptyText=${sessions.length ? 'No sessions in this range' : 'Log this exercise to see your progress'} />
       <div style="margin-top:10px"><${Seg} value=${range} onChange=${setRange} options=${RANGES} /></div>
     </div>
-    ${m.id === 'e1rm' && html`<p class="footnote">Estimated 1RM uses the ${S.settings.formula === 'brzycki' ? 'Brzycki' : 'Epley'} formula on your best working set of each session. Change it in Settings.</p>`}
+    ${m.id === 'e1rm' && html`<p class="footnote">Estimated 1RM uses ${S.settings.formula === 'average' ? 'the average of all formulas' : `the ${formulaLabel(S.settings.formula)} formula`} on your best working set of each session. Change it in Settings.</p>`}
   </div>`;
 }
 

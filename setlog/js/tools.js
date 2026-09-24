@@ -1,7 +1,7 @@
 // Gym tools: plate calculator and 1RM calculator.
 import { html, useState } from './lib.js';
 import { S } from './store.js';
-import { platesFor, est1RM } from './calc.js';
+import { platesFor, est1RM, formulaLabel } from './calc.js';
 import {
   parseNum, fmtNum, toKg, kgTo, roundW,
 } from './util.js';
@@ -83,7 +83,7 @@ function OneRM() {
     ${oneRm > 0 && html`<div class="card center">
       <div class="muted small">Estimated 1RM</div>
       <div style="font-size:40px;font-weight:800;letter-spacing:-0.02em">${fmtNum(roundW(kgTo(oneRm, u), u), 1)} ${u}</div>
-      <div class="muted small">${S.settings.formula === 'brzycki' ? 'Brzycki' : 'Epley'} formula</div>
+      <div class="muted small">${formulaLabel(S.settings.formula)}${S.settings.formula === 'average' ? '' : ' formula'}</div>
     </div>
     <div class="group"><table class="rm-table"><thead><tr><th>% of 1RM</th><th>≈ reps</th><th>Weight</th></tr></thead><tbody>
       ${pct.map((p) => html`<tr key=${p}><td>${p}%</td><td class="muted">${repsAt[p]}</td><td><strong>${fmtNum(roundW(kgTo(oneRm * p / 100, u), u), 1)} ${u}</strong></td></tr>`)}

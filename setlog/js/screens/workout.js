@@ -3,7 +3,7 @@ import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
   S, useStore, setSetting, getTemplate, saveTemplate, deleteTemplate, copyTemplate, templateFolders, getWorkout,
-  addFolder, renameFolder, removeFolder, setTemplateArchived,
+  addFolder, renameFolder, removeFolder, setTemplateArchived, suggestTemplate,
 } from '../store.js';
 import { EXAMPLE_TEMPLATES } from '../seed.js';
 import { WorkoutEditor } from '../editor.js';
@@ -181,6 +181,15 @@ export async function offerSharedTemplate(text) {
   return true;
 }
 
+function suggestWhy(why) {
+  if (why.kind === 'weekday') {
+    const d = new Date(); d.setDate(d.getDate() + ((why.day - d.getDay() + 7) % 7));
+    return `Usually on ${d.toLocaleDateString('en-US', { weekday: 'long' })}s`;
+  }
+  if (why.kind === 'after') return `Usually after ${why.name}`;
+  return `Last done ${relDay(why.at).toLowerCase()}`;
+}
+
 function sortTemplates(list) {
   const byName = (a, b) => a.name.localeCompare(b.name);
   if ((S.settings.templateSort || 'name') !== 'recent') return list.sort(byName);
@@ -207,6 +216,7 @@ export function WorkoutTab() {
   }
   const order = [...folders.keys()].sort((a, b) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
   const a = S.active;
+  const sug = a ? null : suggestTemplate();
   const grid = (list) => html`<div class="tpl-grid">${list.map((t) => html`<${TemplateCard} key=${t.id} t=${t}
     onOpen=${() => previewTemplate(t)} onMenu=${() => templateMenu(t)} />`)}</div>`;
 
@@ -217,7 +227,13 @@ export function WorkoutTab() {
         <strong class="grow ellipsis">${a.name}</strong><span class="muted small">since ${fmt.time(a.startedAt)}</span></div>
       <button class="btn btn-done btn-block btn-lg" id="resume-workout" onClick=${openSheet}><${Icon} name="play" />Resume workout</button>
     </div>` : html`<div class="start-card">
-      <button class="btn btn-primary btn-block btn-lg" id="start-empty" onClick=${() => beginWorkout()}><${Icon} name="plus" />Start an empty workout</button>
+      ${sug && html`<div class="suggest">
+        <div class="suggest-label">Suggested</div>
+        <button class="btn btn-primary btn-block btn-lg" id="start-suggested" onClick=${() => beginWorkout({ template: sug.template })}>
+          <${Icon} name="play" /><span class="ellipsis">Start ${sug.template.name}</span></button>
+        <div class="suggest-why">${suggestWhy(sug.why)}</div>
+      </div>`}
+      <button class=${'btn btn-block btn-lg ' + (sug ? 'btn-tinted' : 'btn-primary')} id="start-empty" onClick=${() => beginWorkout()}><${Icon} name="plus" />Start an empty workout</button>
     </div>`}
 
     <div class="section"><h2>Templates</h2>
@@ -321,7 +337,7 @@ export function TemplateEditScreen({ id = null, fromWorkoutId = null }) {
       folder: draft.folder.trim(),
       notes: draft.notes.trim(),
       exercises: draftEntries(draft, S.settings, S.exercises, { keepEmpty: true }).map((e) => ({
-        exerciseId: e.exerciseId, notes: e.notes, supersetId: e.supersetId, restSec: e.restSec,
+        exerciseId: e.exerciseId, notes: e.notes, supersetId: e.supersetId, restSec: e.restSec, focus: e.focus,
         sets: e.sets.map(({ id: _id, ...rest }) => rest),
       })),
     };

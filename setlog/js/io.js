@@ -514,6 +514,7 @@ export function templateShareLink(t) {
     });
     if (x.restSec !== null && x.restSec !== undefined) o.r = x.restSec;
     if (x.notes) o.o = x.notes;
+    if (x.focus) o.m = x.focus;
     if (x.supersetId) {
       if (!groups.has(x.supersetId)) groups.set(x.supersetId, groups.size + 1);
       o.g = groups.get(x.supersetId);
@@ -576,6 +577,7 @@ export function parseSharedTemplate(text) {
       restSec: num(o.r),
       notes: str(o.o, 500),
       group: Number.isInteger(o.g) ? o.g : null,
+      focus: ['volume', 'volumeChange', 'reps', 'weightPerRep', 'repsChange'].includes(o.m) ? o.m : null,
     };
   }).filter(Boolean);
   const name = str(d.n, 80);
@@ -593,6 +595,7 @@ export function addSharedTemplate(p) {
     if (x.restSec !== null) e.restSec = x.restSec;
     if (x.notes) e.notes = x.notes;
     if (x.group !== null) e.supersetId = `g${x.group}`;
+    if (x.focus) e.focus = x.focus;
     return e;
   });
   return copyTemplate({ name: p.name, notes: p.notes, exercises });

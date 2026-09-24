@@ -156,6 +156,7 @@ const F = {
   monthShort: dtf({ month: 'short' }),
   time: dtf({ hour: '2-digit', minute: '2-digit' }),
   weekday: dtf({ weekday: 'short' }),
+  weekdayLong: dtf({ weekday: 'long' }),
   weekdayNarrow: dtf({ weekday: 'narrow' }),
 };
 export const fmt = {
@@ -167,6 +168,7 @@ export const fmt = {
   monthShort: (t) => F.monthShort.format(t),
   time: (t) => F.time.format(t),
   weekday: (t) => F.weekday.format(t),
+  weekdayLong: (t) => F.weekdayLong.format(t),
   weekdayNarrow: (t) => F.weekdayNarrow.format(t),
 };
 

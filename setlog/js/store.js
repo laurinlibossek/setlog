@@ -12,7 +12,7 @@ import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
 } from './drafts.js';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',
@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
   defaultRest: 120,
   sound: true,
   keepAwake: true,
+  showExamples: true,
   formula: 'epley',
   weekStart: 1,
   weeklyGoal: 3,

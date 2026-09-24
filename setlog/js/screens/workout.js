@@ -2,7 +2,7 @@
 import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
-  S, useStore, getTemplate, saveTemplate, deleteTemplate, copyTemplate, templateFolders, getWorkout,
+  S, useStore, setSetting, getTemplate, saveTemplate, deleteTemplate, copyTemplate, templateFolders, getWorkout,
 } from '../store.js';
 import { EXAMPLE_TEMPLATES } from '../seed.js';
 import { WorkoutEditor } from '../editor.js';
@@ -37,8 +37,13 @@ function TemplateCard({ t, onOpen }) {
 }
 
 export function WorkoutTab() {
-  useStore('templates', 'active', 'exercises', 'workouts');
+  useStore('templates', 'active', 'exercises', 'workouts', 'settings');
   const [closed, setClosed] = useState({});
+  const showExamples = S.settings.showExamples !== false;
+  const hideExamples = () => {
+    setSetting('showExamples', false);
+    toast('Examples hidden — turn them back on in Settings', { action: { label: 'Undo', fn: () => setSetting('showExamples', true) } });
+  };
   const folders = new Map();
   for (const t of [...S.templates].sort((a, b) => a.name.localeCompare(b.name))) {
     const f = t.folder || '';
@@ -61,7 +66,7 @@ export function WorkoutTab() {
 
     <div class="section"><h2>Templates</h2>
       <button class="link-btn" id="new-template" onClick=${newTemplate}><span class="row" style="gap:4px"><${Icon} name="plus" size=${18} />Template</span></button></div>
-    ${!S.templates.length && html`<p class="footnote" style="margin-top:0">Save the workouts you repeat as templates. Start from an example, or finish a workout and tap “Save as template” in History.</p>`}
+    ${!S.templates.length && html`<p class="footnote" style="margin-top:0">Save the workouts you repeat as templates. ${showExamples ? 'Start from an example, tap + Template,' : 'Tap + Template'} or finish a workout and tap “Save as template” in History.</p>`}
     ${order.map((f) => html`<div key=${'f' + f}>
       ${(f || order.length > 1) && html`<div class="folder-head"><button class=${closed[f] ? 'closed' : ''}
         onClick=${() => setClosed({ ...closed, [f]: !closed[f] })}><${Icon} name="chevronDown" />${f || 'My templates'}
@@ -69,8 +74,9 @@ export function WorkoutTab() {
       ${!closed[f] && html`<div class="tpl-grid">${folders.get(f).map((t) => html`<${TemplateCard} key=${t.id} t=${t} onOpen=${() => previewTemplate(t)} />`)}</div>`}
     </div>`)}
 
-    <div class="section"><h2>Examples</h2></div>
-    <div class="tpl-grid">${EXAMPLE_TEMPLATES.map((t) => html`<${TemplateCard} key=${t.id} t=${t} onOpen=${() => previewTemplate(t)} />`)}</div>
+    ${showExamples && html`<div class="section"><h2>Examples</h2>
+        <button class="link-btn" id="hide-examples" style="color:var(--ink-3)" onClick=${hideExamples}>Hide</button></div>
+      <div class="tpl-grid">${EXAMPLE_TEMPLATES.map((t) => html`<${TemplateCard} key=${t.id} t=${t} onOpen=${() => previewTemplate(t)} />`)}</div>`}
   <//>`;
 }
 

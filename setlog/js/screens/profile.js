@@ -239,6 +239,8 @@ export function SettingsScreen() {
         <${Switch} checked=${st.sound} label="Timer sound" onChange=${(v) => { set('sound', v); if (v) { unlockAudio(); beep(); } }} /></div>
       <div class="cell"><div class="cell-main"><div class="cell-title">Keep screen on</div><div class="cell-sub">While a workout is running, so the timer can signal</div></div>
         <${Switch} checked=${st.keepAwake} label="Keep screen on" onChange=${(v) => set('keepAwake', v)} /></div>
+      <div class="cell"><div class="cell-main"><div class="cell-title">Example templates</div><div class="cell-sub">Push/Pull/Legs, 5×5 and Full Body under Start workout</div></div>
+        <${Switch} checked=${st.showExamples !== false} label="Example templates" id="set-examples" onChange=${(v) => set('showExamples', v)} /></div>
       <label class="cell"><div class="cell-main"><div class="cell-title">Weekly goal</div></div>
         <select value=${String(st.weeklyGoal)} onChange=${(e) => set('weeklyGoal', +e.target.value)}>
           ${[1, 2, 3, 4, 5, 6, 7].map((n) => html`<option value=${String(n)}>${n} per week</option>`)}</select></label>

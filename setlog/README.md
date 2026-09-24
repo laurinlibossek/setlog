@@ -1,26 +1,14 @@
-# Setlog
+# Setlog user guide
 
-A private workout tracker that works like Strong: log sets against last time's numbers, rest timer, templates, records and progress charts. It runs as a web app you add to your iPhone's Home Screen. There's no account and no server, and nothing gets uploaded: your training log is stored only on your phone.
+This is the detailed guide. For an overview of the project, see the [main README](../README.md).
 
-## What it does
+Live app: https://laurinlibossek.github.io/setlog/
 
-- **Logging**: every set shows what you did last time. Tap ✓ and empty fields are filled from those grey numbers. There are warm-up, drop and failure sets, RPE, per-exercise notes and pinned notes (e.g. "seat height 4"), plus supersets, reorder, replace and swipe-left-to-delete with undo.
-- **Rest timer**: starts when you check off a set, with a per-exercise default, ±15 s and skip. A signal plays when it ends. In a superset it starts after the last exercise of the round.
-- **Templates**: folders, targets, and six example templates (Push/Pull/Legs, 5×5, Full Body). If a workout changed a template's exercises or sets, you're asked whether to update the template.
-- **History**: a list and a calendar. You can edit a finished workout (sets, start time, duration), run it again, save it as a template or share it as text.
-- **Records and charts** per exercise: estimated 1RM (Epley or Brzycki), heaviest weight, set and session volume, best weight per rep count, and lifetime totals. Cardio gets distance, time and pace. PRs are flagged live while you train and in the summary afterwards.
-- **Measure**: body weight, body fat, calories and 13 circumference measurements, each with a chart.
-- **Tools**: a plate calculator (bar and plates are configurable) and a 1RM calculator.
-- **Your data**: import from Strong (CSV), export CSV in Strong's column format (good for R or Excel), and JSON backup and restore.
-- **Other**: kg/lb, km/mi, dark mode and a weekly goal with a streak. It works offline and keeps the screen on during a workout.
+## Install it on your iPhone
 
-## Put it on your iPhone (≈5 minutes, free, no Git needed)
-
-1. Sign in at github.com (or create a free account).
-2. Click **New repository** and name it `setlog`. Set it to **Public** (GitHub Pages is free for public repos; only the code is public, never your data). Then click **Create repository**.
-3. On the empty repo page, click **uploading an existing file**. Drag in **the contents of this folder** (`index.html`, `sw.js`, `manifest.webmanifest` and the `css`, `js` and `icons` folders), so `index.html` sits at the top level and not inside another folder. Then click **Commit changes**.
-4. Go to **Settings → Pages**. Under *Build and deployment*, choose **Deploy from a branch**, then branch **main** and folder **/ (root)**, and click **Save**. After about a minute the page shows your address: `https://<your-username>.github.io/setlog/`.
-5. On the iPhone, open that address in **Safari** and tap **Share → Add to Home Screen**. Open Setlog from the new icon from then on.
+1. Open https://laurinlibossek.github.io/setlog/ in **Safari**.
+2. Tap **Share → Add to Home Screen**.
+3. Open Setlog from the new icon from then on.
 
 > The Home Screen app has its own storage, separate from Safari. Log your workouts in the installed app, not in a Safari tab.
 
@@ -44,9 +32,11 @@ Strong names like "Bench Press (Barbell)" match the built-in library automatical
 - The signal only sounds when the ring/silent switch is set to ring.
 - There's no Apple Health/Watch integration and no sync between devices. Use backup and restore to move data.
 
-## Updating the app
+## Host your own copy and ship updates
 
-Change the files, then **bump `VERSION` in `sw.js`** (e.g. `setlog-v1.0.1`) and upload the changed files to GitHub again. Next time you open the app, it offers **"A new version of Setlog is ready → Update"**. A running workout is saved first.
+1. Fork the repository and go to **Settings → Pages**. Set the source to **GitHub Actions**.
+2. The workflow in `.github/workflows/pages.yml` publishes this `setlog/` folder to `https://<your-username>.github.io/setlog/` on every push to `main`.
+3. To ship an update, change the files, **bump `VERSION` in `sw.js`** (e.g. `setlog-v1.0.1`) and push. Next time the app opens, it offers **"A new version of Setlog is ready → Update"**. A running workout is saved first.
 
 ## Run it locally
 

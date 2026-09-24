@@ -9,7 +9,7 @@ import {
   nav, TABS, setTab, ModalHost, ToastHost, toast,
 } from './ui.js';
 import { WorkoutSheet, MiniBar } from './sheet.js';
-import { WorkoutTab, TemplateEditScreen } from './screens/workout.js';
+import { WorkoutTab, TemplateEditScreen, offerSharedTemplate } from './screens/workout.js';
 import { HistoryTab, WorkoutDetailScreen, WorkoutEditScreen } from './screens/history.js';
 import { ExercisesTab, ExerciseDetailScreen } from './screens/exercises.js';
 import { MeasureTab, MeasureDetailScreen } from './screens/measure.js';
@@ -171,7 +171,16 @@ subscribe(['settings'], applyTheme);
 
 render(html`<${ErrorBoundary}><${Shell} /><//>`, document.getElementById('app'));
 registerSW();
-load().then(() => { applyTheme(); syncWakeLock(); }).catch((e) => {
+// a shared template link: …/setlog/#template=…
+function checkSharedLink() {
+  if (!/template=/.test(location.hash)) return;
+  const h = location.hash;
+  history.replaceState(null, '', location.pathname + location.search);
+  offerSharedTemplate(h);
+}
+window.addEventListener('hashchange', () => { if (S.ready) checkSharedLink(); });
+
+load().then(() => { applyTheme(); syncWakeLock(); checkSharedLink(); }).catch((e) => {
   console.error(e);
   S.ready = true;
   emit('ready');

@@ -303,13 +303,21 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 0.85; 
 
 /* ---------- workout tab ---------- */
 .start-card { background: var(--surface); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.start-card .hint { color: var(--ink-3); font-size: 14px; }
 .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .tpl-card {
   background: var(--surface); border-radius: var(--radius); padding: 12px 13px 12px; text-align: left;
   display: flex; flex-direction: column; gap: 6px; min-height: 124px; border: 1px solid var(--line);
 }
 .tpl-card:active { background: var(--surface-2); }
+.tpl-card-wrap { position: relative; display: flex; min-width: 0; }
+.tpl-card-wrap .tpl-card { flex: 1; min-width: 0; }
+.tpl-more {
+  position: absolute; top: 8px; right: 8px; width: 34px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent-text);
+}
+.tpl-more:active { opacity: 0.7; }
+.tpl-more svg { width: 20px; height: 20px; }
+.tpl-card-wrap:has(.tpl-more) .tpl-card .name { padding-right: 36px; }
 .tpl-card .name { font-weight: 700; font-size: 16px; line-height: 1.2; }
 .tpl-card .lines { color: var(--ink-2); font-size: 13px; line-height: 1.45; flex: 1; }
 .tpl-card .lines div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -319,6 +327,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 0.85; 
 .folder-head button { display: flex; align-items: center; gap: 6px; font-weight: 650; color: var(--ink-2); font-size: 15px; }
 .folder-head svg { width: 16px; height: 16px; transition: transform 0.15s; }
 .folder-head .closed svg { transform: rotate(-90deg); }
+.folder-head .folder-more { width: 34px; height: 30px; }
+.folder-head .folder-more svg { width: 20px; height: 20px; }
+.btn.icon-only { width: 38px; padding: 0; }
 
 /* ---------- workout editor ---------- */
 .sheet {

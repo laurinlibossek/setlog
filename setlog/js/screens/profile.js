@@ -2,7 +2,7 @@
 import { html, useState } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
-  S, useStore, stats, setSetting, setProfile, setMeta, importBatch, replaceAllData, checkPersisted, APP_VERSION,
+  S, useStore, stats, setSetting, setProfile, setMeta, importBatch, addWorkoutNotes, replaceAllData, checkPersisted, APP_VERSION,
   isPreview, hasSampleData, clearSampleData,
 } from '../store.js';
 import { PR_LABEL, workoutVolume } from '../calc.js';
@@ -151,13 +151,25 @@ async function doStrongImport() {
     res = parseStrongCSV(f.text, units);
   }
   const s = res.stats;
-  if (!s.workouts) {
+  if (!s.workouts && !s.notesAdded) {
     toast(s.duplicates ? `All ${plural(s.duplicates, 'workout')} are already imported` : 'No workouts found in this file');
+    return;
+  }
+  if (!s.workouts) {
+    const ok = await confirmDialog({
+      title: `Add notes to ${plural(s.notesAdded, 'workout')}?`,
+      message: `All ${plural(s.duplicates, 'workout')} are already in Setlog, but the file has notes that are missing there. Existing notes aren’t changed.`,
+      ok: 'Add notes',
+    });
+    if (!ok) return;
+    addWorkoutNotes(res.noteUpdates);
+    toast(`Notes added to ${plural(s.notesAdded, 'workout')}`);
     return;
   }
   const ok = await openDialog((close) => html`<${ImportPreview} close=${close} s=${s} />`);
   if (!ok) return;
   await importBatch({ exercises: res.exercises, workouts: res.workouts });
+  if (res.noteUpdates.length) addWorkoutNotes(res.noteUpdates);
   toast(`Imported ${plural(s.workouts, 'workout')}`);
 }
 
@@ -178,7 +190,7 @@ function ImportPreview({ close, s }) {
   return html`<div class="dialog">
     <h3>Import ${plural(s.workouts, 'workout')}?</h3>
     <p>${plural(s.sets, 'set')} from ${fmt.short(s.first)} to ${fmt.short(s.last)}.</p>
-    ${s.duplicates > 0 && html`<p class="small">${plural(s.duplicates, 'workout')} already in Setlog will be skipped.</p>`}
+    ${s.duplicates > 0 && html`<p class="small">${plural(s.duplicates, 'workout')} already in Setlog will be skipped${s.notesAdded ? `, but ${s.notesAdded === 1 ? 'one gets its' : `${s.notesAdded} get their`} missing notes` : ''}.</p>`}
     ${s.newExercises.length > 0 && html`<div class="card small" style="background:var(--surface-2)">
       <strong>${plural(s.newExercises.length, 'new exercise')}</strong> will be created:
       <div class="muted" style="margin-top:4px">${s.newExercises.slice(0, 8).join(', ')}${s.newExercises.length > 8 ? ` and ${s.newExercises.length - 8} more` : ''}</div>

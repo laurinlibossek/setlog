@@ -43,7 +43,8 @@ Most workout trackers lock their best features behind a subscription or want an 
 - A rest timer starts when you finish a set, with per-exercise defaults, ±15 s and skip.
 
 **Routines**
-- Save workouts as templates and sort them into folders.
+- Save workouts as templates and sort them into folders. Archive the ones you're not running right now.
+- Share a template as a link. Whoever opens it, or pastes it into their own Setlog, gets the template with all its exercises.
 - Six ready-made examples to start with (Push/Pull/Legs, 5×5, Full Body). You can hide them once you have your own.
 - If a workout differs from its template, Setlog asks whether to update just the numbers, the whole template or neither, and says exactly what each choice changes. You can turn the question off.
 
@@ -85,7 +86,7 @@ If you've been tracking with **Strong**, you can bring your whole history along:
 2. In Setlog, go to **Profile → ⚙︎ → Import from Strong** and pick the file.
 3. Check the preview (workouts, sets, date range, new exercises) and confirm.
 
-Exercises that share a name with a built-in one are matched automatically. Everything else becomes a custom exercise, including the ones you created yourself. If you import the same file twice, workouts you already have are skipped.
+Workout notes and exercise notes come along too. Exercises that share a name with a built-in one are matched automatically. Everything else becomes a custom exercise, including the ones you created yourself. If you import the same file twice, workouts you already have are skipped.
 
 ## Your data
 

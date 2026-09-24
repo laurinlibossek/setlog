@@ -1,8 +1,10 @@
 // Import/export: Strong CSV import, Strong-style CSV export, JSON backup/restore.
 import {
-  S, snapshot, findExerciseByName, APP_VERSION,
+  S, snapshot, findExerciseByName, APP_VERSION, addExercise, copyTemplate,
 } from './store.js';
-import { SEED_EXERCISES } from './seed.js';
+import { SEED_EXERCISES, CATEGORIES, BODY_PARTS } from './seed.js';
+import { setText, setLabels } from './format.js';
+import { usesWeight } from './calc.js';
 import {
   uid, slug, parseNum, KG_PER_LB, KM_PER_MI, fmtDur, kgTo, kmTo, roundW,
 } from './util.js';
@@ -139,6 +141,30 @@ function inferBodyPart(name) {
 }
 
 // ---------- Strong import ----------
+/**
+ * Notes a stored workout lacks but the import has. Exercises pair by id and
+ * occurrence. Returns { id, notes?, entries: [[index, note]] } or null.
+ */
+function missingNotes(w, notes, entries) {
+  const u = { id: w.id, entries: [] };
+  if (notes && !w.notes) u.notes = notes;
+  const seen = new Map();
+  const at = new Map();
+  w.exercises.forEach((e, i) => {
+    const n = seen.get(e.exerciseId) || 0;
+    seen.set(e.exerciseId, n + 1);
+    at.set(`${e.exerciseId}#${n}`, i);
+  });
+  const seen2 = new Map();
+  for (const e of entries) {
+    const n = seen2.get(e.exerciseId) || 0;
+    seen2.set(e.exerciseId, n + 1);
+    const i = at.get(`${e.exerciseId}#${n}`);
+    if (e.notes && i !== undefined && !w.exercises[i].notes) u.entries.push([i, e.notes]);
+  }
+  return u.notes || u.entries.length ? u : null;
+}
+
 const HEADER_ALIASES = {
   date: ['date'],
   workout: ['workout name', 'workout'],
@@ -205,6 +231,9 @@ export function parseStrongCSV(text, opts = {}) {
       last = { name: exName, sets: [], notes: '', restSec: null };
       g.entries.push(last);
     }
+    // an exercise note can sit on any of its rows, including rest-timer rows
+    const note = get(r, 'notes');
+    if (note && !last.notes) last.notes = note;
     if (order.includes('rest')) {
       const sec = parseNum(get(r, 'seconds'));
       if (sec > 0) last.restSec = Math.round(sec);
@@ -234,8 +263,6 @@ export function parseStrongCSV(text, opts = {}) {
     if (t !== null && t > 0) set.t = Math.round(t);
     if (rpe !== null && rpe > 0) set.rpe = rpe;
     if (set.r > 0 && set.w === undefined) set.w = 0;
-    const note = get(r, 'notes');
-    if (note && !last.notes) last.notes = note;
     if (!(set.r > 0 || set.d > 0 || set.t > 0)) { skippedRows++; continue; }
     last.sets.push(set);
   }
@@ -264,8 +291,10 @@ export function parseStrongCSV(text, opts = {}) {
   }
 
   // build workouts, skip ones already present
-  const existingKeys = new Set(S.workouts.map((w) => w.startedAt + '|' + w.name));
+  const existing = new Map(S.workouts.map((w) => [w.startedAt + '|' + w.name, w]));
+  const existingKeys = new Set(existing.keys());
   const workouts = [];
+  const noteUpdates = [];
   let duplicates = 0;
   let setCount = 0;
   for (const g of groups.values()) {
@@ -276,7 +305,14 @@ export function parseStrongCSV(text, opts = {}) {
       return entry;
     });
     if (!entries.length) continue;
-    if (existingKeys.has(g.startedAt + '|' + g.name)) { duplicates++; continue; }
+    if (existingKeys.has(g.startedAt + '|' + g.name)) {
+      duplicates++;
+      // already imported (maybe by an older version that dropped notes): fill in missing notes
+      const w = existing.get(g.startedAt + '|' + g.name);
+      const u = w && missingNotes(w, g.notes, entries);
+      if (u) noteUpdates.push(u);
+      continue;
+    }
     existingKeys.add(g.startedAt + '|' + g.name);
     setCount += entries.reduce((a, e) => a + e.sets.length, 0);
     workouts.push({
@@ -297,8 +333,10 @@ export function parseStrongCSV(text, opts = {}) {
   return {
     workouts,
     exercises: exercisesToAdd,
+    noteUpdates,
     stats: {
       workouts: workouts.length,
+      notesAdded: noteUpdates.length,
       sets: setCount,
       duplicates,
       skippedRows,
@@ -444,3 +482,118 @@ export const dateStamp = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+// ---------- sharing templates ----------
+// A template travels as a link: <app url>#template=<base64url JSON>. Built-in
+// exercises go by id, custom ones by name, category and body part, so the
+// receiver gets matching exercises (or new custom ones) without any server.
+const TYPE_CODE = { normal: 'n', warmup: 'w', drop: 'd', failure: 'f' };
+const CODE_TYPE = Object.fromEntries(Object.entries(TYPE_CODE).map(([k, v]) => [v, k]));
+
+function b64urlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode(code) {
+  const bin = atob(code.replace(/-/g, '+').replace(/_/g, '/'));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+export function templateShareLink(t) {
+  const groups = new Map();
+  const e = t.exercises.filter((x) => S.exercises.has(x.exerciseId)).map((x) => {
+    const ex = S.exercises.get(x.exerciseId);
+    const o = { n: ex.name, c: ex.category, b: ex.bodyPart };
+    if (ex.builtin) o.i = ex.id;
+    o.s = x.sets.map((st) => {
+      const row = [TYPE_CODE[st.type || 'normal'] || 'n', st.w ?? null, st.r ?? null, st.d ?? null, st.t ?? null];
+      while (row.length > 1 && row[row.length - 1] === null) row.pop();
+      return row;
+    });
+    if (x.restSec !== null && x.restSec !== undefined) o.r = x.restSec;
+    if (x.notes) o.o = x.notes;
+    if (x.supersetId) {
+      if (!groups.has(x.supersetId)) groups.set(x.supersetId, groups.size + 1);
+      o.g = groups.get(x.supersetId);
+    }
+    return o;
+  });
+  const data = { v: 1, n: t.name, e };
+  if (t.notes) data.f = t.notes;
+  const base = `${location.origin}${location.pathname.replace(/index\.html$/, '')}`;
+  return `${base}#template=${b64urlEncode(JSON.stringify(data))}`;
+}
+
+export function templateShareText(t) {
+  const lines = [`${t.name} (Setlog template)`];
+  if (t.notes) lines.push(t.notes);
+  for (const x of t.exercises) {
+    const ex = S.exercises.get(x.exerciseId);
+    if (!ex) continue;
+    const labels = setLabels(x.sets);
+    const sets = x.sets.map((st, i) => {
+      let v = '';
+      if (st.w === undefined && st.r && usesWeight(ex.category)) v = `${st.r} reps`;
+      else if (st.w || st.r || st.d || st.t) v = setText(st, ex.category);
+      return v && labels[i] === 'W' ? `W ${v}` : v;
+    }).filter(Boolean);
+    lines.push(`• ${ex.name}: ${x.sets.length} set${x.sets.length === 1 ? '' : 's'}${sets.length ? ` (${sets.join(', ')})` : ''}`);
+  }
+  lines.push('', `Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.`, templateShareLink(t));
+  return lines.join('\n');
+}
+
+const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 100000 ? v : null);
+
+/** Read a shared template out of a link (or any text containing one). Returns null if there's none. */
+export function parseSharedTemplate(text) {
+  const m = String(text || '').match(/template=([A-Za-z0-9_-]{8,})/);
+  if (!m) return null;
+  let d;
+  try { d = JSON.parse(b64urlDecode(m[1])); } catch (e) { return null; }
+  if (!d || d.v !== 1 || !Array.isArray(d.e)) return null;
+  const cats = new Set(CATEGORIES.map((c) => c.id));
+  const parts = new Set(BODY_PARTS.map((b) => b.id));
+  const exercises = d.e.slice(0, 40).map((o) => {
+    if (!o || typeof o !== 'object') return null;
+    const name = str(o.n, 80);
+    if (!name) return null;
+    const sets = (Array.isArray(o.s) ? o.s : []).slice(0, 30).map((row) => {
+      if (!Array.isArray(row)) return null;
+      const set = { type: CODE_TYPE[row[0]] || 'normal' };
+      ['w', 'r', 'd', 't'].forEach((k, i) => { const v = num(row[i + 1]); if (v !== null) set[k] = v; });
+      return set;
+    }).filter(Boolean);
+    return {
+      id: typeof o.i === 'string' && /^x-[a-z0-9-]+$/.test(o.i) ? o.i : null,
+      name,
+      category: cats.has(o.c) ? o.c : 'barbell',
+      bodyPart: parts.has(o.b) ? o.b : 'other',
+      sets: sets.length ? sets : [{ type: 'normal' }],
+      restSec: num(o.r),
+      notes: str(o.o, 500),
+      group: Number.isInteger(o.g) ? o.g : null,
+    };
+  }).filter(Boolean);
+  const name = str(d.n, 80);
+  if (!name || !exercises.length) return null;
+  const newExercises = exercises.filter((x) => !(x.id && S.exercises.has(x.id)) && !findExerciseByName(x.name)).map((x) => x.name);
+  return { name, notes: str(d.f, 1000), exercises, newExercises: [...new Set(newExercises)] };
+}
+
+/** Save a parsed shared template, creating any exercises the receiver doesn't have. */
+export function addSharedTemplate(p) {
+  const exercises = p.exercises.map((x) => {
+    let id = x.id && S.exercises.has(x.id) ? x.id : findExerciseByName(x.name)?.id;
+    if (!id) id = addExercise({ name: x.name, category: x.category, bodyPart: x.bodyPart }).id;
+    const e = { exerciseId: id, sets: x.sets };
+    if (x.restSec !== null) e.restSec = x.restSec;
+    if (x.notes) e.notes = x.notes;
+    if (x.group !== null) e.supersetId = `g${x.group}`;
+    return e;
+  });
+  return copyTemplate({ name: p.name, notes: p.notes, exercises });
+}

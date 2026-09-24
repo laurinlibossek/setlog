@@ -12,7 +12,7 @@ import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
 } from './drafts.js';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',
@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   keepAwake: true,
   showExamples: true,
   askTemplateUpdate: true,
+  templateSort: 'name',
   formula: 'epley',
   weekStart: 1,
   weeklyGoal: 3,
@@ -68,7 +69,13 @@ export function emit(...topics) {
 /** Re-render the calling component when any of the topics change. */
 export function useStore(...topics) {
   const [, force] = useReducer((x) => x + 1, 0);
-  useEffect(() => subscribe(topics, force), [topics.join(',')]);
+  const seen = topics.map((t) => S.v[t] || 0).join(',');
+  useEffect(() => {
+    const unsub = subscribe(topics, force);
+    // an emit between this render and the subscription would otherwise be missed
+    if (topics.map((t) => S.v[t] || 0).join(',') !== seen) force();
+    return unsub;
+  }, [topics.join(',')]);
   return S;
 }
 
@@ -319,6 +326,19 @@ export function saveWorkout(w) {
   save('workouts', w);
   emit('workouts');
 }
+/** Fill in notes on stored workouts: [{ id, notes?, entries: [[index, note]] }]. */
+export function addWorkoutNotes(updates) {
+  const changed = [];
+  for (const u of updates) {
+    const w = getWorkout(u.id);
+    if (!w) continue;
+    if (u.notes && !w.notes) w.notes = u.notes;
+    for (const [i, note] of u.entries) if (w.exercises[i] && !w.exercises[i].notes) w.exercises[i].notes = note;
+    changed.push(w);
+  }
+  if (changed.length) { saveMany('workouts', changed); emit('workouts'); }
+  return changed.length;
+}
 export function deleteWorkout(id) {
   S.workouts = S.workouts.filter((w) => w.id !== id);
   remove('workouts', id);
@@ -362,8 +382,35 @@ export function copyTemplate(src, patch = {}) {
   saveTemplate(t);
   return t;
 }
+/** Folder names: the ones templates use plus empty ones created with "New folder". */
 export function templateFolders() {
-  return [...new Set(S.templates.map((t) => t.folder || '').filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const names = [...S.templates.map((t) => t.folder || ''), ...(S.meta.folders || [])];
+  return [...new Set(names.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+export function addFolder(name) {
+  const n = String(name || '').trim();
+  if (!n || templateFolders().includes(n)) return false;
+  setMeta({ folders: [...(S.meta.folders || []), n] });
+  return true;
+}
+export function renameFolder(from, to) {
+  const n = String(to || '').trim();
+  if (!n || n === from) return;
+  for (const t of S.templates) if ((t.folder || '') === from) { t.folder = n; save('templates', t); }
+  setMeta({ folders: [...new Set((S.meta.folders || []).map((f) => (f === from ? n : f)))] });
+  emit('templates');
+}
+/** Remove a folder; its templates move out of it (they aren't deleted). */
+export function removeFolder(name) {
+  for (const t of S.templates) if ((t.folder || '') === name) { t.folder = ''; save('templates', t); }
+  setMeta({ folders: (S.meta.folders || []).filter((f) => f !== name) });
+  emit('templates');
+}
+export function setTemplateArchived(id, archived) {
+  const t = getTemplate(id);
+  if (!t) return;
+  if (archived) t.archived = true; else delete t.archived;
+  saveTemplate(t);
 }
 // ----- comparing a finished workout with its template -----
 const VALUE_KEYS = ['w', 'r', 'd', 't'];

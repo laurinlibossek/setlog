@@ -31,7 +31,7 @@ Most workout trackers lock their best features behind a subscription or want an 
 - **Private.** There's no account and no server. Your training log is stored on your phone and never uploaded.
 - **Works offline.** It opens instantly and keeps working in a basement gym with no signal.
 - **iPhone and Android.** Add it to your home screen from the browser and it runs full-screen like a native app.
-- **Open source.** It's MIT-licensed and small enough to read in an afternoon.
+- **Open source.** It's MIT-licensed and compact.
 
 ## Features
 
@@ -54,7 +54,7 @@ Most workout trackers lock their best features behind a subscription or want an 
 - A weekly goal with a streak. Body weight, body fat, calories and 13 body measurements, each with a chart.
 
 **Exercises**
-- About 190 built-in exercises with forgiving search: "db bench" finds *Bench Press (Dumbbell)*.
+- About 190 built-in exercises.
 - Add your own exercises, merge duplicates and hide the ones you never do.
 
 **Your data**
@@ -63,7 +63,7 @@ Most workout trackers lock their best features behind a subscription or want an 
 - Import your history from Strong, including custom exercises and set types ([see below](#coming-from-another-app)).
 
 **And more**
-- kg or lb, km or mi, light and dark mode, a plate calculator and a 1RM calculator. The screen stays on during a workout.
+- kg or lb, km or mi, light and dark mode, a plate calculator and a 1RM calculator. All the features you're used to. 
 
 ## Install it on your phone
 
@@ -79,7 +79,7 @@ From then on, open Setlog from the new icon. The installed app keeps its own sto
 
 ## Coming from another app?
 
-You don't need any other app to use Setlog. But if you've been tracking with **Strong**, you can bring your whole history along:
+If you've been tracking with **Strong**, you can bring your whole history along:
 
 1. In Strong, go to **Settings → Export Workouts** and save the CSV file.
 2. In Setlog, go to **Profile → ⚙︎ → Import from Strong** and pick the file.
@@ -89,13 +89,13 @@ Exercises that share a name with a built-in one are matched automatically. Every
 
 ## Your data
 
-Your workouts are stored on your device in IndexedDB. Nothing is uploaded and nothing is tracked. Nobody else can see your workouts, not even whoever hosts the app.
+Your workouts are stored on your device (locally in IndexedDB). Nothing is uploaded and nothing is tracked. Nobody else can see your workouts.
 
 The flip side is that backups are up to you. Use **Settings → Back up now** every so often (the app reminds you every two weeks), and always before deleting the home screen icon or switching phones. **Restore from backup** brings everything back.
 
 ## Known limits
 
-- Phones pause web apps while they're locked, so the rest timer can't alert you with the phone in your pocket. It keeps counting correctly, and while the screen is on (the default during a workout) it beeps when your rest is over. Android also vibrates. On iPhone, the beep needs the ring/silent switch set to ring.
+- Phones pause web apps while they're locked, so the rest timer can't alert you with the phone in your pocket. It keeps counting correctly, and while the screen is on (the default during a workout) it alerts when your rest is over. Android also vibrates. On iPhone, the beep needs the ring/silent switch set to ring.
 - There's no sync between devices. Use backup and restore to move your data.
 - There's no Apple Health, Google Fit or smartwatch integration yet.
 
@@ -111,7 +111,7 @@ When you change the app, bump `VERSION` in `setlog/sw.js`. Installed copies then
 
 ## How it's built
 
-Setlog is a Progressive Web App written as plain JavaScript modules. There's no build step and nothing to install; the only libraries are two tiny ones vendored into the repo.
+Setlog is a Progressive Web App written as plain JavaScript modules. There's no build step and nothing to install.
 
 - **UI:** Preact and htm, vendored in `setlog/js/vendor/` (about 17 KB).
 - **Storage:** IndexedDB with automatic reconnect, because iOS Safari drops idle database connections. The workout in progress is also mirrored to localStorage, so it survives the app being closed mid-set.
@@ -152,7 +152,7 @@ Then open http://localhost:8000.
 
 ## Background
 
-Setlog started as a personal replacement for a paid tracker. I wanted every feature I actually used, my full history in open formats and no monthly fee. It turned out useful enough to share, so now it's free and open source for anyone who trains.
+Setlog started as a personal replacement for a paid tracker. I wanted every feature I actually used, my full history in open formats and no monthly fee. It turned out useful enough to share, so now it's free and open source for anyone who wants. 
 
 ## Contributing
 

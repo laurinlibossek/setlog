@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://laurinlibossek.github.io/setlog/"><strong>Open the app</strong></a> ·
   <a href="#install-it-on-your-phone">Install</a> ·
-  <a href="#features">Features</a> ·
+  <a href="#how-it-works">How it works</a> ·
   <a href="#how-its-built">How it's built</a>
 </p>
 
@@ -25,46 +25,24 @@
 
 ## Why Setlog
 
-Most workout trackers lock their best features behind a subscription or want an account before you log a single set. Setlog doesn't do either:
+Most workout trackers put their best features behind a subscription or want an account before you log a single set. Setlog doesn't:
 
-- **Completely free.** There's no subscription, no ads and no premium tier.
-- **Private.** There's no account and no server. Your training log is stored on your phone and never uploaded.
-- **Works offline.** It opens instantly and keeps working in a basement gym with no signal.
-- **iPhone and Android.** Add it to your home screen from the browser and it runs full-screen like a native app.
-- **Open source.** It's MIT-licensed and compact.
+- **Free.** No subscription, no ads, no premium tier.
+- **Private.** No account and no server. Your training log stays on your phone.
+- **Offline.** It keeps working in a basement gym with no signal.
+- **Open source.** MIT-licensed and compact.
 
-## Features
+## How it works
 
-**Logging**
-- Every set shows what you did last time. Tap ✓ on an empty set to reuse those numbers.
-- Weight × reps, bodyweight (plain, weighted or assisted), reps only, distance and time for cardio, and time for holds like planks.
-- Warm-up, drop and failure sets, RPE, notes per exercise, and pinned notes ("seat on 4").
-- Supersets, reordering, swapping exercises, swipe to delete with undo, and a warm-up set generator.
-- A rest timer starts when you finish a set, with per-exercise defaults, ±15 s and skip.
+Start a workout from a template or from scratch. Every set shows what you did last time, and the rest timer starts when you check a set off. New personal records are flagged as you set them. When you finish a workout that differs from its template, Setlog asks whether to save the changes to the template.
 
-**Routines**
-- Save workouts as templates and sort them into folders. Archive the ones you're not running right now.
-- Share a template as a link. Whoever opens it, or pastes it into their own Setlog, gets the template with all its exercises.
-- Six ready-made examples to start with (Push/Pull/Legs, 5×5, Full Body). You can hide them once you have your own.
-- If a workout differs from its template, Setlog asks whether to update just the numbers, the whole template or neither, and says exactly what each choice changes. You can turn the question off.
+Over time, every exercise gets its own charts, records and history.
 
-**Progress**
-- New personal records are flagged the moment you set them and summed up after each workout.
-- Each exercise gets charts for estimated 1RM (Epley or Brzycki), heaviest weight, volume and reps. It also lists your records, your best weight for every rep count and your full history.
-- History shows as a list or a calendar. You can edit past workouts, repeat them or turn them into templates.
-- A weekly goal with a streak. Body weight, body fat, calories and 13 body measurements, each with a chart.
-
-**Exercises**
-- About 190 built-in exercises.
-- Add your own exercises, merge duplicates and hide the ones you never do.
-
-**Your data**
-- Backup and restore as a single file you can keep in iCloud Drive, Google Drive or anywhere else.
-- CSV export for spreadsheets, R or Python.
-- Import your history from Strong, including custom exercises and set types ([see below](#coming-from-another-app)).
-
-**And more**
-- kg or lb, km or mi, light and dark mode, a plate calculator and a 1RM calculator. All the features you're used to. 
+**Good to know**
+- Tap ✓ on an empty set to log last time's numbers.
+- Tap a set's number to make it a warm-up, drop or failure set. Swipe a set left to delete it.
+- Tap an exercise's name for notes, supersets, warm-up sets, its rest timer and the plate calculator. A pinned note shows up every time you do that exercise.
+- To share a template, use its ⋯ → **Share**. On iPhone the other person pastes the link under Templates ⋯ → **Add shared template**, because the home screen app keeps its data separate from Safari.
 
 ## Install it on your phone
 
@@ -78,25 +56,20 @@ Open **[laurinlibossek.github.io/setlog](https://laurinlibossek.github.io/setlog
 
 From then on, open Setlog from the new icon. The installed app keeps its own storage, separate from the browser tab, so log your workouts there.
 
-## Coming from another app?
-
-If you've been tracking with **Strong**, you can bring your whole history along:
+## Coming from Strong?
 
 1. In Strong, go to **Settings → Export Workouts** and save the CSV file.
-2. In Setlog, go to **Profile → ⚙︎ → Import from Strong** and pick the file.
-3. Check the preview (workouts, sets, date range, new exercises) and confirm.
+2. In Setlog, go to **Profile → ⚙︎ → Import from Strong**, pick the file and confirm.
 
-Workout notes and exercise notes come along too. Exercises that share a name with a built-in one are matched automatically. Everything else becomes a custom exercise, including the ones you created yourself. If you import the same file twice, workouts you already have are skipped.
+Notes, set types and your custom exercises come along. Importing the same file again only adds what's missing.
 
-## Your data
+## Back up your data
 
-Your workouts are stored on your device (locally in IndexedDB). Nothing is uploaded and nothing is tracked. Nobody else can see your workouts.
-
-The flip side is that backups are up to you. Use **Settings → Back up now** every so often (the app reminds you every two weeks), and always before deleting the home screen icon or switching phones. **Restore from backup** brings everything back.
+Your workouts exist only on your phone. Nothing is uploaded, so nobody else has a copy either. Use **Settings → Back up now** every so often (the app reminds you every two weeks), and always before deleting the app or switching phones. **Restore from backup** brings everything back.
 
 ## Known limits
 
-- Phones pause web apps while they're locked, so the rest timer can't alert you with the phone in your pocket. It keeps counting correctly, and while the screen is on (the default during a workout) it alerts when your rest is over. Android also vibrates. On iPhone, the beep needs the ring/silent switch set to ring.
+- A locked phone pauses web apps, so the rest timer can't alert you with the phone in your pocket. With the screen on (the default during a workout) it beeps when your rest is over. On iPhone, the ring/silent switch has to be set to ring.
 - There's no sync between devices. Use backup and restore to move your data.
 - There's no Apple Health, Google Fit or smartwatch integration yet.
 
@@ -119,7 +92,7 @@ Setlog is a Progressive Web App written as plain JavaScript modules. There's no 
 - **Offline:** a service worker caches the whole app on install and offers new versions through an in-app prompt.
 - **Units and input:** data is stored in kg, km and seconds and converted for display. Number inputs accept decimal commas ("62,5").
 - **Records:** a single chronological pass over the history works out the personal records for every set (estimated 1RM, weight, set volume, reps, distance and time).
-- **Import:** a CSV parser that handles both of Strong's export layouts, comma or semicolon delimiters, warm-up/drop/failure sets and rest-timer rows, and skips duplicates.
+- **Import:** a CSV parser for both of Strong's export layouts that skips workouts it already has.
 - **Testing:** end-to-end tests in an emulated iPhone browser (Playwright). They cover a real 86-workout import, backup round-trips and starting offline.
 - Developed with the assistance of Claude (Anthropic).
 

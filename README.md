@@ -45,7 +45,7 @@ Most workout trackers lock their best features behind a subscription or want an 
 **Routines**
 - Save workouts as templates and sort them into folders.
 - Six ready-made examples to start with (Push/Pull/Legs, 5×5, Full Body). You can hide them once you have your own.
-- If a workout differs from its template, Setlog asks whether to update the template.
+- If a workout differs from its template, Setlog asks whether to update just the numbers, the whole template or neither, and says exactly what each choice changes. You can turn the question off.
 
 **Progress**
 - New personal records are flagged the moment you set them and summed up after each workout.

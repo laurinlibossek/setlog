@@ -3,7 +3,7 @@ import { html, useRef } from './lib.js';
 import { Icon } from './icons.js';
 import {
   S, useStore, touchActive, startWorkout, discardActive, finishActive, startRest, adjustRest, skipRest,
-  getTemplate, templateDiffers, updateTemplateFromWorkout, stats, exName,
+  getTemplate, templateChanges, updateTemplateFromWorkout, restoreTemplateExercises, stats, exName,
 } from './store.js';
 import { WorkoutEditor, pendingSets } from './editor.js';
 import {
@@ -212,17 +212,58 @@ export async function finishFlow() {
   const result = finishActive(mode);
   closeSheet();
   if (!result) return;
-  await showSummary(result);
-  // offer to update the template it was started from
-  const t = result.workout.templateId && getTemplate(result.workout.templateId);
-  if (t && templateDiffers(t, result.workout)) {
-    const ok = await confirmDialog({
-      title: `Update “${t.name}”?`,
-      message: 'This workout had different exercises or sets than the template. Save them to the template for next time?',
-      ok: 'Update template', cancel: 'Keep as is',
-    });
-    if (ok) { updateTemplateFromWorkout(t.id, result.workout); toast('Template updated'); }
-  }
+  const summary = showSummary(result);
+  await offerTemplateUpdate(result.workout);
+  await summary;
+}
+
+// ---------- update the template it was started from ----------
+async function offerTemplateUpdate(workout) {
+  if (S.settings.askTemplateUpdate === false) return;
+  const t = workout.templateId && getTemplate(workout.templateId);
+  if (!t) return;
+  const changes = templateChanges(t, workout);
+  if (!changes.structure && !changes.valueSets) return;
+  await new Promise((r) => { setTimeout(r, 350); }); // let the summary slide in first
+  const choice = await openDialog((close) => html`<${TemplateUpdateDialog} template=${t} changes=${changes} close=${close} />`);
+  if (choice !== 'values' && choice !== 'all') return;
+  const before = updateTemplateFromWorkout(t.id, workout, { valuesOnly: choice === 'values' });
+  if (!before) return;
+  toast(choice === 'values' ? 'Template values updated' : 'Template updated', {
+    action: { label: 'Undo', fn: () => { restoreTemplateExercises(t.id, before); toast('Template change undone'); } },
+  });
+}
+
+function structureLines(c) {
+  const out = [];
+  if (c.addedExercises) out.push(`Adds ${plural(c.addedExercises, 'exercise')}.`);
+  if (c.removedExercises) out.push(`Removes ${plural(c.removedExercises, 'exercise')}.`);
+  if (c.reordered) out.push('Reorders exercises.');
+  if (c.addedSets) out.push(`Adds ${plural(c.addedSets, 'set')}.`);
+  if (c.removedSets) out.push(`Removes ${plural(c.removedSets, 'set')}.`);
+  if (c.typesChanged) out.push('Changes set types.');
+  if (c.supersetsChanged) out.push('Changes supersets.');
+  return out;
+}
+
+function TemplateUpdateDialog({ template, changes: c, close }) {
+  const name = `“${template.name}”`;
+  return html`<div class="dialog tpl-update" role="alertdialog" aria-modal="true" aria-labelledby="tpl-update-title">
+    <h3 id="tpl-update-title">Update template</h3>
+    <p>${c.structure
+      ? `You changed ${name} during this workout. Update the template?`
+      : `You logged different numbers than ${name} has saved. Update the template?`}</p>
+    <div class="btns">
+      ${c.valueSets > 0 && html`<button class="btn btn-primary btn-choice" id="tpl-update-values" onClick=${() => close('values')}>
+        <span class="t">${c.structure ? 'Update values only' : 'Update values'}</span>
+        <span class="s">Updates values for ${plural(c.valueSets, 'set')}.</span></button>`}
+      ${c.structure && html`<button class="btn btn-danger btn-choice" id="tpl-update-all" onClick=${() => close('all')}>
+        <span class="t">Update template and values</span>
+        <span class="s">${structureLines(c).map((l, i) => html`${i ? ' ' : ''}<span class="nowrap">${l}</span>`)}</span></button>`}
+      <button class="btn btn-choice" id="tpl-update-keep" onClick=${() => close('keep')}>
+        <span class="t">Keep original template</span></button>
+    </div>
+  </div>`;
 }
 
 function showSummary(result) {

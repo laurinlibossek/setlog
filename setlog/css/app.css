@@ -447,6 +447,11 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 0.85; 
 .dialog .btns { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .dialog .btns.two { flex-direction: row; }
 .dialog .btns.two .btn { flex: 1; }
+/* stacked choice buttons with a one-line consequence (template update) */
+.btn-choice { height: auto; min-height: 52px; padding: 10px 16px; flex-direction: column; gap: 2px; text-align: center; line-height: 1.25; }
+.btn-choice .t { font-size: 17px; font-weight: 700; }
+.btn-choice .s { font-size: 13.5px; font-weight: 600; opacity: 0.9; }
+.tpl-update .btns { gap: 10px; margin-top: 8px; }
 
 /* full-screen modal page (pickers, forms) */
 .fs { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; animation: sheet-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1); }

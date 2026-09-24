@@ -28,7 +28,7 @@ I was paying about €6 a month for Strong, a popular workout tracker, and my wh
 2. Tap **Share → Add to Home Screen**.
 3. Open Setlog from the new icon. The installed app keeps its own storage, separate from Safari tabs.
 
-### Switching from Strong
+### Switching from Strong (Paid App)
 
 1. In Strong: **Settings → Export Workouts** and save the CSV to Files.
 2. In Setlog: **Profile → ⚙︎ → Import from Strong** and pick the file.

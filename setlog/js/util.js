@@ -1,4 +1,5 @@
-// Small, dependency-free helpers: ids, numbers, units, dates, durations.
+// Small helpers: ids, numbers, units, dates, durations.
+import { tr, getLang } from './i18n.js';
 
 export const uid = () => {
   try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* ignore */ }
@@ -106,8 +107,10 @@ export function fmtClock(sec) {
 /** ms -> "1h 5m" / "45m" / "30s" */
 export function fmtDur(ms) {
   const totalMin = Math.round((ms || 0) / 60000);
-  if (totalMin < 1) return Math.max(0, Math.round((ms || 0) / 1000)) + 's';
+  const de = getLang() === 'de';
+  if (totalMin < 1) return Math.max(0, Math.round((ms || 0) / 1000)) + (de ? ' s' : 's');
   const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  if (de) return h === 0 ? `${m} min` : m ? `${h} h ${m} min` : `${h} h`;
   if (h === 0) return `${m}m`;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
@@ -146,7 +149,9 @@ export function addDays(t, n) { const d = new Date(t); d.setDate(d.getDate() + n
 export function startOfMonth(t) { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); }
 export function addMonths(t, n) { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth() + n, 1).getTime(); }
 
-const dtf = (opts) => new Intl.DateTimeFormat(LOCALE, opts);
+// dates follow the app language (a German UI on an English phone still gets German dates)
+const DATE_LOCALE = getLang() === 'de' && !/^de\b/i.test(LOCALE) ? 'de-DE' : LOCALE;
+const dtf = (opts) => new Intl.DateTimeFormat(DATE_LOCALE, opts);
 const F = {
   dayMonth: dtf({ day: 'numeric', month: 'short' }),
   full: dtf({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
@@ -172,16 +177,22 @@ export const fmt = {
   weekdayNarrow: (t) => F.weekdayNarrow.format(t),
 };
 
-export function relDay(t, now = Date.now()) {
-  const days = Math.round((startOfDay(now) - startOfDay(t)) / DAY);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
-  if (days < 14) return '1 week ago';
-  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
-  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+export function relDay(at, now = Date.now()) {
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / DAY);
+  if (days <= 0) return tr('Today');
+  if (days === 1) return tr('Yesterday');
+  if (days < 7) return tr('{n} days ago', { n: days });
+  if (days < 14) return tr('1 week ago');
+  if (days < 60) return tr('{n} weeks ago', { n: Math.floor(days / 7) });
+  if (days < 365) return tr('{n} months ago', { n: Math.floor(days / 30) });
   const y = Math.floor(days / 365);
-  return y === 1 ? '1 year ago' : `${y} years ago`;
+  return y === 1 ? tr('1 year ago') : tr('{n} years ago', { n: y });
+}
+
+/** relDay for use mid-sentence ("last done 3 days ago" / "zuletzt vor 3 Tagen"). */
+export function relDayLower(at, now) {
+  const s = relDay(at, now);
+  return getLang() === 'de' ? s.replace(/^(Heute|Gestern)$/, (m) => m.toLowerCase()) : s.toLowerCase();
 }
 
 /** Date -> value for <input type="datetime-local"> in local time */
@@ -198,14 +209,15 @@ export function fromLocalInput(s) {
 
 export function workoutNameForTime(t) {
   const h = new Date(t).getHours();
-  if (h < 5) return 'Night Workout';
-  if (h < 12) return 'Morning Workout';
-  if (h < 17) return 'Afternoon Workout';
-  if (h < 22) return 'Evening Workout';
-  return 'Night Workout';
+  if (h < 5) return tr('Night Workout');
+  if (h < 12) return tr('Morning Workout');
+  if (h < 17) return tr('Afternoon Workout');
+  if (h < 22) return tr('Evening Workout');
+  return tr('Night Workout');
 }
 
-export function plural(n, one, many) { return `${fmtNum(n, 0)} ${n === 1 ? one : (many || one + 's')}`; }
+/** "3 sets" — both forms go through the dictionary ("set" → "Satz", "sets" → "Sätze"). */
+export function plural(n, one, many) { return `${fmtNum(n, 0)} ${n === 1 ? tr(one) : tr(many || one + "s")}`; }
 
 export const isStandalone = () => {
   try {

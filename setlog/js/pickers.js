@@ -1,4 +1,5 @@
 // Exercise picker and the create/edit exercise form.
+import { tr } from './i18n.js';
 import { html, useState, useMemo, useRef, useEffect } from './lib.js';
 import { Icon } from './icons.js';
 import {
@@ -8,6 +9,7 @@ import {
   BODY_PARTS, BODY_PART_LABEL, CATEGORIES, CATEGORY_LABEL,
 } from './seed.js';
 import { NavBar, openScreenModal, toast } from './ui.js';
+import { plural } from './util.js';
 
 const ALIASES = {
   db: 'dumbbell', bb: 'barbell', ohp: 'overhead press', rdl: 'romanian deadlift', bp: 'bench press',
@@ -50,13 +52,13 @@ function ExerciseRow({ ex, on, onClick, count }) {
     <div class="avatar">${on ? html`<${Icon} name="check" />` : ex.name.charAt(0).toUpperCase()}</div>
     <div class="cell-main">
       <div class="cell-title">${ex.name}</div>
-      <div class="cell-sub">${BODY_PART_LABEL[ex.bodyPart] || 'Other'}${count ? ` · ${count}×` : ''}</div>
+      <div class="cell-sub">${BODY_PART_LABEL[ex.bodyPart] || tr('Other')}${count ? ` · ${count}×` : ''}</div>
     </div>
   </button>`;
 }
 
 /** Full-screen exercise picker. Resolves to an array of ids (multi) or one id. */
-export function pickExercises({ multi = true, title = 'Add exercises' } = {}) {
+export function pickExercises({ multi = true, title = tr('Add exercises') } = {}) {
   return openScreenModal((close) => html`<${Picker} multi=${multi} title=${title} close=${close} />`);
 }
 
@@ -100,21 +102,21 @@ function Picker({ multi, title, close }) {
 
   return html`
     <${NavBar} title=${title} solid
-      left=${html`<button class="nav-btn" onClick=${() => close(undefined)}>Cancel</button>`}
-      right=${html`<button class="nav-btn" onClick=${create} aria-label="New exercise">New</button>`} />
+      left=${html`<button class="nav-btn" onClick=${() => close(undefined)}>${tr('Cancel')}</button>`}
+      right=${html`<button class="nav-btn" onClick=${create} aria-label=${tr('New exercise')}>${tr('New')}</button>`} />
     <div class="scroll"><div class="page">
       <div class="sticky-top">
         <label class="search"><${Icon} name="search" />
-          <input ref=${inputRef} type="search" id="picker-search" placeholder="Search exercises" value=${q}
+          <input ref=${inputRef} type="search" id="picker-search" placeholder=${tr('Search exercises')} value=${q}
             autocomplete="off" autocorrect="off" spellcheck=${false} onInput=${(e) => setQ(e.target.value)} />
-          ${q && html`<button onClick=${() => setQ('')} aria-label="Clear search"><${Icon} name="x" size=${16} /></button>`}
+          ${q && html`<button onClick=${() => setQ('')} aria-label=${tr('Clear search')}><${Icon} name="x" size=${16} /></button>`}
         </label>
         <div class="chips" style="margin-top:10px">
-          <button class=${'chip' + (part === 'all' ? ' on' : '')} onClick=${() => setPart('all')}>All</button>
+          <button class=${'chip' + (part === 'all' ? ' on' : '')} onClick=${() => setPart('all')}>${tr('All')}</button>
           ${BODY_PARTS.map((b) => html`<button class=${'chip' + (part === b.id ? ' on' : '')} onClick=${() => setPart(b.id)}>${b.label}</button>`)}
         </div>
       </div>
-      ${recent.length > 0 && html`<div class="letter-head">Recent</div>
+      ${recent.length > 0 && html`<div class="letter-head">${tr('Recent')}</div>
         <div class="group">${recent.map((ex) => html`<${ExerciseRow} key=${'r' + ex.id} ex=${ex} on=${sel.includes(ex.id)}
           count=${counts.get(ex.id)} onClick=${() => toggle(ex.id)} />`)}</div>`}
       ${groups.map((g) => html`<div key=${g.L}>
@@ -122,13 +124,13 @@ function Picker({ multi, title, close }) {
         <div class="group">${g.items.map((ex) => html`<${ExerciseRow} key=${ex.id} ex=${ex} on=${sel.includes(ex.id)}
           count=${counts.get(ex.id)} onClick=${() => toggle(ex.id)} />`)}</div>
       </div>`)}
-      ${!list.length && html`<div class="empty"><h3>No match for “${q}”</h3>
-        <p>Create it as your own exercise.</p>
-        <div style="margin-top:14px"><button class="btn btn-tinted" onClick=${create}><${Icon} name="plus" />Create “${q.trim() || 'new exercise'}”</button></div></div>`}
+      ${!list.length && html`<div class="empty"><h3>${tr('No match for “{q}”', { q })}</h3>
+        <p>${tr('Create it as your own exercise.')}</p>
+        <div style="margin-top:14px"><button class="btn btn-tinted" onClick=${create}><${Icon} name="plus" />${tr('Create “{name}”', { name: q.trim() || tr('new exercise') })}</button></div></div>`}
     </div></div>
     ${multi && html`<div class="bottom-bar">
       <button class="btn btn-primary btn-block btn-lg" id="picker-add" disabled=${!sel.length} onClick=${() => close(sel)}>
-        ${sel.length ? `Add ${sel.length} exercise${sel.length > 1 ? 's' : ''}` : 'Select exercises'}</button>
+        ${sel.length ? tr('Add {n}', { n: plural(sel.length, 'exercise') }) : tr('Select exercises')}</button>
     </div>`}`;
 }
 
@@ -146,9 +148,9 @@ function ExerciseForm({ ex, preset, close }) {
   useEffect(() => { if (!ex) setTimeout(() => ref.current?.focus(), 250); }, []);
   const save = () => {
     const n = name.trim();
-    if (!n) { toast('Give the exercise a name'); return; }
+    if (!n) { toast(tr('Give the exercise a name')); return; }
     const dupe = findExerciseByName(n);
-    if (dupe && dupe.id !== ex?.id) { toast(`“${dupe.name}” already exists`); return; }
+    if (dupe && dupe.id !== ex?.id) { toast(tr('“{name}” already exists', { name: dupe.name })); return; }
     if (ex) {
       updateExercise(ex.id, { name: n, category, bodyPart, notes });
       close(S.exercises.get(ex.id));
@@ -157,25 +159,25 @@ function ExerciseForm({ ex, preset, close }) {
     }
   };
   return html`
-    <${NavBar} title=${ex ? 'Edit exercise' : 'New exercise'} solid
-      left=${html`<button class="nav-btn" onClick=${() => close(undefined)}>Cancel</button>`}
-      right=${html`<button class="nav-btn strong" id="exercise-save" onClick=${save}>Save</button>`} />
+    <${NavBar} title=${ex ? tr('Edit exercise') : tr('New exercise')} solid
+      left=${html`<button class="nav-btn" onClick=${() => close(undefined)}>${tr('Cancel')}</button>`}
+      right=${html`<button class="nav-btn strong" id="exercise-save" onClick=${save}>${tr('Save')}</button>`} />
     <div class="scroll"><div class="page stack" style="padding-top:16px">
-      <div class="field"><label for="ex-name">Name</label>
-        <input ref=${ref} id="ex-name" class="input" value=${name} placeholder="e.g. Incline Row (Dumbbell)"
+      <div class="field"><label for="ex-name">${tr('Name')}</label>
+        <input ref=${ref} id="ex-name" class="input" value=${name} placeholder=${tr('e.g. Incline Row (Dumbbell)')}
           onInput=${(e) => setName(e.target.value)} autocomplete="off" /></div>
-      <div class="field"><label for="ex-cat">What you log</label>
+      <div class="field"><label for="ex-cat">${tr('What you log')}</label>
         <select id="ex-cat" class="select" value=${category} onChange=${(e) => setCategory(e.target.value)}>
           ${CATEGORIES.map((c) => html`<option value=${c.id}>${c.label}</option>`)}
         </select></div>
-      <div class="field"><label for="ex-part">Body part</label>
+      <div class="field"><label for="ex-part">${tr('Body part')}</label>
         <select id="ex-part" class="select" value=${bodyPart} onChange=${(e) => setBodyPart(e.target.value)}>
           ${BODY_PARTS.map((c) => html`<option value=${c.id}>${c.label}</option>`)}
         </select></div>
-      <div class="field"><label for="ex-notes">Notes</label>
-        <textarea id="ex-notes" class="textarea" value=${notes} placeholder="Setup, cues, seat height…"
+      <div class="field"><label for="ex-notes">${tr('Notes')}</label>
+        <textarea id="ex-notes" class="textarea" value=${notes} placeholder=${tr('Setup, cues, seat height…')}
           onInput=${(e) => setNotes(e.target.value)}></textarea></div>
-      <p class="footnote">${CATEGORY_HELP[category]}</p>
+      <p class="footnote">${tr(CATEGORY_HELP[category])}</p>
     </div></div>`;
 }
 

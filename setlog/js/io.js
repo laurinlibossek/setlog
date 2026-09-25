@@ -1,4 +1,5 @@
 // Import/export: Strong CSV import, Strong-style CSV export, JSON backup/restore.
+import { tr } from './i18n.js';
 import {
   S, snapshot, findExerciseByName, APP_VERSION, addExercise, copyTemplate,
 } from './store.js';
@@ -6,7 +7,7 @@ import { SEED_EXERCISES, CATEGORIES, BODY_PARTS } from './seed.js';
 import { setText, setLabels } from './format.js';
 import { usesWeight } from './calc.js';
 import {
-  uid, slug, parseNum, KG_PER_LB, KM_PER_MI, fmtDur, kgTo, kmTo, roundW,
+  uid, slug, parseNum, KG_PER_LB, KM_PER_MI, fmtDur, kgTo, kmTo, roundW, plural,
 } from './util.js';
 
 // ---------- CSV ----------
@@ -189,14 +190,14 @@ const HEADER_ALIASES = {
  */
 export function parseStrongCSV(text, opts = {}) {
   const rows = parseCSV(text);
-  if (rows.length < 2) throw new Error('The file is empty or not a CSV export.');
+  if (rows.length < 2) throw new Error(tr('The file is empty or not a CSV export.'));
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const col = {};
   for (const [key, names] of Object.entries(HEADER_ALIASES)) {
     col[key] = header.findIndex((h) => names.includes(h));
   }
   if (col.date < 0 || col.exercise < 0) {
-    throw new Error('This doesn\'t look like a Strong export — it needs "Date" and "Exercise Name" columns.');
+    throw new Error(tr('This doesn’t look like a Strong export — it needs “Date” and “Exercise Name” columns.'));
   }
   const get = (r, key) => (col[key] >= 0 ? (r[col[key]] ?? '').trim() : '');
   const parseDate = parseDateFactory(rows.slice(1, 200).map((r) => get(r, 'date')));
@@ -212,7 +213,7 @@ export function parseStrongCSV(text, opts = {}) {
     const exName = get(r, 'exercise');
     const startedAt = parseDate(dateStr);
     if (!startedAt || !exName) { skippedRows++; continue; }
-    const wName = get(r, 'workout') || 'Workout';
+    const wName = get(r, 'workout') || tr('Workout');
     const key = dateStr + '|' + wName;
     let g = groups.get(key);
     if (!g) {
@@ -363,7 +364,7 @@ export function exportCSV() {
   for (const w of asc) {
     const dur = fmtDur((w.endedAt || w.startedAt) - w.startedAt);
     for (const e of w.exercises) {
-      const name = S.exercises.get(e.exerciseId)?.name || 'Unknown exercise';
+      const name = S.exercises.get(e.exerciseId)?.name || tr('Unknown exercise');
       let n = 0;
       e.sets.forEach((s, i) => {
         let order;
@@ -396,11 +397,11 @@ export function backupJSON() {
 
 export function parseBackup(text) {
   let obj;
-  try { obj = JSON.parse(text); } catch (e) { throw new Error('This file isn\'t valid JSON.'); }
-  if (!obj || obj.app !== 'setlog' || !obj.data) throw new Error('This isn\'t a Setlog backup file.');
+  try { obj = JSON.parse(text); } catch (e) { throw new Error(tr('This file isn’t valid JSON.')); }
+  if (!obj || obj.app !== 'setlog' || !obj.data) throw new Error(tr('This isn’t a Setlog backup file.'));
   const d = obj.data;
   for (const k of ['exercises', 'workouts', 'templates', 'measurements']) {
-    if (d[k] !== undefined && !Array.isArray(d[k])) throw new Error(`The backup is damaged (${k}).`);
+    if (d[k] !== undefined && !Array.isArray(d[k])) throw new Error(tr('The backup is damaged ({part}).', { part: k }));
   }
   // keep the built-in library even if the backup predates it
   const exercises = d.exercises || [];
@@ -422,7 +423,7 @@ export function parseBackup(text) {
 /** Offer a file to the user: share sheet on iOS ("Save to Files"), download elsewhere. */
 export async function saveFile(filename, content, mime) {
   if (typeof window !== 'undefined' && window.SETLOG_PREVIEW) {
-    throw new Error('Saving files is blocked in this preview. Install the app from your own link to back up.');
+    throw new Error(tr('Saving files is blocked in this preview. Install the app from your own link to back up.'));
   }
   const blob = new Blob([content], { type: mime });
   let file = null;
@@ -528,7 +529,7 @@ export function templateShareLink(t) {
 }
 
 export function templateShareText(t) {
-  const lines = [`${t.name} (Setlog template)`];
+  const lines = [tr('{name} (Setlog template)', { name: t.name })];
   if (t.notes) lines.push(t.notes);
   for (const x of t.exercises) {
     const ex = S.exercises.get(x.exerciseId);
@@ -536,13 +537,13 @@ export function templateShareText(t) {
     const labels = setLabels(x.sets);
     const sets = x.sets.map((st, i) => {
       let v = '';
-      if (st.w === undefined && st.r && usesWeight(ex.category)) v = `${st.r} reps`;
+      if (st.w === undefined && st.r && usesWeight(ex.category)) v = `${st.r} ${tr(st.r === 1 ? 'rep' : 'reps')}`;
       else if (st.w || st.r || st.d || st.t) v = setText(st, ex.category);
       return v && labels[i] === 'W' ? `W ${v}` : v;
     }).filter(Boolean);
-    lines.push(`• ${ex.name}: ${x.sets.length} set${x.sets.length === 1 ? '' : 's'}${sets.length ? ` (${sets.join(', ')})` : ''}`);
+    lines.push(`• ${ex.name}: ${plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
   }
-  lines.push('', `Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.`, templateShareLink(t));
+  lines.push('', tr('Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.'), templateShareLink(t));
   return lines.join('\n');
 }
 

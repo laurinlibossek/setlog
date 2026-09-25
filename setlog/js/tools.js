@@ -1,4 +1,5 @@
 // Gym tools: plate calculator and 1RM calculator.
+import { tr } from './i18n.js';
 import { html, useState } from './lib.js';
 import { S } from './store.js';
 import { platesFor, est1RM, formulaLabel } from './calc.js';
@@ -25,9 +26,9 @@ export function openTools(initial = {}) {
 function Tools({ close, initial }) {
   const [tab, setTab] = useState(initial.tab || 'plates');
   return html`
-    <${NavBar} title="Tools" solid right=${html`<button class="nav-btn strong" onClick=${() => close()}>Done</button>`} />
+    <${NavBar} title=${tr('Tools')} solid right=${html`<button class="nav-btn strong" onClick=${() => close()}>${tr('Done')}</button>`} />
     <div class="scroll"><div class="page stack" style="padding-top:12px">
-      <${Seg} value=${tab} onChange=${setTab} options=${[{ value: 'plates', label: 'Plate calculator' }, { value: 'rm', label: '1RM calculator' }]} />
+      <${Seg} value=${tab} onChange=${setTab} options=${[{ value: 'plates', label: tr('Plate calculator') }, { value: 'rm', label: tr('1RM calculator') }]} />
       ${tab === 'plates' ? html`<${Plates} initial=${initial.weight} />` : html`<${OneRM} />`}
     </div></div>`;
 }
@@ -42,25 +43,25 @@ function Plates({ initial }) {
   const loaded = res ? bar + res.plates.reduce((a, p) => a + p * 2, 0) : null;
   const barOptions = u === 'lb' ? [45, 35, 33, 25, 15, 0] : [20, 15, 10, 7.5, 0];
   return html`<div class="stack">
-    <div class="field"><label for="plate-target">Target weight (${u})</label>
+    <div class="field"><label for="plate-target">${tr('Target weight ({unit})', { unit: u })}</label>
       <input id="plate-target" class="input tnum" inputmode="decimal" value=${val} placeholder=${u === 'lb' ? '225' : '100'}
         onInput=${(e) => setVal(e.target.value)} style="font-size:24px;font-weight:700;text-align:center" /></div>
-    <div class="field"><span class="label">Bar</span>
-      <${Seg} value=${bar} onChange=${setBar} options=${barOptions.map((b) => ({ value: b, label: b ? `${b}` : 'None' }))} /></div>
+    <div class="field"><span class="label">${tr('Bar')}</span>
+      <${Seg} value=${bar} onChange=${setBar} options=${barOptions.map((b) => ({ value: b, label: b ? `${b}` : tr('None') }))} /></div>
     ${res && target !== null && html`<div class="card">
-      ${target < bar ? html`<p class="center muted" style="margin:8px 0">That’s lighter than the bar.</p>` : html`
-        <div class="card-title center">Each side</div>
+      ${target < bar ? html`<p class="center muted" style="margin:8px 0">${tr('That’s lighter than the bar.')}</p>` : html`
+        <div class="card-title center">${tr('Each side')}</div>
         <div class="plate-bar" aria-hidden="true">
           <div class="shaft"></div><div class="collar"></div>
           ${res.plates.map((p, i) => { const v = plateVisual(p); return html`<div key=${i} class="plate" style=${`height:${v.h}px;width:${v.w}px;background:${v.color};color:${p === 5 ? '#333' : '#fff'}`}></div>`; })}
           <div class="sleeve"></div>
         </div>
-        <div class="plate-legend">${res.plates.length ? res.plates.map((p, i) => html`<span key=${i} class="plate-chip">${fmtNum(p, 2)}</span>`) : html`<span class="muted">Just the bar</span>`}</div>
+        <div class="plate-legend">${res.plates.length ? res.plates.map((p, i) => html`<span key=${i} class="plate-chip">${fmtNum(p, 2)}</span>`) : html`<span class="muted">${tr('Just the bar')}</span>`}</div>
         <p class="center small muted" style="margin:10px 0 0">
-          Loaded: <strong class="tnum" style="color:var(--ink)">${fmtNum(loaded, 2)} ${u}</strong>
-          ${res.remainder > 0 ? html` · ${fmtNum(res.remainder, 2)} ${u} can’t be loaded with your plates` : ''}</p>`}
+          ${tr('Loaded:')} <strong class="tnum" style="color:var(--ink)">${fmtNum(loaded, 2)} ${u}</strong>
+          ${res.remainder > 0 ? html` · ${tr('{w} can’t be loaded with your plates', { w: `${fmtNum(res.remainder, 2)} ${u}` })}` : ''}</p>`}
     </div>`}
-    <p class="footnote">Plates and bar weights can be changed in Settings → Plates.</p>
+    <p class="footnote">${tr('Plates and bar weights can be changed in Settings → Plates.')}</p>
   </div>`;
 }
 
@@ -75,17 +76,17 @@ function OneRM() {
   const repsAt = { 100: 1, 95: 2, 90: 4, 85: 6, 80: 8, 75: 10, 70: 12, 65: 15, 60: 18, 50: 25 };
   return html`<div class="stack">
     <div class="row">
-      <div class="field grow"><label for="rm-w">Weight (${u})</label>
+      <div class="field grow"><label for="rm-w">${tr('Weight ({unit})', { unit: u })}</label>
         <input id="rm-w" class="input tnum" inputmode="decimal" value=${wv} onInput=${(e) => setW(e.target.value)} /></div>
-      <div class="field grow"><label for="rm-r">Reps</label>
+      <div class="field grow"><label for="rm-r">${tr('Reps')}</label>
         <input id="rm-r" class="input tnum" inputmode="numeric" value=${rv} onInput=${(e) => setR(e.target.value)} /></div>
     </div>
     ${oneRm > 0 && html`<div class="card center">
-      <div class="muted small">Estimated 1RM</div>
+      <div class="muted small">${tr('Estimated 1RM')}</div>
       <div style="font-size:40px;font-weight:800;letter-spacing:-0.02em">${fmtNum(roundW(kgTo(oneRm, u), u), 1)} ${u}</div>
-      <div class="muted small">${formulaLabel(S.settings.formula)}${S.settings.formula === 'average' ? '' : ' formula'}</div>
+      <div class="muted small">${S.settings.formula === 'average' ? formulaLabel('average') : tr('{name} formula', { name: formulaLabel(S.settings.formula) })}</div>
     </div>
-    <div class="group"><table class="rm-table"><thead><tr><th>% of 1RM</th><th>≈ reps</th><th>Weight</th></tr></thead><tbody>
+    <div class="group"><table class="rm-table"><thead><tr><th>${tr('% of 1RM')}</th><th>${tr('≈ reps')}</th><th>${tr('Weight')}</th></tr></thead><tbody>
       ${pct.map((p) => html`<tr key=${p}><td>${p}%</td><td class="muted">${repsAt[p]}</td><td><strong>${fmtNum(roundW(kgTo(oneRm * p / 100, u), u), 1)} ${u}</strong></td></tr>`)}
     </tbody></table></div>`}
   </div>`;

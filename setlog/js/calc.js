@@ -1,4 +1,5 @@
 // Training math and derived statistics (history per exercise, PRs, records).
+import { tr } from './i18n.js';
 
 export const WEIGHT_CATS = new Set(['barbell', 'dumbbell', 'machine', 'weighted_bw', 'assisted_bw']);
 export const usesWeight = (cat) => WEIGHT_CATS.has(cat);
@@ -26,7 +27,7 @@ export const FORMULAS = [
   { id: 'oconner', label: 'O’Conner' },
   { id: 'wathen', label: 'Wathen' },
   { id: 'lander', label: 'Lander' },
-  { id: 'average', label: 'Average of all' },
+  { id: 'average', label: tr('Average of all') },
 ];
 export const formulaLabel = (id) => (FORMULAS.find((f) => f.id === id) || FORMULAS[0]).label;
 const ONE_RM = {
@@ -113,7 +114,7 @@ export function bestSet(sets, cat, formula) {
 
 // ---------- PR metrics ----------
 export const PR_LABEL = {
-  e1rm: 'Est. 1RM', weight: 'Weight', volume: 'Set volume', reps: 'Reps', distance: 'Distance', time: 'Time',
+  e1rm: tr('Est. 1RM'), weight: tr('Weight'), volume: tr('Set volume'), reps: tr('Reps'), distance: tr('Distance'), time: tr('Time'),
 };
 
 function metricsFor(s, cat, formula, at) {
@@ -285,28 +286,28 @@ export function exerciseSeries(sessions, cat, metric, formula) {
 export function chartMetricsFor(cat) {
   if (hasLoadRecords(cat)) {
     return [
-      { id: 'e1rm', label: 'Est. 1RM', kind: 'weight' },
-      { id: 'weight', label: 'Heaviest weight', kind: 'weight' },
-      { id: 'volume', label: 'Session volume', kind: 'weight' },
-      { id: 'setVolume', label: 'Best set volume', kind: 'weight' },
-      { id: 'totalReps', label: 'Total reps', kind: 'count' },
+      { id: 'e1rm', label: tr('Est. 1RM'), kind: 'weight' },
+      { id: 'weight', label: tr('Heaviest weight'), kind: 'weight' },
+      { id: 'volume', label: tr('Session volume'), kind: 'weight' },
+      { id: 'setVolume', label: tr('Best set volume'), kind: 'weight' },
+      { id: 'totalReps', label: tr('Total reps'), kind: 'count' },
     ];
   }
   if (cat === 'assisted_bw' || cat === 'reps') {
     return [
-      { id: 'reps', label: 'Most reps (set)', kind: 'count' },
-      { id: 'totalReps', label: 'Total reps', kind: 'count' },
-      ...(countsVolume(cat) ? [{ id: 'volume', label: 'Session volume', kind: 'weight' }] : []),
+      { id: 'reps', label: tr('Most reps (set)'), kind: 'count' },
+      { id: 'totalReps', label: tr('Total reps'), kind: 'count' },
+      ...(countsVolume(cat) ? [{ id: 'volume', label: tr('Session volume'), kind: 'weight' }] : []),
     ];
   }
   if (cat === 'cardio') {
     return [
-      { id: 'distance', label: 'Distance', kind: 'distance' },
-      { id: 'time', label: 'Time', kind: 'time' },
-      { id: 'pace', label: 'Pace', kind: 'pace' },
+      { id: 'distance', label: tr('Distance'), kind: 'distance' },
+      { id: 'time', label: tr('Time'), kind: 'time' },
+      { id: 'pace', label: tr('Pace'), kind: 'pace' },
     ];
   }
-  return [{ id: 'time', label: 'Total time', kind: 'time' }];
+  return [{ id: 'time', label: tr('Total time'), kind: 'time' }];
 }
 
 // ---------- plates & warm-ups ----------

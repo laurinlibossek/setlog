@@ -1,4 +1,5 @@
 // Display formatting that depends on the user's unit settings.
+import { tr } from './i18n.js';
 import { S } from './store.js';
 import {
   fmtNum, kgTo, kmTo, roundW, fmtClock, compact,
@@ -38,7 +39,7 @@ export function setText(s, cat, { short = false } = {}) {
     const txt = short ? `${wt} × ${s.r ?? '—'}` : `${wt} ${u} × ${s.r ?? '—'}`;
     return s.rpe ? `${txt} @${fmtNum(s.rpe, 1)}` : txt;
   }
-  if (cat === 'reps') return `${s.r ?? '—'} reps${s.rpe ? ` @${fmtNum(s.rpe, 1)}` : ''}`;
+  if (cat === 'reps') return `${s.r ?? '—'} ${tr(s.r === 1 ? 'rep' : 'reps')}${s.rpe ? ` @${fmtNum(s.rpe, 1)}` : ''}`;
   if (cat === 'cardio') {
     const parts = [];
     if (s.d) parts.push(dist(s.d));
@@ -70,7 +71,9 @@ export function metricAxis(kind, v) {
 function compactNum(v) { return Math.abs(v) >= 10000 ? compact(v) : fmtNum(v, Math.abs(v) < 10 ? 1 : 0); }
 
 export const SET_TYPE_LABEL = { warmup: 'W', drop: 'D', failure: 'F' };
-export const SET_TYPE_NAME = { normal: 'Normal', warmup: 'Warm-up', drop: 'Drop set', failure: 'Failure' };
+export const SET_TYPE_NAME = {
+  normal: tr('Normal'), warmup: tr('Warm-up'), drop: tr('Drop set'), failure: tr('Failure'),
+};
 
 /** Label per set: warm-ups W, drops D, failure F, numbered working sets otherwise. */
 export function setLabels(sets) {

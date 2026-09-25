@@ -1,4 +1,5 @@
 // UI infrastructure: navigation, modals (promise based), toasts, shared widgets.
+import { tr } from './i18n.js';
 import {
   html, useState, useEffect, useRef, useReducer, useLayoutEffect,
 } from './lib.js';
@@ -60,7 +61,7 @@ export const openDialog = (render) => openModal('dialog', { render });
 
 function ConfirmDialog({ props, close }) {
   const {
-    title, message, ok = 'OK', cancel = 'Cancel', destructive = false, extra = null,
+    title, message, ok = tr('OK'), cancel = tr('Cancel'), destructive = false, extra = null,
   } = props;
   return html`<div class="dialog" role="alertdialog" aria-modal="true" aria-label=${title}>
     ${title && html`<h3>${title}</h3>`}
@@ -88,8 +89,8 @@ function PromptDialog({ props, close }) {
           inputmode=${props.inputMode || 'text'} type=${props.type || 'text'} enterkeyhint="done" autocomplete="off"
           onInput=${(e) => setV(e.target.value)} />`}
     <div class="btns two">
-      <button type="button" class="btn" onClick=${() => close(undefined)}>Cancel</button>
-      <button type="submit" class="btn btn-primary">${props.ok || 'Save'}</button>
+      <button type="button" class="btn" onClick=${() => close(undefined)}>${tr('Cancel')}</button>
+      <button type="submit" class="btn btn-primary">${props.ok || tr('Save')}</button>
     </div>
   </form>`;
 }
@@ -102,7 +103,7 @@ function ActionSheet({ props, close }) {
       ${actions.filter(Boolean).map((a) => html`<button class=${'action' + (a.destructive ? ' destructive' : '') + (a.checked ? ' checked' : '')}
           onClick=${() => close(a.value)}>${a.icon && html`<${Icon} name=${a.icon} />`}${a.label}</button>`)}
     </div>
-    <div class="action-group"><button class="action cancel" onClick=${() => close(undefined)}>Cancel</button></div>
+    <div class="action-group"><button class="action cancel" onClick=${() => close(undefined)}>${tr('Cancel')}</button></div>
   </div>`;
 }
 
@@ -177,7 +178,7 @@ export function NavBar({
   return html`<header class=${'nav' + (solid ? ' solid' : '')}>
     <div class="nav-inner">
       <div class="nav-side">
-        ${back !== null && html`<button class="nav-btn" onClick=${onBack || pop} aria-label="Back">
+        ${back !== null && html`<button class="nav-btn" onClick=${onBack || pop} aria-label=${tr('Go back')}>
           <${Icon} name="chevronLeft" /><span>${back}</span></button>`}
         ${left}
       </div>

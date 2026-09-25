@@ -1,4 +1,5 @@
 // Entry point: app shell, tabs, service worker, wake lock, theme.
+import { tr } from './i18n.js';
 import { html, render } from './lib.js';
 import { Component as PComponent } from './vendor/preact.js';
 import { Icon } from './icons.js';
@@ -29,11 +30,11 @@ const SCREENS = {
   'measure-detail': MeasureDetailScreen,
 };
 const TAB_META = {
-  profile: { label: 'Profile', icon: 'user' },
-  history: { label: 'History', icon: 'history' },
-  workout: { label: 'Workout', icon: 'plusCircle' },
-  exercises: { label: 'Exercises', icon: 'dumbbell' },
-  measure: { label: 'Measure', icon: 'ruler' },
+  profile: { label: tr('Profile'), icon: 'user' },
+  history: { label: tr('History'), icon: 'history' },
+  workout: { label: tr('Workout'), icon: 'plusCircle' },
+  exercises: { label: tr('Exercises'), icon: 'dumbbell' },
+  measure: { label: tr('Measure'), icon: 'ruler' },
 };
 
 function TabStack({ tab }) {
@@ -50,7 +51,7 @@ function TabStack({ tab }) {
 
 function TabBar() {
   useStore('nav');
-  return html`<nav class="tabbar" aria-label="Main">${TABS.map((t) => html`<button key=${t} id=${'tab-' + t}
+  return html`<nav class="tabbar" aria-label=${tr('Main')}>${TABS.map((t) => html`<button key=${t} id=${'tab-' + t}
     class=${'tab' + (nav.tab === t ? ' on' : '')} aria-current=${nav.tab === t ? 'page' : undefined}
     onClick=${() => setTab(t)}><${Icon} name=${TAB_META[t].icon} />${TAB_META[t].label}</button>`)}</nav>`;
 }
@@ -59,7 +60,7 @@ function TabBar() {
 // workout must not re-render every tab. The mini bar offset is pure CSS (:has).
 function Shell() {
   useStore('ready', 'nav');
-  if (!S.ready) return html`<div class="boot"><div class="boot-mark">Setlog</div><div>Loading…</div></div>`;
+  if (!S.ready) return html`<div class="boot"><div class="boot-mark">Setlog</div><div>${tr('Loading…')}</div></div>`;
   return html`
     ${TABS.map((t) => html`<div key=${t} class="tab-panel" hidden=${nav.tab !== t}><${TabStack} tab=${t} /></div>`)}
     <${MiniBar} />
@@ -75,11 +76,11 @@ class ErrorBoundary extends PComponent {
   render() {
     if (!this.state.error) return this.props.children;
     return html`<div class="page stack" style="padding-top:calc(var(--safe-top) + 40px)">
-      <h1 class="large-title">Something went wrong</h1>
-      <p class="ink2">Your data is safe on this phone. Reload the app; if this keeps happening, save a backup first.</p>
+      <h1 class="large-title">${tr('Something went wrong')}</h1>
+      <p class="ink2">${tr('Your data is safe on this phone. Reload the app; if this keeps happening, save a backup first.')}</p>
       <pre class="small muted" style="white-space:pre-wrap;overflow-wrap:anywhere">${String(this.state.error?.message || this.state.error)}</pre>
-      <button class="btn btn-primary btn-block" onClick=${() => location.reload()}>Reload</button>
-      <button class="btn btn-block" onClick=${() => saveFile(`setlog-backup-${dateStamp()}.json`, backupJSON(), 'application/json')}>Save a backup</button>
+      <button class="btn btn-primary btn-block" onClick=${() => location.reload()}>${tr('Reload')}</button>
+      <button class="btn btn-block" onClick=${() => saveFile(`setlog-backup-${dateStamp()}.json`, backupJSON(), 'application/json')}>${tr('Save a backup')}</button>
     </div>`;
   }
 }
@@ -122,10 +123,10 @@ function registerSW() {
   navigator.serviceWorker.register('./sw.js').then((reg) => {
     const offer = () => {
       if (!reg.waiting || !navigator.serviceWorker.controller) return;
-      toast('A new version of Setlog is ready', {
+      toast(tr('A new version of Setlog is ready'), {
         ms: 60000,
         action: {
-          label: 'Update',
+          label: tr('Update'),
           fn: () => { flushActive(); userRequestedReload = true; reg.waiting?.postMessage('skipWaiting'); },
         },
       });
@@ -150,13 +151,13 @@ ui.toast = (m) => toast(m);
 ui.onSaveError = () => {
   if (Date.now() - lastSaveErrorToast < 15000) return;
   lastSaveErrorToast = Date.now();
-  toast('Couldn’t save to storage. Make a backup in Settings to be safe.');
+  toast(tr('Couldn’t save to storage. Make a backup in Settings to be safe.'));
 };
 ui.onRestDone = (late) => {
   if (document.visibilityState !== 'visible') return;
   if (late < 4000) {
     if (S.settings.sound) beep();
-    toast('Rest over — time for the next set');
+    toast(tr('Rest over — time for the next set'));
   }
 };
 
@@ -184,6 +185,6 @@ load().then(() => { applyTheme(); syncWakeLock(); checkSharedLink(); }).catch((e
   console.error(e);
   S.ready = true;
   emit('ready');
-  toast('Couldn’t load your data: ' + (e?.message || e));
+  toast(tr('Couldn’t load your data: {error}', { error: e?.message || e }));
 });
 

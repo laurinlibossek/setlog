@@ -1,6 +1,7 @@
 // Minimal SVG charts: a single-series line chart and a column chart.
 // One accent hue, hairline grid, 2px line, >=8px end dot with a surface ring,
 // crosshair + tooltip on touch/hover, sparse direct labels.
+import { tr } from './i18n.js';
 import { html, useState, useRef, useLayoutEffect } from './lib.js';
 import { fmt } from './util.js';
 
@@ -43,7 +44,7 @@ export function niceTicks(min, max, count = 4, { zero = false, time = false } = 
  * fmtAxis(v), fmtVal(v): number -> string
  */
 export function LineChart({
-  points, height = 200, fmtAxis = String, fmtVal = String, time = false, emptyText = 'No data yet', label,
+  points, height = 200, fmtAxis = String, fmtVal = String, time = false, emptyText = tr('No data yet'), label,
 }) {
   const [ref, width] = useWidth();
   const [sel, setSel] = useState(null);
@@ -81,7 +82,7 @@ export function LineChart({
   const tipLeft = sp ? Math.min(Math.max(sx(sp.x), 60), W - 60) : 0;
 
   return html`<div class="chart" ref=${ref}>
-    <svg width="100%" height=${H} viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${label || 'Chart'}
+    <svg width="100%" height=${H} viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${label || tr('Chart')}
       onPointerDown=${pick} onPointerMove=${(e) => { if (e.pointerType === 'mouse' || e.buttons) pick(e); }}
       onPointerLeave=${(e) => { if (e.pointerType === 'mouse') setSel(null); }}>
       ${ticks.map((t) => html`<g key=${'t' + t}>
@@ -130,13 +131,13 @@ export function BarChart({
   const sb = sel !== null ? bars[sel] : null;
   const lastI = bars.length - 1;
   return html`<div class="chart" ref=${ref}>
-    <svg width="100%" height=${H} viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${label || 'Chart'}
+    <svg width="100%" height=${H} viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${label || tr('Chart')}
       onPointerLeave=${(e) => { if (e.pointerType === 'mouse') setSel(null); }}>
       ${ticks.map((t) => html`<g key=${'t' + t}>
         <line class=${t === 0 ? 'baseline' : 'grid'} x1=${padL} x2=${W - padR} y1=${sy(t)} y2=${sy(t)} />
         <text x=${padL - 6} y=${sy(t) + 4} text-anchor="end">${t}</text></g>`)}
       ${goal && html`<g><line class="goal" x1=${padL} x2=${W - padR} y1=${sy(goal)} y2=${sy(goal)} />
-        <text class="goallabel" x=${W - padR} y=${sy(goal) - 5} text-anchor="end">Goal ${goal}</text></g>`}
+        <text class="goallabel" x=${W - padR} y=${sy(goal) - 5} text-anchor="end">${tr('Goal {n}', { n: goal })}</text></g>`}
       ${bars.map((b, i) => {
         const x = padL + band * i + (band - bw) / 2;
         const dim = highlightLast && i !== lastI;

@@ -1,4 +1,5 @@
 // History tab: workout list, calendar, workout detail, edit finished workouts.
+import { tr } from '../i18n.js';
 import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
@@ -27,18 +28,18 @@ export function WorkoutCard({ w, onClick }) {
     <div class="facts">
       <span><${Icon} name="clock" />${fmtDur((w.endedAt || w.startedAt) - w.startedAt)}</span>
       ${vol > 0 && html`<span><${Icon} name="weight" />${volume(vol)}</span>`}
-      ${prs > 0 && html`<span class="gold"><${Icon} name="trophy" />${prs} PR${prs > 1 ? 's' : ''}</span>`}
+      ${prs > 0 && html`<span class="gold"><${Icon} name="trophy" />${prs} ${prs > 1 ? tr('PRs') : tr('PR')}</span>`}
     </div>
     <div class="ex-lines">
-      <div class="h">Exercise</div><div class="h" style="text-align:right">Best set</div>
+      <div class="h">${tr('Exercise')}</div><div class="h" style="text-align:right">${tr('Best set')}</div>
       ${lines.map((e) => {
         const ex = S.exercises.get(e.exerciseId);
         const b = bestSet(e.sets, ex?.category, S.settings.formula);
-        return html`<div class="ellipsis" key=${e.id + 'n'}>${e.sets.length} × ${ex?.name || 'Unknown exercise'}</div>
+        return html`<div class="ellipsis" key=${e.id + 'n'}>${e.sets.length} × ${ex?.name || tr('Unknown exercise')}</div>
           <div class="v" key=${e.id + 'v'}>${b ? setText(b, ex?.category) : ''}</div>`;
       })}
     </div>
-    ${w.exercises.length > 6 && html`<div class="more">+ ${w.exercises.length - 6} more</div>`}
+    ${w.exercises.length > 6 && html`<div class="more">${tr('+ {n} more', { n: w.exercises.length - 6 })}</div>`}
   </button>`;
 }
 
@@ -48,13 +49,13 @@ export function HistoryTab() {
   const [limit, setLimit] = useState(30);
   const ws = S.workouts;
   const toggle = html`<button class="nav-btn" id="history-view" onClick=${() => setView(view === 'list' ? 'cal' : 'list')}
-    aria-label=${view === 'list' ? 'Show calendar' : 'Show list'}><${Icon} name=${view === 'list' ? 'calendar' : 'list'} /></button>`;
+    aria-label=${view === 'list' ? tr('Show calendar') : tr('Show list')}><${Icon} name=${view === 'list' ? 'calendar' : 'list'} /></button>`;
   if (!ws.length) {
-    return html`<${Screen} large="History">
-      <${Empty} icon="history" title="No workouts yet" text="Finished workouts land here with their best sets, records and totals. Coming from Strong? Import your history in Profile → Settings." />
+    return html`<${Screen} large=${tr('History')}>
+      <${Empty} icon="history" title=${tr('No workouts yet')} text=${tr('Finished workouts land here with their best sets, records and totals. Coming from Strong? Import your history in Profile → Settings.')} />
     <//>`;
   }
-  if (view === 'cal') return html`<${Screen} large="History" nav=${{ right: toggle }}><${Calendar} /><//>`;
+  if (view === 'cal') return html`<${Screen} large=${tr('History')} nav=${{ right: toggle }}><${Calendar} /><//>`;
   const groups = [];
   let cur = null;
   for (const w of ws.slice(0, limit)) {
@@ -63,12 +64,12 @@ export function HistoryTab() {
     cur.items.push(w);
   }
   const monthCount = (m) => ws.filter((w) => startOfMonth(w.startedAt) === m).length;
-  return html`<${Screen} large="History" nav=${{ right: toggle }}>
+  return html`<${Screen} large=${tr('History')} nav=${{ right: toggle }}>
     ${groups.map((g) => html`<div key=${g.m}>
       <div class="month-head"><h3>${fmt.monthYear(g.m)}</h3><span>${plural(monthCount(g.m), 'workout')}</span></div>
       ${g.items.map((w) => html`<${WorkoutCard} key=${w.id} w=${w} onClick=${() => push('workout-detail', { id: w.id })} />`)}
     </div>`)}
-    ${ws.length > limit && html`<button class="btn btn-tinted btn-block" onClick=${() => setLimit(limit + 40)}>Show older workouts</button>`}
+    ${ws.length > limit && html`<button class="btn btn-tinted btn-block" onClick=${() => setLimit(limit + 40)}>${tr('Show older workouts')}</button>`}
   <//>`;
 }
 
@@ -96,9 +97,9 @@ function Calendar() {
   return html`<div>
     <div class="cal">
       <div class="cal-head">
-        <button class="icon-btn" onClick=${() => { setMonth(addMonths(month, -1)); setSel(null); }} aria-label="Previous month"><${Icon} name="chevronLeft" /></button>
+        <button class="icon-btn" onClick=${() => { setMonth(addMonths(month, -1)); setSel(null); }} aria-label=${tr('Previous month')}><${Icon} name="chevronLeft" /></button>
         <strong>${fmt.monthYear(month)}</strong>
-        <button class="icon-btn" onClick=${() => { setMonth(addMonths(month, 1)); setSel(null); }} aria-label="Next month"><${Icon} name="chevronRight" /></button>
+        <button class="icon-btn" onClick=${() => { setMonth(addMonths(month, 1)); setSel(null); }} aria-label=${tr('Next month')}><${Icon} name="chevronRight" /></button>
       </div>
       <div class="cal-grid">
         ${days.slice(0, 7).map((d) => html`<div class="wd" key=${'w' + d}>${fmt.weekdayNarrow(d)}</div>`)}
@@ -109,14 +110,14 @@ function Calendar() {
         })}
       </div>
       <div class="cal-stats">
-        <div><div class="v tnum">${inMonth.length}</div><div class="k">Workouts</div></div>
-        <div><div class="v tnum">${activeDays}</div><div class="k">Days trained</div></div>
-        <div><div class="v tnum">${fmtDur(totalTime)}</div><div class="k">Time</div></div>
+        <div><div class="v tnum">${inMonth.length}</div><div class="k">${tr('Workouts')}</div></div>
+        <div><div class="v tnum">${activeDays}</div><div class="k">${tr('Days trained')}</div></div>
+        <div><div class="v tnum">${fmtDur(totalTime)}</div><div class="k">${tr('Time')}</div></div>
       </div>
     </div>
     ${sel && html`<div class="month-head"><h3>${fmt.full(sel)}</h3></div>
       ${selected.map((w) => html`<${WorkoutCard} key=${w.id} w=${w} onClick=${() => push('workout-detail', { id: w.id })} />`)}`}
-    ${!sel && inMonth.length > 0 && html`<p class="footnote center">Tap a highlighted day to see that workout.</p>`}
+    ${!sel && inMonth.length > 0 && html`<p class="footnote center">${tr('Tap a highlighted day to see that workout.')}</p>`}
   </div>`;
 }
 
@@ -128,10 +129,10 @@ export function workoutAsText(w) {
   if (w.notes) lines.push(w.notes);
   for (const e of w.exercises) {
     const ex = S.exercises.get(e.exerciseId);
-    lines.push('', ex?.name || 'Exercise');
+    lines.push('', ex?.name || tr('Exercise'));
     const labels = setLabels(e.sets);
     e.sets.forEach((s, i) => lines.push(`  ${labels[i].padEnd(2)} ${setText(s, ex?.category)}`));
-    if (e.notes) lines.push(`  “${e.notes}”`);
+    if (e.notes) lines.push(`  ${tr('“{name}”', { name: e.notes })}`);
   }
   return lines.join('\n');
 }
@@ -139,7 +140,7 @@ export function workoutAsText(w) {
 export function WorkoutDetailScreen({ id }) {
   useStore('workouts', 'exercises', 'settings');
   const w = getWorkout(id);
-  if (!w) return html`<${Screen} nav=${{ back: '' }}><${Empty} title="Workout not found" text="It may have been deleted." /><//>`;
+  if (!w) return html`<${Screen} nav=${{ back: '' }}><${Empty} title=${tr('Workout not found')} text=${tr('It may have been deleted.')} /><//>`;
   const st = stats();
   const prSets = st.prSets;
   const vol = workoutVolume(w, S.exercises);
@@ -149,11 +150,11 @@ export function WorkoutDetailScreen({ id }) {
     const c = await actionSheet({
       title: w.name,
       actions: [
-        { label: 'Edit workout', value: 'edit', icon: 'edit' },
-        { label: 'Do this workout again', value: 'again', icon: 'play' },
-        { label: 'Save as template', value: 'template', icon: 'copy' },
-        { label: 'Share as text', value: 'share', icon: 'share' },
-        { label: 'Delete workout', value: 'delete', destructive: true, icon: 'trash' },
+        { label: tr('Edit workout'), value: 'edit', icon: 'edit' },
+        { label: tr('Do this workout again'), value: 'again', icon: 'play' },
+        { label: tr('Save as template'), value: 'template', icon: 'copy' },
+        { label: tr('Share as text'), value: 'share', icon: 'share' },
+        { label: tr('Delete workout'), value: 'delete', destructive: true, icon: 'trash' },
       ],
     });
     if (c === 'edit') push('workout-edit', { id: w.id });
@@ -161,33 +162,33 @@ export function WorkoutDetailScreen({ id }) {
     if (c === 'template') push('template-edit', { fromWorkoutId: w.id });
     if (c === 'share') {
       const r = await shareText(workoutAsText(w), w.name);
-      if (r === 'copied') toast('Copied to clipboard');
-      if (r === 'failed') toast('Sharing isn’t available here');
+      if (r === 'copied') toast(tr('Copied to clipboard'));
+      if (r === 'failed') toast(tr('Sharing isn’t available here'));
     }
     if (c === 'delete') {
-      const ok = await confirmDialog({ title: 'Delete this workout?', message: 'Its sets and records will be removed from your history.', ok: 'Delete', destructive: true });
+      const ok = await confirmDialog({ title: tr('Delete this workout?'), message: tr('Its sets and records will be removed from your history.'), ok: tr('Delete'), destructive: true });
       if (ok) {
         const copy = JSON.parse(JSON.stringify(w));
         deleteWorkout(w.id);
         pop();
-        toast('Workout deleted', { action: { label: 'Undo', fn: () => saveWorkout(copy) } });
+        toast(tr('Workout deleted'), { action: { label: tr('Undo'), fn: () => saveWorkout(copy) } });
       }
     }
   };
-  return html`<${Screen} nav=${{ back: '', title: w.name, right: html`<button class="nav-btn" id="workout-menu" onClick=${menu} aria-label="Workout options"><${Icon} name="more" /></button>` }}>
+  return html`<${Screen} nav=${{ back: '', title: w.name, right: html`<button class="nav-btn" id="workout-menu" onClick=${menu} aria-label=${tr('Workout options')}><${Icon} name="more" /></button>` }}>
     <h1 class="large-title" style="font-size:28px;margin-bottom:4px">${w.name}</h1>
     <p class="subtitle" style="margin:0 0 12px">${fmt.full(w.startedAt)} · ${fmt.time(w.startedAt)}–${fmt.time(w.endedAt)}</p>
     <div class="facts-row">
-      <div class="fact"><div class="k">Duration</div><div class="v tnum">${fmtDur(w.endedAt - w.startedAt)}</div></div>
-      <div class="fact"><div class="k">Volume</div><div class="v tnum">${vol ? volume(vol) : '—'}</div></div>
-      <div class="fact"><div class="k">${prs.length ? 'Records' : 'Sets'}</div><div class="v tnum" style=${prs.length ? 'color:var(--gold)' : ''}>${prs.length || sets}</div></div>
+      <div class="fact"><div class="k">${tr('Duration')}</div><div class="v tnum">${fmtDur(w.endedAt - w.startedAt)}</div></div>
+      <div class="fact"><div class="k">${tr('Volume')}</div><div class="v tnum">${vol ? volume(vol) : '—'}</div></div>
+      <div class="fact"><div class="k">${prs.length ? tr('Records') : tr('Sets')}</div><div class="v tnum" style=${prs.length ? 'color:var(--gold)' : ''}>${prs.length || sets}</div></div>
     </div>
     ${w.notes && html`<div class="card ink2" style="margin-top:8px;white-space:pre-wrap">${w.notes}</div>`}
     ${w.exercises.map((e) => {
       const ex = S.exercises.get(e.exerciseId);
       const labels = setLabels(e.sets);
       return html`<div class="detail-ex" key=${e.id}>
-        <h4><button onClick=${() => push('exercise', { id: e.exerciseId })}>${ex?.name || 'Unknown exercise'}</button></h4>
+        <h4><button onClick=${() => push('exercise', { id: e.exerciseId })}>${ex?.name || tr('Unknown exercise')}</button></h4>
         ${e.notes && html`<div class="small muted" style="margin:-2px 0 6px">${e.notes}</div>`}
         ${e.sets.map((s, i) => {
           const flags = prSets.get(s.id);
@@ -202,7 +203,7 @@ export function WorkoutDetailScreen({ id }) {
       </div>`;
     })}
     <div class="stack" style="margin-top:18px">
-      <button class="btn btn-tinted btn-block" onClick=${() => beginWorkout({ fromWorkout: w })}><${Icon} name="play" />Do this workout again</button>
+      <button class="btn btn-tinted btn-block" onClick=${() => beginWorkout({ fromWorkout: w })}><${Icon} name="play" />${tr('Do this workout again')}</button>
     </div>
   <//>`;
 }
@@ -230,15 +231,15 @@ export function WorkoutEditScreen({ id }) {
       source: w.source,
     };
   });
-  if (!draft) return html`<${Screen} nav=${{ back: '' }}><${Empty} title="Workout not found" /><//>`;
+  if (!draft) return html`<${Screen} nav=${{ back: '' }}><${Empty} title=${tr('Workout not found')} /><//>`;
   const onChange = () => { dirty.current = true; force(); };
   const save = () => {
     const exercises = draftEntries(draft, S.settings, S.exercises, {});
-    if (!exercises.length) { toast('Keep at least one complete set'); return; }
+    if (!exercises.length) { toast(tr('Keep at least one complete set')); return; }
     const mins = Math.max(1, Math.round(parseFloat(String(draft.durationMin).replace(',', '.')) || 1));
     saveWorkout({
       id: draft.id,
-      name: draft.name.trim() || 'Workout',
+      name: draft.name.trim() || tr('Workout'),
       notes: draft.notes.trim(),
       startedAt: draft.startedAt,
       endedAt: draft.startedAt + mins * 60000,
@@ -246,37 +247,37 @@ export function WorkoutEditScreen({ id }) {
       exercises,
       ...(draft.source ? { source: draft.source } : {}),
     });
-    toast('Workout saved');
+    toast(tr('Workout saved'));
     pop();
   };
   const cancel = async () => {
     if (dirty.current) {
-      const ok = await confirmDialog({ title: 'Discard changes?', ok: 'Discard', cancel: 'Keep editing', destructive: true });
+      const ok = await confirmDialog({ title: tr('Discard changes?'), ok: tr('Discard'), cancel: tr('Keep editing'), destructive: true });
       if (!ok) return;
     }
     pop();
   };
   const header = html`<div class="stack" style="gap:10px;margin-top:8px">
-    <input class="wo-name" value=${draft.name} aria-label="Workout name" onInput=${(e) => { draft.name = e.target.value; dirty.current = true; }} />
+    <input class="wo-name" value=${draft.name} aria-label=${tr('Workout name')} onInput=${(e) => { draft.name = e.target.value; dirty.current = true; }} />
     <div class="row">
-      <div class="field grow"><label for="edit-start">Started</label>
+      <div class="field grow"><label for="edit-start">${tr('Started')}</label>
         <input id="edit-start" class="input" type="datetime-local" value=${toLocalInput(draft.startedAt)}
           onChange=${(e) => { const t = fromLocalInput(e.target.value); if (t) { draft.startedAt = t; onChange(); } }} /></div>
-      <div class="field" style="width:110px"><label for="edit-dur">Minutes</label>
+      <div class="field" style="width:110px"><label for="edit-dur">${tr('Minutes')}</label>
         <input id="edit-dur" class="input tnum" inputmode="numeric" value=${draft.durationMin}
           onInput=${(e) => { draft.durationMin = e.target.value; dirty.current = true; }} /></div>
     </div>
-    <textarea class="textarea" placeholder="Workout note" value=${draft.notes} style="min-height:48px"
+    <textarea class="textarea" placeholder=${tr('Workout note')} value=${draft.notes} style="min-height:48px"
       onInput=${(e) => { draft.notes = e.target.value; dirty.current = true; }}></textarea>
   </div>`;
   return html`<${Screen} nav=${{
-    title: 'Edit workout',
-    left: html`<button class="nav-btn" onClick=${cancel}>Cancel</button>`,
-    right: html`<button class="nav-btn strong" id="edit-save" onClick=${save}>Save</button>`,
+    title: tr('Edit workout'),
+    left: html`<button class="nav-btn" onClick=${cancel}>${tr('Cancel')}</button>`,
+    right: html`<button class="nav-btn strong" id="edit-save" onClick=${save}>${tr('Save')}</button>`,
   }}>
     <${WorkoutEditor} draft=${draft} mode="edit" onChange=${onChange} header=${header}
       before=${draft.startedAt} excludeWorkoutId=${draft.id} />
-    <p class="footnote">Sets without reps (or time) are dropped when you save.</p>
+    <p class="footnote">${tr('Sets without reps (or time) are dropped when you save.')}</p>
   <//>`;
 }
 

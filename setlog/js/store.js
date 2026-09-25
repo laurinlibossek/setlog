@@ -1,5 +1,6 @@
 // App state, persistence and all data actions. UI components subscribe to
 // "topics" so a keystroke in the active workout doesn't re-render History.
+import { tr } from './i18n.js';
 import * as db from './db.js';
 import { useEffect, useReducer } from './lib.js';
 import { SEED_EXERCISES, SEED_VERSION } from './seed.js';
@@ -14,7 +15,7 @@ import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
 } from './drafts.js';
 
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '1.4.0';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS = {
   keepAwake: true,
   showExamples: true,
   askTemplateUpdate: true,
+  language: 'auto', // 'auto' | 'en' | 'de'; mirrored to localStorage by i18n.js
   templateSort: 'name',
   formula: 'epley',
   dumbbellTwice: false,
@@ -286,7 +288,7 @@ export function exerciseList() {
   }
   return exListCache;
 }
-export const exName = (id) => S.exercises.get(id)?.name || 'Unknown exercise';
+export const exName = (id) => S.exercises.get(id)?.name || tr('Unknown exercise');
 
 export function findExerciseByName(name) {
   const n = String(name).trim().toLowerCase().replace(/\s+/g, ' ');

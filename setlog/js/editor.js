@@ -2,6 +2,7 @@
 // Used for the running workout (mode "active"), editing a finished workout
 // ("edit") and templates ("template"). Drafts are mutated in place and the
 // owner re-renders through onChange().
+import { tr } from './i18n.js';
 import { html, useState, useRef } from './lib.js';
 import { Icon } from './icons.js';
 import {
@@ -15,7 +16,7 @@ import {
   setText, setLabels, SET_TYPE_NAME, wUnit, dUnit, volume as fmtVolume, w as fmtW,
 } from './format.js';
 import {
-  uid, fmtDigits, fmtClock, parseNum, fmtNum,
+  uid, fmtDigits, fmtClock, parseNum, fmtNum, plural,
 } from './util.js';
 import {
   actionSheet, promptDialog, toast, openScreenModal, openDialog, NavBar, useForce, push, closeSheet,
@@ -106,10 +107,10 @@ export function WorkoutEditor({
       ssColor=${entry.supersetId ? SS_COLORS[ssIndex.get(entry.supersetId) % SS_COLORS.length] : null}
       ssLetter=${entry.supersetId ? String.fromCharCode(65 + ssIndex.get(entry.supersetId)) : null} />`)}
     ${!draft.exercises.length && html`<div class="empty" style="padding:28px 12px 8px">
-      <h3>${mode === 'template' ? 'Build your template' : 'No exercises yet'}</h3>
-      <p>${mode === 'template' ? 'Add the exercises and sets you want to repeat.' : 'Add the exercises you’re about to do. Your numbers from last time show up next to every set.'}</p></div>`}
+      <h3>${mode === 'template' ? tr('Build your template') : tr('No exercises yet')}</h3>
+      <p>${mode === 'template' ? tr('Add the exercises and sets you want to repeat.') : tr('Add the exercises you’re about to do. Your numbers from last time show up next to every set.')}</p></div>`}
     <div class="stack" style="margin-top:16px">
-      <button class="btn btn-tinted btn-block btn-lg" id="add-exercises" onClick=${addExercises}><${Icon} name="plus" />Add exercises</button>
+      <button class="btn btn-tinted btn-block btn-lg" id="add-exercises" onClick=${addExercises}><${Icon} name="plus" />${tr('Add exercises')}</button>
       ${footer}
     </div>
   </div>`;
@@ -141,7 +142,7 @@ function ExerciseBlock({
     if (i < 0) return;
     entry.sets.splice(i, 1);
     onChange();
-    toast('Set deleted', { action: { label: 'Undo', fn: () => { entry.sets.splice(i, 0, set); onChange(); } } });
+    toast(tr('Set deleted'), { action: { label: tr('Undo'), fn: () => { entry.sets.splice(i, 0, set); onChange(); } } });
   };
 
   const toggleDone = (set, i) => {
@@ -155,7 +156,7 @@ function ExerciseBlock({
       setTimeout(() => setShakeId(null), 400);
       const msg = usesWeight(cat) ? (c.r > 0 ? 'Enter the weight first' : 'Enter reps first')
         : cat === 'reps' ? 'Enter reps first' : cat === 'cardio' ? 'Enter distance or time first' : 'Enter a time first';
-      toast(msg);
+      toast(tr(msg));
       onChange();
       return;
     }
@@ -171,21 +172,21 @@ function ExerciseBlock({
 
   const setMenu = async (set, i) => {
     const choice = await actionSheet({
-      title: `Set ${labels[i]}`,
+      title: tr('Set {label}', { label: labels[i] }),
       actions: [
         ...['normal', 'warmup', 'drop', 'failure'].map((t) => ({ label: SET_TYPE_NAME[t], value: t, checked: set.type === t })),
-        usesWeight(cat) || cat === 'reps' ? { label: set.rpe ? `RPE (${set.rpe})` : 'Add RPE', value: 'rpe' } : null,
-        { label: 'Delete set', value: 'delete', destructive: true },
+        usesWeight(cat) || cat === 'reps' ? { label: set.rpe ? `RPE (${set.rpe})` : tr('Add RPE'), value: 'rpe' } : null,
+        { label: tr('Delete set'), value: 'delete', destructive: true },
       ],
     });
     if (!choice) return;
     if (choice === 'delete') { removeSet(set); return; }
     if (choice === 'rpe') {
       const v = await actionSheet({
-        title: 'Rate of perceived exertion',
-        message: '10 = nothing left, 8 = two reps left',
+        title: tr('Rate of perceived exertion'),
+        message: tr('10 = nothing left, 8 = two reps left'),
         actions: [...[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((n) => ({ label: fmtNum(n, 1), value: String(n), checked: parseNum(set.rpe) === n })),
-          set.rpe ? { label: 'Clear RPE', value: 'clear', destructive: true } : null],
+          set.rpe ? { label: tr('Clear RPE'), value: 'clear', destructive: true } : null],
       });
       if (!v) return;
       set.rpe = v === 'clear' ? '' : v;
@@ -211,27 +212,27 @@ function ExerciseBlock({
     const choice = await actionSheet({
       title: ex.name,
       actions: [
-        { label: entry.showNotes ? 'Remove note' : 'Add note', value: 'note', icon: 'note' },
-        { label: ex.pinnedNote ? 'Edit pinned note' : 'Pin a note to this exercise', value: 'pin', icon: 'pin' },
-        { label: 'Replace exercise', value: 'replace', icon: 'swap' },
-        others.length ? { label: inSuperset ? 'Change superset' : 'Superset with…', value: 'superset', icon: 'link' } : null,
-        inSuperset ? { label: 'Remove from superset', value: 'unsuperset', icon: 'unlink' } : null,
-        { label: `Rest timer: ${rest ? fmtClock(rest) : 'off'}`, value: 'rest', icon: 'timer' },
-        usesWeight(cat) && cat !== 'assisted_bw' ? { label: 'Add warm-up sets', value: 'warmup', icon: 'flame' } : null,
-        isBarbell ? { label: 'Plate calculator', value: 'plates', icon: 'plate' } : null,
-        draft.exercises.length > 1 ? { label: 'Reorder exercises', value: 'reorder', icon: 'reorder' } : null,
-        { label: 'History & records', value: 'info', icon: 'history' },
-        { label: 'Remove exercise', value: 'remove', destructive: true, icon: 'trash' },
+        { label: entry.showNotes ? tr('Remove note') : tr('Add note'), value: 'note', icon: 'note' },
+        { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note to this exercise'), value: 'pin', icon: 'pin' },
+        { label: tr('Replace exercise'), value: 'replace', icon: 'swap' },
+        others.length ? { label: inSuperset ? tr('Change superset') : tr('Superset with…'), value: 'superset', icon: 'link' } : null,
+        inSuperset ? { label: tr('Remove from superset'), value: 'unsuperset', icon: 'unlink' } : null,
+        { label: tr('Rest timer: {time}', { time: rest ? fmtClock(rest) : tr('off') }), value: 'rest', icon: 'timer' },
+        usesWeight(cat) && cat !== 'assisted_bw' ? { label: tr('Add warm-up sets'), value: 'warmup', icon: 'flame' } : null,
+        isBarbell ? { label: tr('Plate calculator'), value: 'plates', icon: 'plate' } : null,
+        draft.exercises.length > 1 ? { label: tr('Reorder exercises'), value: 'reorder', icon: 'reorder' } : null,
+        { label: tr('History & records'), value: 'info', icon: 'history' },
+        { label: tr('Remove exercise'), value: 'remove', destructive: true, icon: 'trash' },
       ],
     });
     if (!choice) return;
     if (choice === 'note') { entry.showNotes = !entry.showNotes; if (!entry.showNotes) entry.notes = ''; onChange(); }
     if (choice === 'pin') {
-      const v = await promptDialog({ title: 'Pinned note', message: 'Shown every time you do this exercise.', value: ex.pinnedNote || '', placeholder: 'Seat height 4, grip on the rings…', multiline: true });
+      const v = await promptDialog({ title: tr('Pinned note'), message: tr('Shown every time you do this exercise.'), value: ex.pinnedNote || '', placeholder: tr('Seat height 4, grip on the rings…'), multiline: true });
       if (v !== null) { updateExercise(ex.id, { pinnedNote: v.trim() }); onChange(); }
     }
     if (choice === 'replace') {
-      const id = await pickExercises({ multi: false, title: 'Replace exercise' });
+      const id = await pickExercises({ multi: false, title: tr('Replace exercise') });
       if (!id) return;
       const nex = S.exercises.get(id);
       const sameKind = nex && fieldsFor(nex.category).join() === fields.join();
@@ -242,8 +243,8 @@ function ExerciseBlock({
     }
     if (choice === 'superset') {
       const target = await actionSheet({
-        title: 'Superset with',
-        actions: others.map((o) => ({ label: S.exercises.get(o.exerciseId)?.name || 'Exercise', value: o.id })),
+        title: tr('Superset with'),
+        actions: others.map((o) => ({ label: S.exercises.get(o.exerciseId)?.name || tr('Exercise'), value: o.id })),
       });
       if (!target) return;
       const other = draft.exercises.find((e) => e.id === target);
@@ -269,9 +270,9 @@ function ExerciseBlock({
     }
     if (choice === 'rest') {
       const v = await actionSheet({
-        title: `Rest timer · ${ex.name}`,
-        message: 'Starts when you check off a set. Saved for this exercise.',
-        actions: REST_CHOICES.map((sec) => ({ label: sec ? fmtClock(sec) : 'Off', value: String(sec), checked: rest === sec })),
+        title: `${tr('Rest timer')} · ${ex.name}`,
+        message: tr('Starts when you check off a set. Saved for this exercise.'),
+        actions: REST_CHOICES.map((sec) => ({ label: sec ? fmtClock(sec) : tr('Off'), value: String(sec), checked: rest === sec })),
       });
       if (v === undefined) return;
       entry.restSec = +v;
@@ -294,25 +295,25 @@ function ExerciseBlock({
       const i = draft.exercises.indexOf(entry);
       draft.exercises.splice(i, 1);
       onChange();
-      toast(`${ex.name} removed`, { action: { label: 'Undo', fn: () => { draft.exercises.splice(i, 0, entry); onChange(); } } });
+      toast(tr('{name} removed', { name: ex.name }), { action: { label: tr('Undo'), fn: () => { draft.exercises.splice(i, 0, entry); onChange(); } } });
     }
   };
 
   const addWarmups = () => {
     const firstWorkIdx = entry.sets.findIndex((s) => s.type !== 'warmup');
     const src = firstWorkIdx >= 0 ? (parseNum(entry.sets[firstWorkIdx].w) ?? parseNum(rows[firstWorkIdx].ph.w)) : null;
-    if (!src) { toast('Enter the weight of your first working set first'); return; }
+    if (!src) { toast(tr('Enter the weight of your first working set first')); return; }
     const st = S.settings;
     const kg = st.unit === 'lb' ? src * 0.45359237 : src;
     const ws = warmupSets(kg, st.bar * (st.unit === 'lb' ? 0.45359237 : 1),
       st.plates.map((p) => (st.unit === 'lb' ? p * 0.45359237 : p)), cat === 'barbell', st.warmup);
-    if (!ws.length) { toast('That weight is too light for warm-up sets'); return; }
+    if (!ws.length) { toast(tr('That weight is too light for warm-up sets')); return; }
     const existing = entry.sets.filter((s) => s.type === 'warmup' && !s.done);
     entry.sets = entry.sets.filter((s) => !existing.includes(s));
     const newSets = ws.map((x) => newSetDraft('warmup', { w: weightToInput(x.w, st), r: String(x.r) }));
     entry.sets.unshift(...newSets);
     onChange();
-    toast(`${ws.length} warm-up sets added`);
+    toast(tr('{n} warm-up sets added', { n: ws.length }));
   };
 
   const focusOpts = focusOptions(cat);
@@ -326,7 +327,7 @@ function ExerciseBlock({
   };
 
   const wLabel = (cat === 'assisted_bw' ? '−' : cat === 'weighted_bw' ? '+' : '') + wUnit().toUpperCase();
-  const headers = usesWeight(cat) ? [wLabel, 'Reps'] : cat === 'reps' ? ['Reps'] : cat === 'cardio' ? [dUnit().toUpperCase(), 'Time'] : ['Time'];
+  const headers = usesWeight(cat) ? [wLabel, tr('Reps')] : cat === 'reps' ? [tr('Reps')] : cat === 'cardio' ? [dUnit().toUpperCase(), tr('Time')] : [tr('Time')];
   const gridCls = 'set-grid' + (one ? ' one' : '') + (showCheck ? '' : ' no-check');
   const doneCount = entry.sets.filter((s) => s.done).length;
 
@@ -335,27 +336,27 @@ function ExerciseBlock({
       <button class="ex-title" onClick=${menu}>${ex.name}</button>
       ${showCheck && entry.sets.length > 0 && html`<span class="muted small tnum" style="margin-right:2px">${doneCount}/${entry.sets.length}</span>`}
       ${focusOpts.length > 0 && html`<button class=${'focus-btn' + (focus ? ' on' : '')} onClick=${pickFocus}
-        aria-label=${focus ? `${FOCUS_LABEL[focus]}: ${fmtFocus(focus, focusVals)}` : `Focus metric for ${ex.name}`}>
+        aria-label=${focus ? `${FOCUS_LABEL[focus]}: ${fmtFocus(focus, focusVals)}` : tr('Focus metric for {name}', { name: ex.name })}>
         <${Icon} name="trend" />${focus && html`<span class="tnum">${fmtFocus(focus, focusVals)}</span>`}</button>`}
-      <button class="icon-btn accent" onClick=${menu} aria-label=${`Options for ${ex.name}`}><${Icon} name="more" /></button>
+      <button class="icon-btn accent" onClick=${menu} aria-label=${tr('Options for {name}', { name: ex.name })}><${Icon} name="more" /></button>
     </div>
     ${(ssLetter || (rest && showCheck)) && html`<div class="ex-tags">
-      ${ssLetter && html`<span class="tag ss" style=${`color:${ssColor};background:color-mix(in srgb, ${ssColor} 14%, transparent)`}><${Icon} name="link" />Superset ${ssLetter}</span>`}
+      ${ssLetter && html`<span class="tag ss" style=${`color:${ssColor};background:color-mix(in srgb, ${ssColor} 14%, transparent)`}><${Icon} name="link" />${tr('Superset {letter}', { letter: ssLetter })}</span>`}
       ${showCheck && rest > 0 && html`<span class="tag"><${Icon} name="timer" />${fmtClock(rest)}</span>`}
     </div>`}
     ${ex.pinnedNote && html`<div class="pinned"><${Icon} name="pin" /><span>${ex.pinnedNote}</span></div>`}
-    ${entry.showNotes && html`<div class="ex-note"><textarea class="textarea" rows="2" placeholder="Note for this exercise"
+    ${entry.showNotes && html`<div class="ex-note"><textarea class="textarea" rows="2" placeholder=${tr('Note for this exercise')}
       value=${entry.notes} onInput=${(e) => { entry.notes = e.target.value; onChange(); }}></textarea></div>`}
     <div class="set-table" role="table">
       <div class=${gridCls + ' set-hdr'} role="row">
-        <div>Set</div><div>Previous</div>${headers.map((h) => html`<div key=${h}>${h}</div>`)}${showCheck && html`<div></div>`}
+        <div>${tr('Set')}</div><div>${tr('Previous')}</div>${headers.map((h) => html`<div key=${h}>${h}</div>`)}${showCheck && html`<div></div>`}
       </div>
       ${entry.sets.map((set, i) => html`<${SetRow} key=${set.id} set=${set} i=${i} label=${labels[i]} cat=${cat} fields=${fields}
         gridCls=${gridCls} showCheck=${showCheck} row=${rows[i]} shake=${shakeId === set.id} bests=${bests}
         onInput=${onChange} onToggle=${() => toggleDone(set, i)} onMenu=${() => setMenu(set, i)}
         onPrev=${() => copyPrev(set, i)} onDelete=${() => removeSet(set)} />`)}
     </div>
-    <button class="btn btn-sm btn-block add-set" onClick=${addSet}><${Icon} name="plus" />Add set</button>
+    <button class="btn btn-sm btn-block add-set" onClick=${addSet}><${Icon} name="plus" />${tr('Add set')}</button>
   </section>`;
 }
 
@@ -364,7 +365,7 @@ function ExerciseBlock({
 // It's worked out from the sets as they stand (typed values, else the grey
 // placeholders) and compared with the previous session.
 const FOCUS_LABEL = {
-  volume: 'Total volume', volumeChange: 'Volume increase', reps: 'Total reps', weightPerRep: 'Weight/rep', repsChange: 'Reps increase',
+  volume: tr('Total volume'), volumeChange: tr('Volume increase'), reps: tr('Total reps'), weightPerRep: tr('Weight/rep'), repsChange: tr('Reps increase'),
 };
 function focusOptions(cat) {
   if (usesWeight(cat) && countsVolume(cat)) return ['volume', 'volumeChange', 'reps', 'weightPerRep'];
@@ -394,17 +395,17 @@ function fmtFocus(key, v) {
   const x = v[key];
   if (x === null || x === undefined) return '—';
   if (key === 'volume') return fmtVolume(x);
-  if (key === 'reps') return `${fmtNum(x, 0)} rep${x === 1 ? '' : 's'}`;
+  if (key === 'reps') return plural(x, 'rep');
   if (key === 'weightPerRep') return `${fmtW(x, 1)} ${wUnit()}`;
   const pct = Math.round(x * 100);
   return `${pct > 0 ? '+' : pct < 0 ? '−' : '±'}${Math.abs(pct)}%`;
 }
 function FocusDialog({ close, options, values, current }) {
   const [help, setHelp] = useState(false);
-  return html`<div class="dialog focus-dialog" role="dialog" aria-label="Set a focus metric">
-    <div class="focus-head"><h3>Set a focus metric</h3>
-      <button class="icon-btn" aria-label="What is this?" onClick=${() => setHelp(!help)}><span class="q">?</span></button></div>
-    ${help && html`<p class="small">The number you want to push for this exercise. It shows next to the name and updates as you log; increases compare with last time. Tap it again to turn it off.</p>`}
+  return html`<div class="dialog focus-dialog" role="dialog" aria-label=${tr('Set a focus metric')}>
+    <div class="focus-head"><h3>${tr('Set a focus metric')}</h3>
+      <button class="icon-btn" aria-label=${tr('What is this?')} onClick=${() => setHelp(!help)}><span class="q">?</span></button></div>
+    ${help && html`<p class="small">${tr('The number you want to push for this exercise. It shows next to the name and updates as you log; increases compare with last time. Tap it again to turn it off.')}</p>`}
     <div class="focus-list">${options.map((k) => html`<button class=${'focus-row' + (current === k ? ' on' : '')} key=${k}
       onClick=${() => close(current === k ? '' : k)}><span class="grow">${FOCUS_LABEL[k]}</span>
       <span class="tnum">${fmtFocus(k, values)}</span>${current === k && html`<${Icon} name="check" />`}</button>`)}</div>
@@ -450,27 +451,27 @@ function SetRow({
   const ph = row.ph;
   const inputFor = (f) => {
     if (f === 't') {
-      return html`<input class="set-input" inputmode="numeric" aria-label="Time" placeholder=${fmtDigits(ph.t) || '0:00'}
+      return html`<input class="set-input" inputmode="numeric" aria-label=${tr('Time')} placeholder=${fmtDigits(ph.t) || '0:00'}
         value=${fmtDigits(set.t)} onFocus=${selectAll}
         onInput=${(e) => { set.t = e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 6); e.target.value = fmtDigits(set.t); onInput(); }} />`;
     }
     const mode = f === 'r' ? 'numeric' : 'decimal';
-    const aria = f === 'w' ? 'Weight' : f === 'r' ? 'Reps' : 'Distance';
+    const aria = tr(f === 'w' ? 'Weight' : f === 'r' ? 'Reps' : 'Distance');
     return html`<input class="set-input" inputmode=${mode} aria-label=${aria} placeholder=${ph[f] || ''} value=${set[f]}
       onFocus=${selectAll} autocomplete="off"
       onInput=${(e) => { set[f] = e.target.value.replace(/[^\d.,]/g, '').slice(0, 7); if (e.target.value !== set[f]) e.target.value = set[f]; onInput(); }} />`;
   };
   const sub = pr ? html`<small style="color:var(--gold)">PR</small>` : set.rpe ? html`<small>@${set.rpe}</small>` : null;
   return html`<div class="set-row-wrap">
-    ${dx < 0 && html`<div class="set-row-del">Delete</div>`}
+    ${dx < 0 && html`<div class="set-row-del">${tr('Delete')}</div>`}
     <div class=${gridCls + ' set-row' + (set.done ? ' done' : '') + (shake ? ' shake' : '')} role="row"
       style=${dx ? `transform:translateX(${dx}px)` : (t.current ? '' : 'transition:transform .2s, background .18s')}
       onTouchStart=${onTouchStart} onTouchMove=${onTouchMove} onTouchEnd=${onTouchEnd} onTouchCancel=${onTouchEnd}>
-      <button class=${'set-label ' + set.type} onClick=${onMenu} aria-label=${`Set ${label}, change type`}>${label}${sub}</button>
-      <button class="prev tnum" onClick=${onPrev} aria-label=${`Previous: ${prevTxt}`}>${prevTxt}</button>
+      <button class=${'set-label ' + set.type} onClick=${onMenu} aria-label=${tr('Set {label}, change type', { label })}>${label}${sub}</button>
+      <button class="prev tnum" onClick=${onPrev} aria-label=${tr('Previous: {value}', { value: prevTxt })}>${prevTxt}</button>
       ${fields.map((f) => html`<div key=${f}>${inputFor(f)}</div>`)}
       ${showCheck && html`<button class=${'check' + (set.done ? ' on' : '') + (bump ? ' bump' : '')} aria-pressed=${set.done}
-        aria-label=${set.done ? 'Mark set as not done' : 'Mark set as done'}
+        aria-label=${set.done ? tr('Mark set as not done') : tr('Mark set as done')}
         onClick=${() => { if (!set.done) { setBump(true); setTimeout(() => setBump(false), 260); } onToggle(); }}><${Icon} name="check" /></button>`}
     </div>
   </div>`;
@@ -494,13 +495,13 @@ function Reorder({ draft, onChange, close }) {
     [list[i], list[j]] = [list[j], list[i]];
     onChange(); force();
   };
-  return html`<${NavBar} title="Reorder" solid right=${html`<button class="nav-btn strong" onClick=${() => close()}>Done</button>`} />
+  return html`<${NavBar} title=${tr('Reorder')} solid right=${html`<button class="nav-btn strong" onClick=${() => close()}>${tr('Done')}</button>`} />
     <div class="scroll"><div class="page" style="padding-top:12px">
       <div class="group">${draft.exercises.map((e, i) => html`<div class="reorder-row" key=${e.id}>
         <div class="grow"><div class="cell-title ellipsis">${S.exercises.get(e.exerciseId)?.name}</div>
-          <div class="cell-sub">${e.sets.length} set${e.sets.length === 1 ? '' : 's'}${e.supersetId ? ' · superset' : ''}</div></div>
-        <button class="icon-btn" disabled=${i === 0} onClick=${() => move(i, -1)} aria-label="Move up"><${Icon} name="arrowUp" /></button>
-        <button class="icon-btn" disabled=${i === draft.exercises.length - 1} onClick=${() => move(i, 1)} aria-label="Move down"><${Icon} name="arrowDown" /></button>
+          <div class="cell-sub">${plural(e.sets.length, 'set')}${e.supersetId ? ` · ${tr('superset')}` : ''}</div></div>
+        <button class="icon-btn" disabled=${i === 0} onClick=${() => move(i, -1)} aria-label=${tr('Move up')}><${Icon} name="arrowUp" /></button>
+        <button class="icon-btn" disabled=${i === draft.exercises.length - 1} onClick=${() => move(i, 1)} aria-label=${tr('Move down')}><${Icon} name="arrowDown" /></button>
       </div>`)}</div>
     </div></div>`;
 }

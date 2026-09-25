@@ -2,29 +2,30 @@
 // Names follow the common "Movement (Equipment)" convention so a Strong CSV
 // import lines up with these entries automatically.
 import { slug } from './util.js';
+import { tr } from './i18n.js';
 
 export const CATEGORIES = [
-  { id: 'barbell', label: 'Barbell' },
-  { id: 'dumbbell', label: 'Dumbbell' },
-  { id: 'machine', label: 'Machine / Other' },
-  { id: 'weighted_bw', label: 'Weighted bodyweight' },
-  { id: 'assisted_bw', label: 'Assisted bodyweight' },
-  { id: 'reps', label: 'Reps only' },
-  { id: 'cardio', label: 'Cardio (distance + time)' },
-  { id: 'duration', label: 'Duration' },
+  { id: 'barbell', label: tr('Barbell') },
+  { id: 'dumbbell', label: tr('Dumbbell') },
+  { id: 'machine', label: tr('Machine / Other') },
+  { id: 'weighted_bw', label: tr('Weighted bodyweight') },
+  { id: 'assisted_bw', label: tr('Assisted bodyweight') },
+  { id: 'reps', label: tr('Reps only') },
+  { id: 'cardio', label: tr('Cardio (distance + time)') },
+  { id: 'duration', label: tr('Duration') },
 ];
 export const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 
 export const BODY_PARTS = [
-  { id: 'chest', label: 'Chest' },
-  { id: 'back', label: 'Back' },
-  { id: 'shoulders', label: 'Shoulders' },
-  { id: 'arms', label: 'Arms' },
-  { id: 'legs', label: 'Legs' },
-  { id: 'core', label: 'Core' },
-  { id: 'full', label: 'Full body' },
-  { id: 'cardio', label: 'Cardio' },
-  { id: 'other', label: 'Other' },
+  { id: 'chest', label: tr('Chest') },
+  { id: 'back', label: tr('Back') },
+  { id: 'shoulders', label: tr('Shoulders') },
+  { id: 'arms', label: tr('Arms') },
+  { id: 'legs', label: tr('Legs') },
+  { id: 'core', label: tr('Core') },
+  { id: 'full', label: tr('Full body') },
+  { id: 'cardio', label: tr('Cardio') },
+  { id: 'other', label: tr('Other') },
 ];
 export const BODY_PART_LABEL = Object.fromEntries(BODY_PARTS.map((b) => [b.id, b.label]));
 
@@ -292,7 +293,7 @@ export const EXAMPLE_TEMPLATES = [
     ],
   },
   {
-    id: 'example-5x5-a', name: 'Strength A', folder: 'Strength 5×5', example: true,
+    id: 'example-5x5-a', name: tr('Strength A'), folder: tr('Strength 5×5'), example: true,
     exercises: [
       ex('Squat (Barbell)', 5, 5, 180),
       ex('Bench Press (Barbell)', 5, 5, 180),
@@ -300,7 +301,7 @@ export const EXAMPLE_TEMPLATES = [
     ],
   },
   {
-    id: 'example-5x5-b', name: 'Strength B', folder: 'Strength 5×5', example: true,
+    id: 'example-5x5-b', name: tr('Strength B'), folder: tr('Strength 5×5'), example: true,
     exercises: [
       ex('Squat (Barbell)', 5, 5, 180),
       ex('Overhead Press (Barbell)', 5, 5, 180),
@@ -308,7 +309,7 @@ export const EXAMPLE_TEMPLATES = [
     ],
   },
   {
-    id: 'example-full', name: 'Full Body', folder: 'Full body', example: true,
+    id: 'example-full', name: tr('Full Body'), folder: tr('Full body'), example: true,
     exercises: [
       ex('Goblet Squat (Dumbbell)', 3, 10, 90),
       ex('Bench Press (Dumbbell)', 3, 10, 90),
@@ -320,21 +321,21 @@ export const EXAMPLE_TEMPLATES = [
 ];
 
 export const MEASUREMENTS = [
-  { id: 'bodyweight', label: 'Body weight', kind: 'weight', group: 'core' },
-  { id: 'bodyfat', label: 'Body fat', kind: 'percent', group: 'core' },
-  { id: 'calories', label: 'Calorie intake', kind: 'kcal', group: 'core' },
-  { id: 'neck', label: 'Neck', kind: 'length', group: 'body' },
-  { id: 'shoulders', label: 'Shoulders', kind: 'length', group: 'body' },
-  { id: 'chest', label: 'Chest', kind: 'length', group: 'body' },
-  { id: 'bicep_l', label: 'Left biceps', kind: 'length', group: 'body' },
-  { id: 'bicep_r', label: 'Right biceps', kind: 'length', group: 'body' },
-  { id: 'forearm_l', label: 'Left forearm', kind: 'length', group: 'body' },
-  { id: 'forearm_r', label: 'Right forearm', kind: 'length', group: 'body' },
-  { id: 'waist', label: 'Waist', kind: 'length', group: 'body' },
-  { id: 'hips', label: 'Hips', kind: 'length', group: 'body' },
-  { id: 'thigh_l', label: 'Left thigh', kind: 'length', group: 'body' },
-  { id: 'thigh_r', label: 'Right thigh', kind: 'length', group: 'body' },
-  { id: 'calf_l', label: 'Left calf', kind: 'length', group: 'body' },
-  { id: 'calf_r', label: 'Right calf', kind: 'length', group: 'body' },
+  { id: 'bodyweight', label: tr('Body weight'), kind: 'weight', group: 'core' },
+  { id: 'bodyfat', label: tr('Body fat'), kind: 'percent', group: 'core' },
+  { id: 'calories', label: tr('Calorie intake'), kind: 'kcal', group: 'core' },
+  { id: 'neck', label: tr('Neck'), kind: 'length', group: 'body' },
+  { id: 'shoulders', label: tr('Shoulders'), kind: 'length', group: 'body' },
+  { id: 'chest', label: tr('Chest'), kind: 'length', group: 'body' },
+  { id: 'bicep_l', label: tr('Left biceps'), kind: 'length', group: 'body' },
+  { id: 'bicep_r', label: tr('Right biceps'), kind: 'length', group: 'body' },
+  { id: 'forearm_l', label: tr('Left forearm'), kind: 'length', group: 'body' },
+  { id: 'forearm_r', label: tr('Right forearm'), kind: 'length', group: 'body' },
+  { id: 'waist', label: tr('Waist'), kind: 'length', group: 'body' },
+  { id: 'hips', label: tr('Hips'), kind: 'length', group: 'body' },
+  { id: 'thigh_l', label: tr('Left thigh'), kind: 'length', group: 'body' },
+  { id: 'thigh_r', label: tr('Right thigh'), kind: 'length', group: 'body' },
+  { id: 'calf_l', label: tr('Left calf'), kind: 'length', group: 'body' },
+  { id: 'calf_r', label: tr('Right calf'), kind: 'length', group: 'body' },
 ];
 export const MEASUREMENT_BY_ID = Object.fromEntries(MEASUREMENTS.map((m) => [m.id, m]));

@@ -1,7 +1,7 @@
 // Offline support. Everything the app needs is cached on install, so it opens
 // instantly and works in a basement gym with no signal.
 // When you change any file, bump VERSION so phones pick up the update.
-const VERSION = 'setlog-v1.3.0';
+const VERSION = 'setlog-v1.4.0';
 const ASSETS = [
   './',
   './index.html',
@@ -20,6 +20,8 @@ const ASSETS = [
   './js/drafts.js',
   './js/editor.js',
   './js/format.js',
+  './js/i18n.js',
+  './js/i18n-de.js',
   './js/icons.js',
   './js/io.js',
   './js/lib.js',

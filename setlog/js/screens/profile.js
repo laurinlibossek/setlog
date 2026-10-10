@@ -374,9 +374,10 @@ export function SettingsScreen() {
     </div>
 
     <div class="section"><span class="section-title">${tr('Appearance')}</span></div>
-    <div class="group"><div class="cell"><div class="cell-main"><div class="cell-title">${tr('Theme')}</div></div>
-      <div style="width:210px"><${Seg} value=${st.theme} onChange=${(v) => set('theme', v)}
-        options=${[{ value: 'system', label: tr('Auto') }, { value: 'light', label: tr('Light') }, { value: 'dark', label: tr('Dark') }]} /></div></div>
+    <div class="group"><label class="cell"><div class="cell-main"><div class="cell-title">${tr('Theme')}</div></div>
+        <select id="set-theme" value=${st.theme} onChange=${(e) => set('theme', e.target.value)}>
+          <option value="system">${tr('Auto')}</option><option value="light">${tr('Light')}</option><option value="dark">${tr('Dark')}</option>
+          <option value="strawberry-matcha">${tr('Strawberry Matcha')}</option><option value="intense-red">${tr('Intense Red')}</option></select></label>
       <label class="cell"><div class="cell-main"><div class="cell-title">${tr('Language')}</div></div>
         <select id="set-language" value=${getLangPref()} onChange=${(e) => changeLanguage(e.target.value)}>
           <option value="auto">${tr('Phone language')}</option><option value="en">English</option><option value="de">Deutsch</option></select></label></div>

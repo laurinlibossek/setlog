@@ -1,5 +1,6 @@
 /* Setlog — styles. Light palette on :root, dark redefined for the system
-   setting and for an explicit data-theme stamp. */
+   setting and for an explicit data-theme stamp. Named colour themes
+   (Strawberry Matcha, Intense Red) are full palettes on their own stamp. */
 :root {
   --bg: #f1f3f6;
   --surface: #ffffff;
@@ -17,6 +18,7 @@
   --done: #1f9d55;
   --done-soft: #e2f4e9;
   --done-ink: #ffffff;
+  --up: var(--done); /* a positive change, e.g. +2.5 kg on a chart */
   --warm: #b87400;
   --warm-soft: #fbefd5;
   --drop: #6a4fd1;
@@ -39,7 +41,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --bg: #0b0d11;
     --surface: #16191f;
     --surface-2: #1d2128;
@@ -100,6 +102,73 @@
   --scrim: rgba(0, 0, 0, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
   --bar-bg: rgba(18, 21, 26, 0.86);
+  color-scheme: dark;
+}
+/* Strawberry Matcha: beige and cream, strawberry buttons, matcha ticks. Light only. */
+:root[data-theme="strawberry-matcha"] {
+  --bg: #f2ebde;
+  --surface: #fbf8f2;
+  --surface-2: #f5efe4;
+  --surface-3: #eae1d1;
+  --ink: #2b261f;
+  --ink-2: #5c5346;
+  --ink-3: #857b6b;
+  --line: #e2d8c6;
+  --line-strong: #d3c6af;
+  --accent: #c94159;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(201, 65, 89, 0.11);
+  --accent-text: #b23a50;
+  --done: #55803a;
+  --done-soft: #e3ecd8;
+  --done-ink: #ffffff;
+  --warm: #9a5f22;
+  --warm-soft: #f6e6d2;
+  --drop: #77579f;
+  --drop-soft: #eee6f5;
+  --danger: #b12e3c;
+  --danger-soft: #f8e1e3;
+  --gold: #a8781a;
+  --gold-soft: #f7ecd3;
+  --note: #f8edcf;
+  --note-ink: #6b5200;
+  --scrim: rgba(43, 38, 31, 0.42);
+  --shadow: 0 1px 2px rgba(43, 38, 31, 0.06), 0 8px 24px rgba(43, 38, 31, 0.08);
+  --bar-bg: rgba(246, 240, 230, 0.88);
+  color-scheme: light;
+}
+/* Intense Red: blacks and greys with a bright red. Dark only. */
+:root[data-theme="intense-red"] {
+  --bg: #0a0a0a;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --surface-3: #2a2a2a;
+  --ink: #f5f5f5;
+  --ink-2: #bdbdbd;
+  --ink-3: #8c8c8c;
+  --line: #262626;
+  --line-strong: #3a3a3a;
+  --accent: #e5202e;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(229, 32, 46, 0.16);
+  --accent-text: #ff4f5a;
+  --done: #e5202e;
+  --done-soft: rgba(229, 32, 46, 0.16);
+  --done-ink: #ffffff;
+  --up: #f5f5f5; /* completed sets are red here, so gains can't share their colour */
+  --warm: #b0b0b0;
+  --warm-soft: rgba(176, 176, 176, 0.14);
+  --drop: #ff8a3d;
+  --drop-soft: rgba(255, 138, 61, 0.16);
+  --danger: #ff4f5a;
+  --danger-soft: rgba(255, 79, 90, 0.15);
+  --gold: #f2b233;
+  --gold-soft: rgba(242, 178, 51, 0.15);
+  --note: rgba(255, 255, 255, 0.07);
+  --note-ink: #e6e6e6;
+  --scrim: rgba(0, 0, 0, 0.65);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --bar-bg: rgba(14, 14, 14, 0.88);
   color-scheme: dark;
 }
 

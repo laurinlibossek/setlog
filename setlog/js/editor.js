@@ -24,7 +24,7 @@ import {
 import { pickExercises } from './pickers.js';
 import { openTools } from './tools.js';
 
-const SS_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
+const SS_COLORS = ['var(--accent)', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
 const REST_CHOICES = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 
 function fieldsFor(cat) {

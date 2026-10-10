@@ -495,6 +495,8 @@ export default {
   Auto: 'Auto',
   Light: 'Hell',
   Dark: 'Dunkel',
+  'Strawberry Matcha': 'Erdbeer-Matcha',
+  'Intense Red': 'Intensives Rot',
   Language: 'Sprache',
   'Phone language': 'Sprache des Handys',
   'Your data': 'Deine Daten',

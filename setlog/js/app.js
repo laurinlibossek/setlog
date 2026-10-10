@@ -86,11 +86,17 @@ class ErrorBoundary extends PComponent {
 }
 
 // ---------- theme ----------
+// Every value except 'system' is stamped on <html> as data-theme. The stamp is
+// mirrored to localStorage so index.html can apply it before the first paint.
+const THEMES = ['light', 'dark', 'strawberry-matcha', 'intense-red'];
 function applyTheme() {
   const t = S.settings.theme;
   const root = document.documentElement;
-  if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t);
+  if (THEMES.includes(t)) root.setAttribute('data-theme', t);
   else if (!window.SETLOG_PREVIEW) root.removeAttribute('data-theme'); // the preview host sets its own
+  if (!window.SETLOG_PREVIEW) {
+    try { localStorage.setItem('setlog-theme', THEMES.includes(t) ? t : 'system'); } catch (e) { /* storage unavailable */ }
+  }
   requestAnimationFrame(() => {
     const bg = getComputedStyle(root).getPropertyValue('--bar-bg').trim() || '#f1f3f6';
     const solid = getComputedStyle(root).getPropertyValue('--bg').trim() || bg;

@@ -222,7 +222,7 @@ function ExCharts({ ex, sessions }) {
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:flex-start">
         <div><div class="card-title">${m.label}</div>
-          <div class="card-sub">${last ? tr('{value} last time', { value: fmtVal(last.y) }) : tr('No data in this range')}${change !== null ? html` · <span style=${`color:${(change > 0) !== lowerBetter ? 'var(--done)' : change === 0 ? 'var(--ink-3)' : 'var(--danger)'}`}>${change > 0 ? '+' : change < 0 ? '−' : '±'}${fmtVal(Math.abs(change))}</span> ${tr('in range')}` : ''}</div></div>
+          <div class="card-sub">${last ? tr('{value} last time', { value: fmtVal(last.y) }) : tr('No data in this range')}${change !== null ? html` · <span style=${`color:${(change > 0) !== lowerBetter ? 'var(--up)' : change === 0 ? 'var(--ink-3)' : 'var(--danger)'}`}>${change > 0 ? '+' : change < 0 ? '−' : '±'}${fmtVal(Math.abs(change))}</span> ${tr('in range')}` : ''}</div></div>
       </div>
       <${LineChart} points=${disp} fmtVal=${fmtVal} fmtAxis=${fmtAxis} time=${m.kind === 'time' || m.kind === 'pace'} label=${tr('{metric} for {name}', { metric: m.label, name: ex.name })}
         emptyText=${sessions.length ? tr('No sessions in this range') : tr('Log this exercise to see your progress')} />

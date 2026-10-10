@@ -19,6 +19,9 @@
   --done-soft: #e2f4e9;
   --done-ink: #ffffff;
   --up: var(--done); /* a positive change, e.g. +2.5 kg on a chart */
+  --primary: var(--accent); /* filled primary buttons */
+  --primary-ink: var(--accent-ink);
+  --chart: var(--accent); /* chart lines, points and bars */
   --warm: #b87400;
   --warm-soft: #fbefd5;
   --drop: #6a4fd1;
@@ -104,24 +107,28 @@
   --bar-bg: rgba(18, 21, 26, 0.86);
   color-scheme: dark;
 }
-/* Strawberry Matcha: beige and cream, strawberry buttons, matcha ticks. Light only. */
+/* Strawberry Matcha: beige and cream with matcha for tabs, links, icons and
+   controls; strawberry for primary buttons and charts. Light only. */
 :root[data-theme="strawberry-matcha"] {
   --bg: #f2ebde;
   --surface: #fbf8f2;
   --surface-2: #f5efe4;
-  --surface-3: #eae1d1;
+  --surface-3: #e1e6d0;
   --ink: #2b261f;
   --ink-2: #5c5346;
-  --ink-3: #857b6b;
+  --ink-3: #7a7f66;
   --line: #e2d8c6;
   --line-strong: #d3c6af;
-  --accent: #c94159;
+  --accent: #55803a;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(201, 65, 89, 0.11);
-  --accent-text: #b23a50;
+  --accent-soft: rgba(85, 128, 58, 0.14);
+  --accent-text: #476e2b;
   --done: #55803a;
   --done-soft: #e3ecd8;
   --done-ink: #ffffff;
+  --primary: #c94159;
+  --primary-ink: #ffffff;
+  --chart: #c94159;
   --warm: #9a5f22;
   --warm-soft: #f6e6d2;
   --drop: #77579f;
@@ -326,7 +333,7 @@ button.cell:active, .cell.tappable:active { background: var(--surface-2); }
 }
 .btn:active { transform: scale(0.98); opacity: 0.85; }
 .btn svg { width: 20px; height: 20px; }
-.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary { background: var(--primary); color: var(--primary-ink); }
 .btn-done { background: var(--done); color: var(--done-ink); }
 .btn-tinted { background: var(--accent-soft); color: var(--accent-text); }
 .btn-danger { background: var(--danger-soft); color: var(--danger); }
@@ -638,12 +645,12 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 0.85; 
 .chart svg text { font-family: var(--font); font-size: 11px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
 .chart .grid { stroke: var(--line); stroke-width: 1; }
 .chart .baseline { stroke: var(--line-strong); stroke-width: 1; }
-.chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.chart .area { fill: var(--accent); opacity: 0.1; }
-.chart .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.chart .line { fill: none; stroke: var(--chart); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--chart); opacity: 0.1; }
+.chart .pt { fill: var(--chart); stroke: var(--surface); stroke-width: 2; }
 .chart .cross { stroke: var(--ink-3); stroke-width: 1; }
-.chart .bar { fill: var(--accent); }
-.chart .bar.dim { fill: var(--accent); opacity: 0.45; }
+.chart .bar { fill: var(--chart); }
+.chart .bar.dim { fill: var(--chart); opacity: 0.45; }
 .chart .goal { stroke: var(--ink-3); stroke-width: 1; }
 .chart .endlabel { fill: var(--ink); font-weight: 700; font-size: 12px; }
 .chart .goallabel { fill: var(--ink-3); font-size: 11px; }

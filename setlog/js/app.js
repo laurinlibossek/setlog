@@ -86,22 +86,39 @@ class ErrorBoundary extends PComponent {
 }
 
 // ---------- theme ----------
-// Every value except 'system' is stamped on <html> as data-theme. The stamp is
-// mirrored to localStorage so index.html can apply it before the first paint.
+// Every value except 'system' is stamped on <html> as data-theme. The stamp and
+// the theme's background colour are mirrored to localStorage so index.html can
+// apply both before the first paint; the status bar strip on iOS takes its
+// colour from the theme-color meta, which is replaced (not edited) so iOS
+// notices the change.
 const THEMES = ['light', 'dark', 'strawberry-matcha', 'intense-red'];
+const SYSTEM_COLORS = [['#f1f3f6', '(prefers-color-scheme: light)'], ['#0b0d11', '(prefers-color-scheme: dark)']];
+function setThemeColor(pairs) {
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+  for (const [content, media] of pairs) {
+    const m = document.createElement('meta');
+    m.name = 'theme-color';
+    m.content = content;
+    if (media) m.media = media;
+    document.head.appendChild(m);
+  }
+}
 function applyTheme() {
   const t = S.settings.theme;
   const root = document.documentElement;
-  if (THEMES.includes(t)) root.setAttribute('data-theme', t);
+  const fixed = THEMES.includes(t);
+  if (fixed) root.setAttribute('data-theme', t);
   else if (!window.SETLOG_PREVIEW) root.removeAttribute('data-theme'); // the preview host sets its own
+  const solid = getComputedStyle(root).getPropertyValue('--bg').trim() || '#f1f3f6';
+  if (fixed || window.SETLOG_PREVIEW) setThemeColor([[solid]]);
+  else setThemeColor(SYSTEM_COLORS);
   if (!window.SETLOG_PREVIEW) {
-    try { localStorage.setItem('setlog-theme', THEMES.includes(t) ? t : 'system'); } catch (e) { /* storage unavailable */ }
+    try {
+      localStorage.setItem('setlog-theme', fixed ? t : 'system');
+      if (fixed) localStorage.setItem('setlog-theme-color', solid);
+      else localStorage.removeItem('setlog-theme-color');
+    } catch (e) { /* storage unavailable */ }
   }
-  requestAnimationFrame(() => {
-    const bg = getComputedStyle(root).getPropertyValue('--bar-bg').trim() || '#f1f3f6';
-    const solid = getComputedStyle(root).getPropertyValue('--bg').trim() || bg;
-    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', solid));
-  });
 }
 
 // ---------- screen wake lock ----------

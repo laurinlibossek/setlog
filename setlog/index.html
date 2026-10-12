@@ -15,7 +15,13 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <script>try { var t = localStorage.getItem('setlog-theme'); if (t && t !== 'system') document.documentElement.setAttribute('data-theme', t); } catch (e) {}</script>
+  <script>try {
+    var t = localStorage.getItem('setlog-theme'), c = localStorage.getItem('setlog-theme-color');
+    if (t && t !== 'system') {
+      document.documentElement.setAttribute('data-theme', t);
+      if (c) document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.setAttribute('content', c); m.removeAttribute('media'); });
+    }
+  } catch (e) {}</script>
   <link rel="stylesheet" href="css/app.css">
   <link rel="modulepreload" href="js/app.js">
 </head>

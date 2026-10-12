@@ -156,7 +156,7 @@
   --scrim: rgba(43, 38, 31, 0.42);
   --shadow: 0 1px 2px rgba(43, 38, 31, 0.06), 0 8px 24px rgba(43, 38, 31, 0.08);
   --bar-bg: rgba(226, 232, 210, 0.92);
-  --nav-bg: rgba(246, 240, 230, 0.88);
+  --nav-bg: rgba(242, 235, 222, 0.9); /* same beige as --bg */
   color-scheme: light;
 }
 /* Intense Red: blacks and greys with a bright red. Dark only. */

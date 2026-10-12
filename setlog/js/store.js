@@ -15,7 +15,7 @@ import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
 } from './drafts.js';
 
-export const APP_VERSION = '1.5.3';
+export const APP_VERSION = '1.5.4';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',

@@ -27,6 +27,7 @@
   --label: var(--ink-3); /* small uppercase headings */
   --label-strong: var(--ink-2); /* month headings in History */
   --chip-on: var(--ink); /* selected filter chip */
+  --nav-bg: var(--bar-bg); /* top bar; the tab bar keeps --bar-bg */
   --chip-on-ink: var(--bg);
   --warm: #b87400;
   --warm-soft: #fbefd5;
@@ -113,7 +114,7 @@
   --bar-bg: rgba(18, 21, 26, 0.86);
   color-scheme: dark;
 }
-/* Strawberry Matcha: beige and cream. Matcha for the bars, tabs, links, icons,
+/* Strawberry Matcha: beige and cream. Matcha for the tab bar, tabs, links, icons,
    headings and controls; strawberry for primary buttons, charts, the rest
    timer, records, calendar days, selected chips and pinned notes. Light only. */
 :root[data-theme="strawberry-matcha"] {
@@ -155,6 +156,7 @@
   --scrim: rgba(43, 38, 31, 0.42);
   --shadow: 0 1px 2px rgba(43, 38, 31, 0.06), 0 8px 24px rgba(43, 38, 31, 0.08);
   --bar-bg: rgba(226, 232, 210, 0.92);
+  --nav-bg: rgba(246, 240, 230, 0.88);
   color-scheme: light;
 }
 /* Intense Red: blacks and greys with a bright red. Dark only. */
@@ -250,7 +252,7 @@ svg { display: block; }
 .nav {
   flex: none; position: relative; z-index: 5;
   padding-top: var(--safe-top);
-  background: var(--bar-bg);
+  background: var(--nav-bg);
   -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid transparent;
 }

@@ -1,0 +1,14 @@
+{
+  "name": "setlog",
+  "private": true,
+  "description": "Free, open-source workout tracker. The app in setlog/ has no build step and no dependencies; this file only holds the test scripts.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "themes": "node scripts/themes-from-css.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -722,7 +722,11 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 0.85; 
 .reorder-list .reorder-row:last-child { border-radius: 0 0 var(--radius) var(--radius); }
 .reorder-list .reorder-row:only-child { border-radius: var(--radius); }
 .reorder-row { transition: transform .22s cubic-bezier(.2, .8, .2, 1); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.reorder-row.lifted { z-index: 3; border-radius: 12px; box-shadow: var(--shadow), 0 14px 32px rgba(0, 0, 0, .18); }
+.reorder-list.dragging .reorder-row { border-radius: 0; }
+.reorder-list.dragging .reorder-row.v-first { border-radius: var(--radius) var(--radius) 0 0; }
+.reorder-list.dragging .reorder-row.v-last { border-radius: 0 0 var(--radius) var(--radius); }
+.reorder-list.dragging .reorder-row.v-first::before { opacity: 0; }
+.reorder-list.dragging .reorder-row.lifted { z-index: 3; border-radius: 12px; background: var(--surface-2); box-shadow: var(--shadow), 0 14px 32px rgba(0, 0, 0, .18); }
 .reorder-row.lifted::before, .reorder-row.lifted + .reorder-row::before { opacity: 0; }
 .reorder-list.dragging .reorder-row::before { transition: opacity .15s; }
 .drag-handle { touch-action: none; cursor: grab; color: var(--ink-3); width: 44px; height: 44px; }

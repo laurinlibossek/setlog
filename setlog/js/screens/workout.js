@@ -8,7 +8,7 @@ import {
 import { EXAMPLE_TEMPLATES } from '../seed.js';
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
-import { entryToDraft, draftEntries, remapSupersets } from '../drafts.js';
+import { entryToDraft, draftEntries, remapSupersets } from '../core/drafts.js';
 import {
   Screen, openSheet, openScreenModal, NavBar, actionSheet, confirmDialog, toast, push, pop, useForce, promptDialog,
   closeAllModals, setTab, useLeaveGuard,

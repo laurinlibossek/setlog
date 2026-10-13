@@ -1,7 +1,7 @@
 // Offline support. Everything the app needs is cached on install, so it opens
 // instantly and works in a basement gym with no signal.
 // When you change any file, bump VERSION so phones pick up the update.
-const VERSION = 'setlog-v1.5.7';
+const VERSION = 'setlog-v1.6.0';
 const ASSETS = [
   './',
   './index.html',
@@ -17,11 +17,9 @@ const ASSETS = [
   './js/charts.js',
   './js/db.js',
   './js/demo.js',
-  './js/drafts.js',
   './js/editor.js',
   './js/format.js',
   './js/i18n.js',
-  './js/i18n-de.js',
   './js/icons.js',
   './js/io.js',
   './js/lib.js',
@@ -38,6 +36,18 @@ const ASSETS = [
   './js/screens/measure.js',
   './js/screens/profile.js',
   './js/screens/workout.js',
+  './js/core/backup.js',
+  './js/core/calc.js',
+  './js/core/csv.js',
+  './js/core/drafts.js',
+  './js/core/i18n.js',
+  './js/core/i18n-de.js',
+  './js/core/seed.js',
+  './js/core/sessions.js',
+  './js/core/share.js',
+  './js/core/suggest.js',
+  './js/core/templates.js',
+  './js/core/units.js',
   './js/vendor/hooks.js',
   './js/vendor/htm.js',
   './js/vendor/preact.js',

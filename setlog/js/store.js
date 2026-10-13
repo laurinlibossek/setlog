@@ -9,13 +9,18 @@ import {
   buildStats, prsForNewWorkout, workoutVolume, configureCalc, DEFAULT_WARMUP, sessionsByExercise,
 } from './calc.js';
 import {
-  uid, debounce, workoutNameForTime, slug, DAY,
+  uid, debounce, workoutNameForTime, slug,
 } from './util.js';
 import {
   entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
-} from './drafts.js';
+} from './core/drafts.js';
+import { applyWorkoutToTemplate, cleanTemplateExercises } from './core/templates.js';
+import { suggestTemplate as suggestFrom } from './core/suggest.js';
+import { previousSetsFrom, bodyweightFrom } from './core/sessions.js';
 
-export const APP_VERSION = '1.5.7';
+export { templateChanges, templateDiffers } from './core/templates.js';
+
+export const APP_VERSION = '1.6.0';
 
 export const DEFAULT_SETTINGS = {
   unit: 'kg',
@@ -206,15 +211,7 @@ export function clearSampleData() {
 
 // ---------- derived stats ----------
 /** Body weight (kg) on or before `at`; the earliest one if `at` is before all of them. */
-export function bodyweightAt(at = Date.now()) {
-  let earliest = null;
-  for (const m of S.measurements) { // newest first
-    if (m.type !== 'bodyweight') continue;
-    if (m.at <= at) return m.value;
-    earliest = m.value;
-  }
-  return earliest;
-}
+export const bodyweightAt = (at = Date.now()) => bodyweightFrom(S.measurements, at);
 function syncCalc() {
   const st = S.settings;
   configureCalc({
@@ -254,14 +251,9 @@ export function allSessions(exerciseId) {
  * template" setting, sessions from the same template come first.
  */
 export function previousSets(exerciseId, { before = Infinity, excludeWorkoutId = null, templateId = null } = {}) {
-  const sessions = stats().byExercise.get(exerciseId);
-  if (!sessions) return null;
-  const ok = (s) => s.workoutId !== excludeWorkoutId && s.startedAt < before;
-  if (templateId && S.settings.prevSource === 'template') {
-    for (const s of sessions) if (ok(s) && s.templateId === templateId) return s.entry.sets;
-  }
-  for (const s of sessions) if (ok(s)) return s.entry.sets;
-  return null;
+  return previousSetsFrom(stats().byExercise.get(exerciseId), {
+    before, excludeWorkoutId, templateId: S.settings.prevSource === 'template' ? templateId : null,
+  });
 }
 
 // ---------- settings / profile / meta ----------
@@ -427,18 +419,7 @@ export function copyTemplate(src, patch = {}) {
     name: src.name,
     folder: src.folder || '',
     notes: src.notes || '',
-    exercises: remapSupersets(JSON.parse(JSON.stringify(src.exercises)).map((e) => ({
-      exerciseId: e.exerciseId,
-      notes: e.notes,
-      supersetId: e.supersetId,
-      restSec: e.restSec,
-      focus: e.focus,
-      sets: e.sets.map((s) => {
-        const o = { type: s.type || 'normal' };
-        for (const k of ['w', 'r', 'd', 't', 'rpe']) if (s[k] !== null && s[k] !== undefined) o[k] = s[k];
-        return o;
-      }),
-    }))).filter((e) => S.exercises.has(e.exerciseId)),
+    exercises: cleanTemplateExercises(src.exercises, (id) => S.exercises.has(id)),
     createdAt: Date.now(),
     ...patch,
   };
@@ -475,142 +456,15 @@ export function setTemplateArchived(id, archived) {
   if (archived) t.archived = true; else delete t.archived;
   saveTemplate(t);
 }
-// ----- comparing a finished workout with its template -----
-const VALUE_KEYS = ['w', 'r', 'd', 't'];
-const setType = (s) => s.type || 'normal';
-const setBucket = (s) => (setType(s) === 'warmup' ? 'warmup' : 'work');
-
-/** "exerciseId#n" per entry, so the n-th Bench Press pairs with the n-th Bench Press. */
-function entryKeys(entries) {
-  const n = new Map();
-  return entries.map((e) => {
-    const i = n.get(e.exerciseId) || 0;
-    n.set(e.exerciseId, i + 1);
-    return `${e.exerciseId}#${i}`;
-  });
-}
-/** For each template entry, the index of the matching workout entry (or -1). */
-function pairEntries(tplEntries, woEntries) {
-  const tk = entryKeys(tplEntries), wk = entryKeys(woEntries);
-  const at = new Map(wk.map((k, i) => [k, i]));
-  return { pairs: tk.map((k) => (at.has(k) ? at.get(k) : -1)), tk, wk };
-}
 /**
- * For each template set, the index of the workout set it lines up with (or -1).
- * Warm-ups pair with warm-ups and working sets with working sets, each in order,
- * so skipping a warm-up doesn't shift the working weights onto it.
- */
-function pairSets(tplSets, woSets) {
-  const pos = { warmup: [], work: [] };
-  woSets.forEach((s, i) => pos[setBucket(s)].push(i));
-  const used = { warmup: 0, work: 0 };
-  return tplSets.map((s) => {
-    const b = setBucket(s);
-    const j = pos[b][used[b]++];
-    return j === undefined ? -1 : j;
-  });
-}
-function sameValues(a, b) {
-  for (const k of VALUE_KEYS) {
-    const x = a[k] ?? null, y = b[k] ?? null;
-    if ((x === null) !== (y === null)) return false;
-    if (x !== null && Math.abs(x - y) > 1e-6) return false;
-  }
-  return true;
-}
-function templateSet(type, from) {
-  const o = { type };
-  for (const k of [...VALUE_KEYS, 'rpe']) if (from[k] !== null && from[k] !== undefined) o[k] = from[k];
-  return o;
-}
-/** Superset grouping as "key → first key of its group", over the given keys only. */
-function supersetLeaders(entries, keys, only) {
-  const leader = new Map(), first = new Map();
-  entries.forEach((e, i) => {
-    const k = keys[i];
-    if (!only.has(k)) return;
-    if (!e.supersetId) { leader.set(k, k); return; }
-    if (!first.has(e.supersetId)) first.set(e.supersetId, k);
-    leader.set(k, first.get(e.supersetId));
-  });
-  return leader;
-}
-
-/**
- * What finishing `workout` would change in `template`.
- * `structure` is true when exercises, their order, set counts, set types or
- * supersets differ; `valueSets` counts template sets whose numbers would change
- * with "Update values only".
- */
-export function templateChanges(template, workout) {
-  const T = template.exercises, W = workout.exercises;
-  const { pairs, tk, wk } = pairEntries(T, W);
-  const c = {
-    addedExercises: 0, removedExercises: 0, reordered: false, addedSets: 0, removedSets: 0,
-    typesChanged: false, supersetsChanged: false, valueSets: 0, structure: false,
-  };
-  const order = [];
-  const matched = new Set();
-  pairs.forEach((wi, ti) => {
-    if (wi < 0) { c.removedExercises++; return; }
-    order.push(wi);
-    matched.add(tk[ti]);
-    const ts = T[ti].sets, ws = W[wi].sets;
-    const sp = pairSets(ts, ws);
-    let paired = 0;
-    sp.forEach((j, i) => {
-      if (j < 0) { c.removedSets++; return; }
-      paired++;
-      if (setType(ts[i]) !== setType(ws[j])) c.typesChanged = true;
-      if (!sameValues(ts[i], ws[j])) c.valueSets++;
-    });
-    c.addedSets += ws.length - paired;
-    // same set types, but in another order (a warm-up moved after a working set)
-    if (ts.length === ws.length && ts.some((s, i) => setType(s) !== setType(ws[i]))) c.typesChanged = true;
-  });
-  c.addedExercises = W.length - order.length;
-  c.reordered = order.some((w, i) => i > 0 && w < order[i - 1]);
-  const lt = supersetLeaders(T, tk, matched), lw = supersetLeaders(W, wk, matched);
-  c.supersetsChanged = [...matched].some((k) => lt.get(k) !== lw.get(k));
-  c.structure = !!(c.addedExercises || c.removedExercises || c.reordered || c.addedSets || c.removedSets
-    || c.typesChanged || c.supersetsChanged);
-  return c;
-}
-/** Did a finished workout change the structure of its template? */
-export const templateDiffers = (template, workout) => templateChanges(template, workout).structure;
-
-/**
- * Save a finished workout into its template. `valuesOnly` keeps the template's
- * exercises and sets and copies the performed numbers into the matching sets;
- * otherwise the workout's structure and numbers replace the template's.
+ * Save a finished workout into its template (see applyWorkoutToTemplate).
  * Returns the template's previous exercises, for undo.
  */
-export function updateTemplateFromWorkout(templateId, workout, { valuesOnly = false } = {}) {
+export function updateTemplateFromWorkout(templateId, workout, opts = {}) {
   const t = getTemplate(templateId);
   if (!t) return null;
   const before = JSON.parse(JSON.stringify(t.exercises));
-  const { pairs } = pairEntries(t.exercises, workout.exercises);
-  if (valuesOnly) {
-    t.exercises = t.exercises.map((e, ti) => {
-      const wi = pairs[ti];
-      if (wi < 0) return e;
-      const ws = workout.exercises[wi].sets;
-      const sp = pairSets(e.sets, ws);
-      return { ...e, sets: e.sets.map((s, i) => (sp[i] < 0 ? s : templateSet(setType(s), ws[sp[i]]))) };
-    });
-  } else {
-    const tplOf = new Map();
-    pairs.forEach((wi, ti) => { if (wi >= 0) tplOf.set(wi, t.exercises[ti]); });
-    t.exercises = workout.exercises.map((e, wi) => {
-      const out = { exerciseId: e.exerciseId, sets: e.sets.map((s) => templateSet(setType(s), s)) };
-      const notes = tplOf.get(wi)?.notes; // keep the template's own exercise notes
-      if (notes) out.notes = notes;
-      if (e.supersetId) out.supersetId = e.supersetId;
-      if (e.restSec !== null && e.restSec !== undefined) out.restSec = e.restSec;
-      if (e.focus) out.focus = e.focus;
-      return out;
-    });
-  }
+  t.exercises = applyWorkoutToTemplate(t.exercises, workout, opts);
   saveTemplate(t);
   return before;
 }
@@ -623,65 +477,8 @@ export function restoreTemplateExercises(templateId, exercises) {
 }
 
 // ---------- suggested workout ----------
-/**
- * Guess which template comes next from the last four months: what usually
- * follows the most recent template, and what is usually done on this weekday.
- * Both count recent workouts more: each older occurrence weighs SUGGEST_DECAY
- * times the one after it, so a changed routine takes over after about two
- * rounds while a single swapped day doesn't flip the suggestion.
- * Returns { template, why: { kind: 'after'|'weekday'|'due', ... } } or null.
- */
-const SUGGEST_DECAY = 0.6;
-export function suggestTemplate(now = Date.now()) {
-  const live = new Map(S.templates.filter((t) => !t.archived).map((t) => [t.id, t]));
-  const seq = S.workouts
-    .filter((w) => w.templateId && live.has(w.templateId) && w.startedAt < now && w.startedAt >= now - 120 * DAY)
-    .sort((a, b) => a.startedAt - b.startedAt);
-  if (seq.length < 2) return null;
-  const last = seq[seq.length - 1];
-  const ids = [...new Set(seq.map((w) => w.templateId))];
-
-  // what followed the last template before (newer transitions weigh more)
-  const after = new Map();
-  let afterTotal = 0, k = 0;
-  for (let i = seq.length - 2; i >= 0; i--) {
-    if (seq[i].templateId !== last.templateId) continue;
-    const wgt = SUGGEST_DECAY ** k++;
-    after.set(seq[i + 1].templateId, (after.get(seq[i + 1].templateId) || 0) + wgt);
-    afterTotal += wgt;
-  }
-  // what is usually done on this weekday (last 8 weeks, newest weighs most)
-  const today = new Date(now).getDay();
-  const onDay = new Map(); // weighted
-  const onDayCount = new Map();
-  let dayTotal = 0, dayCount = 0, j = 0;
-  for (let i = seq.length - 1; i >= 0; i--) {
-    const w = seq[i];
-    if (w.startedAt < now - 56 * DAY) break;
-    if (new Date(w.startedAt).getDay() !== today) continue;
-    const wgt = SUGGEST_DECAY ** j++;
-    onDay.set(w.templateId, (onDay.get(w.templateId) || 0) + wgt);
-    onDayCount.set(w.templateId, (onDayCount.get(w.templateId) || 0) + 1);
-    dayTotal += wgt;
-    dayCount++;
-  }
-  const lastDone = new Map(seq.map((w) => [w.templateId, w.startedAt]));
-  let best = null;
-  for (const id of ids) {
-    const a = afterTotal ? (after.get(id) || 0) / afterTotal : 0;
-    const d = dayCount >= 2 ? (onDay.get(id) || 0) / dayTotal : 0;
-    // tie-breaker: the longer it hasn't been done, the more likely it's due
-    const due = (now - lastDone.get(id)) / (120 * DAY) * 0.1;
-    const score = 0.6 * a + 0.4 * d + due;
-    if (!best || score > best.score) best = { id, score, a, d };
-  }
-  const template = live.get(best.id);
-  let why;
-  if (best.d >= 0.6 && (onDayCount.get(best.id) || 0) >= 2 && best.d >= best.a) why = { kind: 'weekday', day: today };
-  else if (best.a > 0) why = { kind: 'after', name: live.get(last.templateId).name };
-  else why = { kind: 'due', at: lastDone.get(best.id) };
-  return { template, why };
-}
+/** The template that probably comes next (see core/suggest.js), or null. */
+export const suggestTemplate = (now = Date.now()) => suggestFrom(S.templates, S.workouts, now);
 
 // ---------- measurements ----------
 export function addMeasurement({ type, value, at }) {

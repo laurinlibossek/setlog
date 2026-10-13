@@ -8,7 +8,7 @@ import {
 import { workoutVolume, bestSet, est1RM, hasLoadRecords, PR_LABEL } from '../calc.js';
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
-import { entryToDraft, draftEntries } from '../drafts.js';
+import { entryToDraft, draftEntries } from '../core/drafts.js';
 import {
   Screen, Empty, push, pop, actionSheet, confirmDialog, toast, useForce, Seg, useLeaveGuard,
 } from '../ui.js';

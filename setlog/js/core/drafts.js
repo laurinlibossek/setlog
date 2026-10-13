@@ -3,7 +3,7 @@
 // Saved records use canonical numbers: kg, km, seconds.
 import {
   uid, parseNum, numToInput, kgTo, toKg, kmTo, toKm, roundW, digitsToSec, secToDigits,
-} from './util.js';
+} from './units.js';
 import { setIsValid } from './calc.js';
 
 export function newSetDraft(type = 'normal', extra = {}) {

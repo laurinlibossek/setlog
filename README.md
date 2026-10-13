@@ -42,7 +42,7 @@ Over time, every exercise gets its own charts, records and history.
 **Good to know**
 - Tap ✓ on an empty set to log last time's numbers.
 - Tap a set's number to make it a warm-up, drop or failure set. Swipe a set left to delete it.
-- Tap an exercise's name for notes, supersets, warm-up sets, its rest timer and the plate calculator. A pinned note shows up every time you do that exercise.
+- Tap an exercise's name for notes, supersets, warm-up sets, its rest timer, the plate calculator and reordering (drag the ≡ handle, or press and hold a row). A pinned note shows up every time you do that exercise.
 - The chart button next to an exercise sets a focus metric (volume, volume increase, reps or weight per rep) that updates as you log.
 - To share a template, use its ⋯ → **Share**. On iPhone the other person pastes the link under Templates ⋯ → **Add shared template**, because the home screen app keeps its data separate from Safari.
 
@@ -95,7 +95,8 @@ Setlog is a Progressive Web App written as plain JavaScript modules. There's no 
 - **Units and input:** data is stored in kg, km and seconds and converted for display. Number inputs accept decimal commas ("62,5").
 - **Records:** a single chronological pass over the history works out the personal records for every set (estimated 1RM, weight, set volume, reps, distance and time).
 - **Import:** a CSV parser for both of Strong's export layouts that skips workouts it already has.
-- **Testing:** end-to-end tests in an emulated iPhone browser (Playwright). They cover a real 86-workout import, backup round-trips and starting offline.
+- **Shared core:** the training logic (math, records, template updates, the suggested workout, Strong import and export, backups, translations and colour palettes) lives in `setlog/js/core/`. It doesn't touch the DOM, storage or a UI framework, so a native app can reuse it as is; the web app adds state, language and screens on top.
+- **Testing:** end-to-end tests in an emulated iPhone browser (Playwright) cover a real 86-workout import, backup round-trips and starting offline. Unit tests for the core run in plain Node (`npm test`) on every push, and also check that the core stays free of browser code and that the offline cache lists every module.
 - Developed with the assistance of Claude (Anthropic).
 
 ```
@@ -106,13 +107,19 @@ setlog/                        the app (this folder is what gets deployed)
 ├── css/app.css                styles, light and dark
 └── js/
     ├── app.js                 entry: tabs, wake lock, theme, updates
+    ├── core/                  shared logic, no DOM or storage (see index.js)
+    │   ├── calc.js            1RM, volume, records, plates, warm-ups
+    │   ├── templates.js       comparing a workout with its template
+    │   ├── csv.js, backup.js  Strong import and export, backup files
+    │   ├── i18n-de.js         German translations
+    │   └── themes.js          colour palettes, generated from css/app.css
     ├── store.js, db.js        state, persistence and all data actions
-    ├── calc.js                1RM, volume, records, plates, warm-ups
     ├── editor.js, sheet.js    workout logging and rest timer
-    ├── io.js                  import, export, backup
-    ├── seed.js                built-in exercises and example templates
+    ├── io.js                  files and sharing on top of the core formats
     └── screens/               Workout, History, Exercises, Measure, Profile
-.github/workflows/pages.yml    deploys setlog/ to GitHub Pages
+tests/                         unit tests for the core (npm test)
+scripts/themes-from-css.mjs    regenerates core/themes.js
+.github/workflows/             deploys setlog/ to GitHub Pages, runs the tests
 docs/                          screenshots for this README
 ```
 
@@ -132,7 +139,7 @@ Setlog started as a personal replacement for a paid tracker. I wanted every feat
 
 ## Contributing
 
-Found a bug or missing a feature? Open an issue. Pull requests are welcome too. Please keep the app dependency-free with no build step, and try your change on a real phone.
+Found a bug or missing a feature? Open an issue. Pull requests are welcome too. Please keep the app dependency-free with no build step, run `npm test` (Node 20 or newer, nothing to install), and try your change on a real phone.
 
 ## License
 

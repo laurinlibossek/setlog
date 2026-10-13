@@ -11,7 +11,7 @@ import {
 import {
   usesWeight, setIsValid, warmupSets, countsVolume, setVolume, isWorking, loggedFields, newRecords,
 } from './calc.js';
-import { newSetDraft, setToDraft, draftToSet } from './drafts.js';
+import { newSetDraft, setToDraft, draftToSet } from './core/drafts.js';
 import {
   setText, setLabels, SET_TYPE_NAME, wUnit, dUnit, volume as fmtVolume, w as fmtW,
 } from './format.js';
@@ -602,18 +602,31 @@ function Reorder({ draft, onChange, close }) {
   const onHandleMove = (e) => { if (drag.current) moveTo(e.clientY); };
 
   const d = drag.current;
+  // where each row shows up while dragging (the corners follow the visual order)
+  const pos = (i) => {
+    if (!d) return i;
+    if (i === d.from) return d.over;
+    if (d.from < d.over && i > d.from && i <= d.over) return i - 1;
+    if (d.over < d.from && i >= d.over && i < d.from) return i + 1;
+    return i;
+  };
   const style = (i) => {
     if (!d) return settling ? 'transition:none' : '';
     if (i === d.from) return `transform:translateY(${offset(d)}px) scale(1.02);transition:none`;
-    const h = d.rows[d.from].h;
-    if (d.from < d.over && i > d.from && i <= d.over) return `transform:translateY(${-h}px)`;
-    if (d.over < d.from && i >= d.over && i < d.from) return `transform:translateY(${h}px)`;
-    return '';
+    const shift = (pos(i) - i) * d.rows[d.from].h;
+    return shift ? `transform:translateY(${shift}px)` : '';
+  };
+  const rowClass = (i) => {
+    let c = 'reorder-row';
+    if (d && d.from === i) c += ' lifted';
+    if (d && pos(i) === 0) c += ' v-first';
+    if (d && pos(i) === list.length - 1) c += ' v-last';
+    return c;
   };
   return html`<${NavBar} title=${tr('Reorder')} solid right=${html`<button class="nav-btn strong" id="reorder-done" onClick=${() => close()}>${tr('Done')}</button>`} />
     <div class="scroll" ref=${scrollRef}><div class="page" style="padding-top:12px">
       <div class=${'group reorder-list' + (d ? ' dragging' : '')} ref=${listRef}>${list.map((e, i) => html`<div
-        class=${'reorder-row' + (d && d.from === i ? ' lifted' : '')} key=${e.id} data-id=${e.id} style=${style(i)}>
+        class=${rowClass(i)} key=${e.id} data-id=${e.id} style=${style(i)}>
         <div class="grow"><div class="cell-title ellipsis">${S.exercises.get(e.exerciseId)?.name}</div>
           <div class="cell-sub">${plural(e.sets.length, 'set')}${e.supersetId ? ` · ${tr('superset')}` : ''}</div></div>
         <button class="icon-btn drag-handle" aria-label=${tr('Move {name}', { name: S.exercises.get(e.exerciseId)?.name || '' })}

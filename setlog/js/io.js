@@ -7,7 +7,7 @@ import { SEED_EXERCISES, CATEGORIES, BODY_PARTS } from './seed.js';
 import { setText, setLabels } from './format.js';
 import { usesWeight } from './calc.js';
 import {
-  uid, slug, parseNum, KG_PER_LB, KM_PER_MI, fmtDur, kgTo, kmTo, roundW, plural,
+  uid, slug, parseNum, KG_PER_LB, KM_PER_MI, kgTo, kmTo, roundW, plural,
 } from './util.js';
 
 // ---------- CSV ----------
@@ -291,8 +291,10 @@ export function parseStrongCSV(text, opts = {}) {
     byName.set(name, id);
   }
 
-  // build workouts, skip ones already present
-  const existing = new Map(S.workouts.map((w) => [w.startedAt + '|' + w.name, w]));
+  // build workouts, skip ones already present. CSV times have whole seconds while
+  // workouts logged in Setlog keep milliseconds, so compare by the second.
+  const keyOf = (at, name) => Math.floor(at / 1000) + '|' + name;
+  const existing = new Map(S.workouts.map((w) => [keyOf(w.startedAt, w.name), w]));
   const existingKeys = new Set(existing.keys());
   const workouts = [];
   const noteUpdates = [];
@@ -306,15 +308,16 @@ export function parseStrongCSV(text, opts = {}) {
       return entry;
     });
     if (!entries.length) continue;
-    if (existingKeys.has(g.startedAt + '|' + g.name)) {
+    const key = keyOf(g.startedAt, g.name);
+    if (existingKeys.has(key)) {
       duplicates++;
       // already imported (maybe by an older version that dropped notes): fill in missing notes
-      const w = existing.get(g.startedAt + '|' + g.name);
+      const w = existing.get(key);
       const u = w && missingNotes(w, g.notes, entries);
       if (u) noteUpdates.push(u);
       continue;
     }
-    existingKeys.add(g.startedAt + '|' + g.name);
+    existingKeys.add(key);
     setCount += entries.reduce((a, e) => a + e.sets.length, 0);
     workouts.push({
       id: 's-' + g.startedAt + '-' + (slug(g.name) || 'workout'),
@@ -353,6 +356,13 @@ export function parseStrongCSV(text, opts = {}) {
 
 // ---------- CSV export (Strong-compatible) ----------
 function pad(n) { return String(n).padStart(2, '0'); }
+/** Workout duration the way Strong writes it ("1h 5m", "45m"), whatever the app language. */
+export function strongDuration(ms) {
+  const min = Math.max(0, Math.round((ms || 0) / 60000));
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 function isoLocal(t) {
   const d = new Date(t);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -362,7 +372,7 @@ export function exportCSV() {
   const lines = [['Date', 'Workout Name', 'Duration', 'Exercise Name', 'Set Order', 'Weight', 'Reps', 'Distance', 'Seconds', 'Notes', 'Workout Notes', 'RPE'].join(',')];
   const asc = [...S.workouts].sort((a, b) => a.startedAt - b.startedAt);
   for (const w of asc) {
-    const dur = fmtDur((w.endedAt || w.startedAt) - w.startedAt);
+    const dur = strongDuration((w.endedAt || w.startedAt) - w.startedAt);
     for (const e of w.exercises) {
       const name = S.exercises.get(e.exerciseId)?.name || tr('Unknown exercise');
       let n = 0;
@@ -403,6 +413,11 @@ export function parseBackup(text) {
   for (const k of ['exercises', 'workouts', 'templates', 'measurements']) {
     if (d[k] !== undefined && !Array.isArray(d[k])) throw new Error(tr('The backup is damaged ({part}).', { part: k }));
   }
+  // the backup itself counts as a backup: without this the reminder would come
+  // back early after a restore (the file holds the time of the backup before it)
+  const kv = { ...(d.kv || {}) };
+  const madeAt = Date.parse(obj.exportedAt || '');
+  if (Number.isFinite(madeAt)) kv.meta = { ...(kv.meta || {}), lastBackupAt: Math.max(kv.meta?.lastBackupAt || 0, madeAt) };
   // keep the built-in library even if the backup predates it
   const exercises = d.exercises || [];
   const ids = new Set(exercises.map((e) => e.id));
@@ -414,7 +429,7 @@ export function parseBackup(text) {
       workouts: d.workouts || [],
       templates: d.templates || [],
       measurements: d.measurements || [],
-      kv: d.kv || {},
+      kv,
     },
   };
 }

@@ -3,12 +3,13 @@ import { tr } from './i18n.js';
 import { html, useState, useMemo, useRef, useEffect } from './lib.js';
 import { Icon } from './icons.js';
 import {
-  S, exerciseList, stats, addExercise, updateExercise, findExerciseByName,
+  S, exerciseList, allSessions, addExercise, updateExercise, findExerciseByName,
 } from './store.js';
+import { loggedFields } from './calc.js';
 import {
   BODY_PARTS, BODY_PART_LABEL, CATEGORIES, CATEGORY_LABEL,
 } from './seed.js';
-import { NavBar, openScreenModal, toast } from './ui.js';
+import { NavBar, openScreenModal, toast, confirmDialog } from './ui.js';
 import { plural } from './util.js';
 
 const ALIASES = {
@@ -17,8 +18,10 @@ const ALIASES = {
   bis: 'bicep', lat: 'lat', pulldown: 'pulldown', pullup: 'pull up', pushup: 'push up', chinup: 'chin up',
   situp: 'sit up', hamstring: 'leg curl', quad: 'leg extension', delt: 'raise', abs: 'crunch',
 };
-const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const compactStr = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+// letters beyond a–z count too: "ü" finds "u" and "ü", "é" finds "e"
+const fold = (s) => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+const norm = (s) => fold(s).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const compactStr = (s) => fold(s).replace(/[^\p{L}\p{N}]/gu, '');
 
 export function matchExercise(ex, query) {
   const q = norm(query);
@@ -70,7 +73,7 @@ function Picker({ multi, title, close }) {
   const inputRef = useRef();
   const counts = useMemo(() => {
     const m = new Map();
-    for (const [id, arr] of stats().byExercise) m.set(id, arr.length);
+    for (const [id, arr] of allSessions()) m.set(id, arr.length);
     return m;
   }, [S.v.workouts]);
 
@@ -146,11 +149,23 @@ function ExerciseForm({ ex, preset, close }) {
   const [notes, setNotes] = useState(ex?.notes || '');
   const ref = useRef();
   useEffect(() => { if (!ex) setTimeout(() => ref.current?.focus(), 250); }, []);
-  const save = () => {
+  const save = async () => {
     const n = name.trim();
     if (!n) { toast(tr('Give the exercise a name')); return; }
     const dupe = findExerciseByName(n);
     if (dupe && dupe.id !== ex?.id) { toast(tr('“{name}” already exists', { name: dupe.name })); return; }
+    const used = ex ? allSessions(ex.id).length : 0;
+    if (ex && used && category !== ex.category) {
+      const same = loggedFields(category).join() === loggedFields(ex.category).join();
+      const ok = await confirmDialog({
+        title: tr('Change what you log?'),
+        message: same
+          ? tr('“{name}” is in {n}. Their sets stay as they are, but records and volume are worked out the new way.', { name: ex.name, n: plural(used, 'workout') })
+          : tr('“{name}” is in {n}, logged with other fields. Those sets may show up empty or incomplete afterwards.', { name: ex.name, n: plural(used, 'workout') }),
+        ok: tr('Change'), destructive: !same,
+      });
+      if (!ok) return;
+    }
     if (ex) {
       updateExercise(ex.id, { name: n, category, bodyPart, notes });
       close(S.exercises.get(ex.id));

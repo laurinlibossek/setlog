@@ -8,6 +8,13 @@ export const usesDistance = (cat) => cat === 'cardio';
 export const usesTime = (cat) => cat === 'cardio' || cat === 'duration';
 /** Categories where "heavier is better" records make sense */
 export const hasLoadRecords = (cat) => usesWeight(cat) && cat !== 'assisted_bw';
+/** The fields a set of this category is logged with: w(eight), r(eps), d(istance), t(ime). */
+export function loggedFields(cat) {
+  if (usesWeight(cat)) return ['w', 'r'];
+  if (cat === 'reps') return ['r'];
+  if (cat === 'cardio') return ['d', 't'];
+  return ['t'];
+}
 
 // Settings that change the math. The store keeps these in sync (syncCalc in store.js).
 export const calcOpts = {
@@ -126,7 +133,7 @@ function metricsFor(s, cat, formula, at) {
       out.volume = setVolume(s, cat, at);
     }
   } else if (cat === 'reps' || cat === 'assisted_bw') {
-    if (cat === 'reps' && s.r > 0) out.reps = s.r;
+    if (s.r > 0) out.reps = s.r;
   } else if (cat === 'cardio') {
     if (s.d > 0) out.distance = s.d;
     if (s.t > 0) out.time = s.t;
@@ -134,6 +141,29 @@ function metricsFor(s, cat, formula, at) {
     if (s.t > 0) out.time = s.t;
   }
   return out;
+}
+
+/** exerciseId -> sessions, newest first: { workoutId, startedAt, name, templateId, entry } */
+export function sessionsByExercise(workouts) {
+  const out = new Map();
+  for (const w of [...workouts].sort((a, b) => b.startedAt - a.startedAt)) {
+    for (const entry of w.exercises) {
+      let arr = out.get(entry.exerciseId);
+      if (!arr) { arr = []; out.set(entry.exerciseId, arr); }
+      arr.push({ workoutId: w.id, startedAt: w.startedAt, name: w.name, templateId: w.templateId || null, entry });
+    }
+  }
+  return out;
+}
+
+/**
+ * Record metrics a single set beats, compared with the stored bests for its
+ * exercise. Used for the live PR badge so it agrees with the summary.
+ */
+export function newRecords(s, cat, bests, formula, at) {
+  if (!bests || !isWorking(s)) return [];
+  return Object.entries(metricsFor(s, cat, formula, at))
+    .filter(([k, v]) => bests[k] !== undefined && v > bests[k] + 1e-9).map(([k]) => k);
 }
 
 /**
@@ -333,14 +363,17 @@ export function roundToLoadable(w, bar, available) {
 /** Default warm-up ramp: empty bar × 10, then % of the working weight × reps. */
 export const DEFAULT_WARMUP = { barReps: 10, steps: [[40, 5], [60, 3], [80, 2]] };
 
-/** Warm-up sets towards a working weight, following a scheme like DEFAULT_WARMUP. */
-export function warmupSets(working, bar, available, isBarbell, scheme = DEFAULT_WARMUP) {
+/**
+ * Warm-up sets towards a working weight, following a scheme like DEFAULT_WARMUP.
+ * All weights are in one unit; `step` rounds non-barbell weights (2 for kg, 5 for lb).
+ */
+export function warmupSets(working, bar, available, isBarbell, scheme = DEFAULT_WARMUP, step = 2) {
   const steps = (scheme.steps || []).filter(([pct, r]) => pct > 0 && pct < 100 && r > 0).sort((a, b) => a[0] - b[0]);
   const out = [];
   if (isBarbell && scheme.barReps > 0 && working > bar * 1.5) out.push({ w: bar, r: scheme.barReps });
   for (const [p, r] of steps) {
     const pct = p / 100;
-    const w = isBarbell ? roundToLoadable(working * pct, bar, available) : Math.round(working * pct / 2) * 2;
+    const w = isBarbell ? roundToLoadable(working * pct, bar, available) : Math.round(working * pct / step) * step;
     if (w <= 0 || w >= working) continue;
     if (out.length && Math.abs(out[out.length - 1].w - w) < 1e-9) continue;
     out.push({ w, r });

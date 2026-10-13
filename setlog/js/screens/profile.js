@@ -14,7 +14,7 @@ import {
   Screen, push, openDialog, confirmDialog, promptDialog, toast, Seg, Switch, Cell,
 } from '../ui.js';
 import {
-  fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, relDayLower, parseNum,
+  fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, relDayLower, parseNum, parsePlates,
 } from '../util.js';
 import { tr, saveLangPref, getLangPref } from '../i18n.js';
 import {
@@ -214,7 +214,7 @@ function ImportPreview({ close, s }) {
 async function doDeleteAll() {
   const ok = await confirmDialog({
     title: tr('Delete all data?'),
-    message: tr('Every workout, template, measurement and custom exercise on this phone will be erased.'),
+    message: tr('Every workout, template, measurement and custom exercise on this phone will be erased. Your settings, name, folders and changes to built-in exercises are reset too.'),
     ok: tr('Continue'), destructive: true,
   });
   if (!ok) return;
@@ -282,22 +282,28 @@ function HistoryStartDialog({ close }) {
     <div class="btns">
       <button type="submit" class="btn btn-primary" id="history-start-save">${tr('Save')}</button>
       <button type="button" class="btn" id="history-start-all" onClick=${() => { setSetting('historyStart', null); close(true); }}>${tr('Use all workouts')}</button>
+      <button type="button" class="btn btn-ghost" id="history-start-cancel" onClick=${() => close(false)}>${tr('Cancel')}</button>
     </div>
   </form>`;
 }
 
+async function editName() {
+  const v = await promptDialog({ title: tr('Your name'), value: S.profile.name, placeholder: tr('Name') });
+  if (v !== null) setProfile({ name: v.trim() });
+}
+
 export function SettingsScreen() {
-  useStore('settings', 'meta', 'workouts');
+  useStore('settings', 'meta', 'workouts', 'profile');
   const st = S.settings;
   const set = setSetting;
   const editPlates = async () => {
     const v = await promptDialog({
-      title: tr('Plates you have ({unit})', { unit: st.unit }), message: tr('Per side, separated by commas.'), value: st.plates.join(', '), ok: tr('Save'),
+      title: tr('Plates you have ({unit})', { unit: st.unit }), message: tr('Per side, separated by commas or spaces.'), value: st.plates.map((p) => fmtNum(p, 2)).join('  '), ok: tr('Save'),
     });
     if (v === null) return;
-    const plates = v.split(/[;\s]+|,(?=\s)|,(?!\d)/).map((x) => parseNum(x)).filter((x) => x && x > 0);
+    const plates = parsePlates(v);
     if (!plates.length) { toast(tr('Enter at least one plate')); return; }
-    set('plates', [...new Set(plates)].sort((a, b) => b - a));
+    set('plates', plates);
   };
   const persisted = S.persisted;
   const changeLanguage = (v) => {
@@ -312,6 +318,10 @@ export function SettingsScreen() {
   };
   return html`<${Screen} nav=${{ back: '', title: tr('Settings') }}>
     <h1 class="large-title" style="font-size:28px">${tr('Settings')}</h1>
+
+    <div class="group">
+      <${Cell} id="set-name" icon="user" title=${tr('Your name')} value=${S.profile.name || tr('Not set')} onClick=${editName} />
+    </div>
 
     <div class="section"><span class="section-title">${tr('Units')}</span></div>
     <div class="group">

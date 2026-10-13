@@ -16,7 +16,7 @@ export function weightToInput(kg, st) {
 }
 
 export function setToDraft(s, st, keepId = true) {
-  return {
+  const d = {
     id: keepId && s.id ? s.id : uid(),
     type: s.type || 'normal',
     w: weightToInput(s.w, st),
@@ -26,14 +26,25 @@ export function setToDraft(s, st, keepId = true) {
     rpe: s.rpe !== null && s.rpe !== undefined ? numToInput(s.rpe, 1) : '',
     done: false,
   };
+  // Remember the stored numbers behind the rounded display strings, so saving
+  // an untouched set gives back exactly what was stored (no drift in lb, mi,
+  // or from weights imported with more decimals than the display shows).
+  const orig = {};
+  if (d.w !== '') orig.w = [d.w, s.w];
+  if (d.d !== '') orig.d = [d.d, s.d];
+  if (orig.w || orig.d) d.orig = orig;
+  return d;
 }
+
+/** The stored number for a field when its text is still what setToDraft produced. */
+const kept = (sd, k) => (sd.orig && sd.orig[k] && sd.orig[k][0] === sd[k] ? sd.orig[k][1] : undefined);
 
 export function draftToSet(sd, st) {
   const out = { id: sd.id || uid(), type: sd.type || 'normal' };
   const w = parseNum(sd.w), r = parseNum(sd.r), d = parseNum(sd.d), t = digitsToSec(sd.t), rpe = parseNum(sd.rpe);
-  if (w !== null) out.w = toKg(w, st.unit);
+  if (w !== null) out.w = kept(sd, 'w') ?? toKg(w, st.unit);
   if (r !== null) out.r = Math.max(0, Math.round(r));
-  if (d !== null) out.d = toKm(d, st.distUnit);
+  if (d !== null) out.d = kept(sd, 'd') ?? toKm(d, st.distUnit);
   if (t !== null && t > 0) out.t = t;
   if (rpe !== null && rpe > 0) out.rpe = Math.min(10, rpe);
   return out;
@@ -49,7 +60,10 @@ export function entryToDraft(e, st, { asTemplateTargets = false } = {}) {
     restSec: e.restSec ?? null,
     focus: e.focus || null,
     sets: e.sets.map((s) => (asTemplateTargets
-      ? newSetDraft(s.type || 'normal', { tpl: { w: s.w ?? null, r: s.r ?? null, d: s.d ?? null, t: s.t ?? null } })
+      ? newSetDraft(s.type || 'normal', {
+        tpl: { w: s.w ?? null, r: s.r ?? null, d: s.d ?? null, t: s.t ?? null },
+        rpe: s.rpe ? numToInput(s.rpe, 1) : '',
+      })
       : setToDraft(s, st))),
   };
 }

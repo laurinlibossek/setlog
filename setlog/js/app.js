@@ -45,7 +45,7 @@ function TabStack({ tab }) {
     <div class="screen" hidden=${stack.length > 0}><${Root} /></div>
     ${stack.map((entry, i) => {
       const Scr = SCREENS[entry.screen];
-      return html`<div class="screen" key=${entry.key} hidden=${i !== stack.length - 1}><${Scr} ...${entry.props} /></div>`;
+      return html`<div class="screen" key=${entry.key} hidden=${i !== stack.length - 1}><${Scr} ...${entry.props} navKey=${entry.key} /></div>`;
     })}`;
 }
 

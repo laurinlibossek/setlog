@@ -3,14 +3,14 @@ import { tr } from '../i18n.js';
 import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
-  S, useStore, stats, getWorkout, deleteWorkout, saveWorkout, exName,
+  S, useStore, stats, getWorkout, deleteWorkout, saveWorkout, exName, applyExercisePatches,
 } from '../store.js';
 import { workoutVolume, bestSet, est1RM, hasLoadRecords, PR_LABEL } from '../calc.js';
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
 import { entryToDraft, draftEntries } from '../drafts.js';
 import {
-  Screen, Empty, push, pop, actionSheet, confirmDialog, toast, useForce, Seg,
+  Screen, Empty, push, pop, actionSheet, confirmDialog, toast, useForce, Seg, useLeaveGuard,
 } from '../ui.js';
 import {
   fmt, fmtDur, startOfMonth, addMonths, startOfDay, startOfWeek, addDays, DAY, toLocalInput, fromLocalInput, plural, fmtNum,
@@ -208,10 +208,11 @@ export function WorkoutDetailScreen({ id }) {
   <//>`;
 }
 
-export function WorkoutEditScreen({ id }) {
+export function WorkoutEditScreen({ id, navKey }) {
   useStore('exercises');
   const force = useForce();
   const dirty = useRef(false);
+  useLeaveGuard(navKey, () => dirty.current);
   const [draft] = useState(() => {
     const w = getWorkout(id);
     if (!w) return null;
@@ -247,6 +248,8 @@ export function WorkoutEditScreen({ id }) {
       exercises,
       ...(draft.source ? { source: draft.source } : {}),
     });
+    applyExercisePatches(draft);
+    dirty.current = false;
     toast(tr('Workout saved'));
     pop();
   };

@@ -14,8 +14,25 @@ export const nav = {
   stacks: Object.fromEntries(TABS.map((t) => [t, []])),
   sheetOpen: false,
 };
-export function setTab(t) {
-  if (nav.tab === t && nav.stacks[t].length) nav.stacks[t] = [];
+// Screens with unsaved edits register a check, so tapping their tab again
+// (which goes back to the tab's first screen) asks before throwing them away.
+const leaveGuards = new Map(); // nav entry key -> () => true when there are unsaved changes
+export function useLeaveGuard(key, isDirty) {
+  useEffect(() => {
+    if (!key) return undefined;
+    leaveGuards.set(key, isDirty);
+    return () => leaveGuards.delete(key);
+  }, [key]);
+}
+export async function setTab(t) {
+  if (nav.tab === t && nav.stacks[t].length) {
+    const dirty = nav.stacks[t].some((e) => leaveGuards.get(e.key)?.());
+    if (dirty) {
+      const ok = await confirmDialog({ title: tr('Discard changes?'), ok: tr('Discard'), cancel: tr('Keep editing'), destructive: true });
+      if (!ok) return;
+    }
+    nav.stacks[t] = [];
+  }
   nav.tab = t;
   emit('nav');
 }

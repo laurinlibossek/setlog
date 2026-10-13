@@ -6,7 +6,7 @@ import { useEffect, useReducer } from './lib.js';
 import { SEED_EXERCISES, SEED_VERSION } from './seed.js';
 import { buildSampleData } from './demo.js';
 import {
-  buildStats, prsForNewWorkout, workoutVolume, configureCalc, DEFAULT_WARMUP,
+  buildStats, prsForNewWorkout, workoutVolume, configureCalc, DEFAULT_WARMUP, sessionsByExercise,
 } from './calc.js';
 import {
   uid, debounce, workoutNameForTime, slug, DAY,
@@ -237,6 +237,19 @@ export function stats() {
 }
 
 /**
+ * Every session of every exercise, ignoring "Start history from" (newest first).
+ * For the History tab, counts and safety checks, which must see old workouts too.
+ */
+let allCache = null, allKey = -1;
+export function allSessions(exerciseId) {
+  if (allKey !== (S.v.workouts || 0) || !allCache) {
+    allCache = sessionsByExercise(S.workouts);
+    allKey = S.v.workouts || 0;
+  }
+  return exerciseId === undefined ? allCache : allCache.get(exerciseId) || [];
+}
+
+/**
  * Sets from the most recent earlier session of an exercise. With the "same
  * template" setting, sessions from the same template come first.
  */
@@ -313,7 +326,7 @@ export function updateExercise(id, patch) {
   emit('exercises');
 }
 export function exerciseUsage(id) {
-  const sessions = stats().byExercise.get(id)?.length || 0;
+  const sessions = allSessions(id).length;
   const templates = S.templates.filter((t) => t.exercises.some((e) => e.exerciseId === id)).length;
   const inActive = !!S.active?.exercises.some((e) => e.exerciseId === id);
   return { sessions, templates, inActive };
@@ -329,9 +342,20 @@ export function deleteExercise(id) {
   }
   emit('exercises', 'templates');
 }
-/** Move all history/templates of `fromId` onto `intoId`, then delete `fromId`. */
+/**
+ * Move all history/templates of `fromId` onto `intoId`, then delete `fromId`.
+ * The target keeps its own rest timer and notes; ones it lacks come from the source.
+ */
 export function mergeExercise(fromId, intoId) {
   if (fromId === intoId) return;
+  const from = S.exercises.get(fromId), into = S.exercises.get(intoId);
+  if (from && into) {
+    const patch = {};
+    if ((into.restSec === null || into.restSec === undefined) && from.restSec !== null && from.restSec !== undefined) patch.restSec = from.restSec;
+    if (!into.notes && from.notes) patch.notes = from.notes;
+    if (!into.pinnedNote && from.pinnedNote) patch.pinnedNote = from.pinnedNote;
+    if (Object.keys(patch).length) { Object.assign(into, patch); save('exercises', { ...into }); }
+  }
   const changed = [];
   for (const w of S.workouts) {
     let hit = false;
@@ -411,7 +435,7 @@ export function copyTemplate(src, patch = {}) {
       focus: e.focus,
       sets: e.sets.map((s) => {
         const o = { type: s.type || 'normal' };
-        for (const k of ['w', 'r', 'd', 't']) if (s[k] !== null && s[k] !== undefined) o[k] = s[k];
+        for (const k of ['w', 'r', 'd', 't', 'rpe']) if (s[k] !== null && s[k] !== undefined) o[k] = s[k];
         return o;
       }),
     }))).filter((e) => S.exercises.has(e.exerciseId)),
@@ -496,7 +520,7 @@ function sameValues(a, b) {
 }
 function templateSet(type, from) {
   const o = { type };
-  for (const k of VALUE_KEYS) if (from[k] !== null && from[k] !== undefined) o[k] = from[k];
+  for (const k of [...VALUE_KEYS, 'rpe']) if (from[k] !== null && from[k] !== undefined) o[k] = from[k];
   return o;
 }
 /** Superset grouping as "key → first key of its group", over the given keys only. */
@@ -688,8 +712,10 @@ export function startWorkout({ template = null, fromWorkout = null } = {}) {
   let exercises = [];
   let name = workoutNameForTime(now);
   let notes = '';
+  let templateNotes = '';
   if (template) {
     name = template.name;
+    templateNotes = template.notes || '';
     exercises = remapSupersets(template.exercises.filter((e) => S.exercises.has(e.exerciseId))
       .map((e) => entryToDraft(e, st, { asTemplateTargets: true })));
   } else if (fromWorkout) {
@@ -704,6 +730,7 @@ export function startWorkout({ template = null, fromWorkout = null } = {}) {
     notes,
     startedAt: now,
     templateId: template && !template.example ? template.id : null,
+    templateNotes,
     exercises,
     rest: null,
     updatedAt: now,
@@ -748,7 +775,29 @@ export function finishActive(mode = 'done') {
     if (t) { t.lastUsedAt = now; save('templates', t); emit('templates'); }
   }
   discardActive();
-  return { workout, prs, volume: workoutVolume(workout, S.exercises), number: S.workouts.length };
+  // its place in the history by start time (the start can have been moved earlier)
+  const number = S.workouts.filter((w) => w.startedAt <= workout.startedAt).length;
+  return { workout, prs, volume: workoutVolume(workout, S.exercises), number };
+}
+
+/**
+ * Exercise changes made in the template editor or Edit workout (rest timer,
+ * pinned note) wait in draft.exPatches until the screen is saved, so Cancel
+ * really discards them. The running workout applies them right away.
+ */
+export function exerciseView(draft, id) {
+  const ex = S.exercises.get(id);
+  const p = draft && draft.exPatches && draft.exPatches[id];
+  return ex && p ? { ...ex, ...p } : ex;
+}
+export function patchExercise(draft, id, patch) {
+  if (!draft || draft.kind === 'workout') { updateExercise(id, patch); return; }
+  draft.exPatches = draft.exPatches || {};
+  draft.exPatches[id] = { ...(draft.exPatches[id] || {}), ...patch };
+}
+export function applyExercisePatches(draft) {
+  for (const [id, patch] of Object.entries(draft.exPatches || {})) if (S.exercises.has(id)) updateExercise(id, patch);
+  draft.exPatches = {};
 }
 
 export function addEntries(draft, exerciseIds) {

@@ -72,6 +72,23 @@ export function numToInput(n, maxFrac = 2) {
   return String(r).replace('.', DECIMAL);
 }
 
+/**
+ * A list of plates typed by hand: "25, 20, 15", "25,20,15", "25 20 2,5" or
+ * "45, 35, 2.5". Spaces and semicolons always separate; without them commas
+ * separate too, unless the whole text is one decimal like "2,5" or "1,25".
+ * Returns positive numbers, heaviest first, without duplicates.
+ */
+export function parsePlates(text) {
+  const s = String(text || '').trim().replace(/,\s+/g, ';');
+  if (!s) return [];
+  let parts;
+  if (/[;\s]/.test(s)) parts = s.split(/[;\s]+/);
+  else if (/^\d,(5|25|75)$/.test(s)) parts = [s];
+  else parts = s.split(',');
+  const nums = parts.map((x) => parseNum(x)).filter((x) => x !== null && x > 0);
+  return [...new Set(nums)].sort((a, b) => b - a);
+}
+
 export function compact(n) {
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);

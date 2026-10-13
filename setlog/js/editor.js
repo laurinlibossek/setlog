@@ -3,20 +3,20 @@
 // ("edit") and templates ("template"). Drafts are mutated in place and the
 // owner re-renders through onChange().
 import { tr } from './i18n.js';
-import { html, useState, useRef } from './lib.js';
+import { html, useState, useRef, useEffect } from './lib.js';
 import { Icon } from './icons.js';
 import {
-  S, previousSets, stats, startRest, updateExercise, addEntries, touchActive,
+  S, previousSets, stats, startRest, addEntries, touchActive, exerciseView, patchExercise,
 } from './store.js';
 import {
-  usesWeight, setIsValid, est1RM, warmupSets, hasLoadRecords, countsVolume, setVolume, isWorking,
+  usesWeight, setIsValid, warmupSets, countsVolume, setVolume, isWorking, loggedFields, newRecords,
 } from './calc.js';
-import { newSetDraft, setToDraft, draftToSet, weightToInput } from './drafts.js';
+import { newSetDraft, setToDraft, draftToSet } from './drafts.js';
 import {
   setText, setLabels, SET_TYPE_NAME, wUnit, dUnit, volume as fmtVolume, w as fmtW,
 } from './format.js';
 import {
-  uid, fmtDigits, fmtClock, parseNum, fmtNum, plural,
+  uid, fmtDigits, fmtClock, parseNum, fmtNum, plural, numToInput,
 } from './util.js';
 import {
   actionSheet, promptDialog, toast, openScreenModal, openDialog, NavBar, useForce, push, closeSheet,
@@ -27,11 +27,12 @@ import { openTools } from './tools.js';
 const SS_COLORS = ['var(--accent)', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
 const REST_CHOICES = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 
-function fieldsFor(cat) {
-  if (usesWeight(cat)) return ['w', 'r'];
-  if (cat === 'reps') return ['r'];
-  if (cat === 'cardio') return ['d', 't'];
-  return ['t'];
+const fieldsFor = loggedFields;
+
+/** Copy a placeholder value into a set, with the stored number behind it (no rounding drift). */
+function fillFrom(set, f, ph) {
+  set[f] = ph[f];
+  if (ph.orig && ph.orig[f]) set.orig = { ...(set.orig || {}), [f]: ph.orig[f] };
 }
 
 /** The template a draft belongs to (for "previous values from the same template"). */
@@ -80,7 +81,7 @@ export function pendingSets(draft) {
     entry.sets.forEach((set, i) => {
       if (set.done || !fields.some((f) => String(set[f] || '').trim())) return;
       const filled = { ...set };
-      for (const f of fields) if (!String(filled[f] || '').trim() && rows[i].ph[f]) filled[f] = rows[i].ph[f];
+      for (const f of fields) if (!String(filled[f] || '').trim() && rows[i].ph[f]) fillFrom(filled, f, rows[i].ph);
       if (usesWeight(ex.category) && !String(filled.w || '').trim() && (ex.category === 'weighted_bw' || ex.category === 'assisted_bw')) filled.w = '0';
       if (setIsValid(draftToSet(filled, S.settings), ex.category)) out.push({ set, filled });
     });
@@ -119,7 +120,7 @@ export function WorkoutEditor({
 function ExerciseBlock({
   entry, index, draft, mode, onChange, before, excludeWorkoutId, ssColor, ssLetter,
 }) {
-  const ex = S.exercises.get(entry.exerciseId);
+  const ex = exerciseView(draft, entry.exerciseId);
   const [shakeId, setShakeId] = useState(null);
   if (!ex) return null;
   const cat = ex.category;
@@ -148,7 +149,7 @@ function ExerciseBlock({
   const toggleDone = (set, i) => {
     if (set.done) { set.done = false; onChange(); return; }
     const ph = rows[i].ph;
-    for (const f of fields) if (!String(set[f] || '').trim() && ph[f]) set[f] = ph[f];
+    for (const f of fields) if (!String(set[f] || '').trim() && ph[f]) fillFrom(set, f, ph);
     if (usesWeight(cat) && !String(set.w || '').trim() && (cat === 'weighted_bw' || cat === 'assisted_bw')) set.w = '0';
     const c = draftToSet(set, S.settings);
     if (!setIsValid(c, cat)) {
@@ -201,7 +202,7 @@ function ExerciseBlock({
     const p = rows[i].prev;
     if (!p || set.done) return;
     const d = setToDraft(p, S.settings);
-    for (const f of fields) set[f] = d[f];
+    for (const f of fields) fillFrom(set, f, d);
     onChange();
   };
 
@@ -229,7 +230,7 @@ function ExerciseBlock({
     if (choice === 'note') { entry.showNotes = !entry.showNotes; if (!entry.showNotes) entry.notes = ''; onChange(); }
     if (choice === 'pin') {
       const v = await promptDialog({ title: tr('Pinned note'), message: tr('Shown every time you do this exercise.'), value: ex.pinnedNote || '', placeholder: tr('Seat height 4, grip on the rings…'), multiline: true });
-      if (v !== null) { updateExercise(ex.id, { pinnedNote: v.trim() }); onChange(); }
+      if (v !== null) { patchExercise(draft, ex.id, { pinnedNote: v.trim() }); onChange(); }
     }
     if (choice === 'replace') {
       const id = await pickExercises({ multi: false, title: tr('Replace exercise') });
@@ -237,8 +238,11 @@ function ExerciseBlock({
       const nex = S.exercises.get(id);
       const sameKind = nex && fieldsFor(nex.category).join() === fields.join();
       entry.exerciseId = id;
-      if (!sameKind) for (const s of entry.sets) { s.w = ''; s.r = ''; s.d = ''; s.t = ''; s.done = false; }
+      if (!sameKind) for (const s of entry.sets) { s.w = ''; s.r = ''; s.d = ''; s.t = ''; s.done = false; delete s.orig; }
       for (const s of entry.sets) delete s.tpl;
+      // the rest timer and focus metric belonged to the old exercise
+      entry.restSec = null;
+      if (nex && !focusOptions(nex.category).includes(entry.focus)) entry.focus = null;
       onChange();
     }
     if (choice === 'superset') {
@@ -248,12 +252,14 @@ function ExerciseBlock({
       });
       if (!target) return;
       const other = draft.exercises.find((e) => e.id === target);
-      const id = other.supersetId || entry.supersetId || uid();
-      if (entry.supersetId && entry.supersetId !== id) {
-        const old = entry.supersetId;
-        for (const e of draft.exercises) if (e.supersetId === old) e.supersetId = id;
-      }
+      // only this exercise moves: it joins the other one's group (or they start a new one)
+      const old = entry.supersetId;
+      const id = other.supersetId || uid();
       other.supersetId = id; entry.supersetId = id;
+      if (old && old !== id) {
+        const left = draft.exercises.filter((e) => e.supersetId === old);
+        if (left.length < 2) for (const e of left) e.supersetId = null;
+      }
       // keep the group together: move this entry right after the other one
       const list = draft.exercises;
       list.splice(list.indexOf(entry), 1);
@@ -276,7 +282,7 @@ function ExerciseBlock({
       });
       if (v === undefined) return;
       entry.restSec = +v;
-      updateExercise(ex.id, { restSec: +v });
+      patchExercise(draft, ex.id, { restSec: +v });
       onChange();
     }
     if (choice === 'warmup') addWarmups();
@@ -304,13 +310,13 @@ function ExerciseBlock({
     const src = firstWorkIdx >= 0 ? (parseNum(entry.sets[firstWorkIdx].w) ?? parseNum(rows[firstWorkIdx].ph.w)) : null;
     if (!src) { toast(tr('Enter the weight of your first working set first')); return; }
     const st = S.settings;
-    const kg = st.unit === 'lb' ? src * 0.45359237 : src;
-    const ws = warmupSets(kg, st.bar * (st.unit === 'lb' ? 0.45359237 : 1),
-      st.plates.map((p) => (st.unit === 'lb' ? p * 0.45359237 : p)), cat === 'barbell', st.warmup);
+    // worked out in the unit you lift in (bar and plates are stored in it), so lb
+    // dumbbells land on 5 lb steps instead of converted 2 kg steps
+    const ws = warmupSets(src, st.bar, st.plates, cat === 'barbell', st.warmup, st.unit === 'lb' ? 5 : 2);
     if (!ws.length) { toast(tr('That weight is too light for warm-up sets')); return; }
     const existing = entry.sets.filter((s) => s.type === 'warmup' && !s.done);
     entry.sets = entry.sets.filter((s) => !existing.includes(s));
-    const newSets = ws.map((x) => newSetDraft('warmup', { w: weightToInput(x.w, st), r: String(x.r) }));
+    const newSets = ws.map((x) => newSetDraft('warmup', { w: numToInput(x.w), r: String(x.r) }));
     entry.sets.unshift(...newSets);
     onChange();
     toast(tr('{n} warm-up sets added', { n: ws.length }));
@@ -340,7 +346,7 @@ function ExerciseBlock({
         <${Icon} name="trend" />${focus && html`<span class="tnum">${fmtFocus(focus, focusVals)}</span>`}</button>`}
       <button class="icon-btn accent" onClick=${menu} aria-label=${tr('Options for {name}', { name: ex.name })}><${Icon} name="more" /></button>
     </div>
-    ${(ssLetter || (rest && showCheck)) && html`<div class="ex-tags">
+    ${(ssLetter || (rest > 0 && showCheck)) && html`<div class="ex-tags">
       ${ssLetter && html`<span class="tag ss" style=${`color:${ssColor};background:color-mix(in srgb, ${ssColor} 14%, transparent)`}><${Icon} name="link" />${tr('Superset {letter}', { letter: ssLetter })}</span>`}
       ${showCheck && rest > 0 && html`<span class="tag"><${Icon} name="timer" />${fmtClock(rest)}</span>`}
     </div>`}
@@ -412,19 +418,10 @@ function FocusDialog({ close, options, values, current }) {
   </div>`;
 }
 
-/** Would this checked set beat the stored records? (live PR hint while training) */
+/** Would this checked set beat the stored records? Same rules as the summary's records. */
 function isPR(set, cat, bests) {
   if (!bests || !set.done || set.type === 'warmup') return false;
-  const c = draftToSet(set, S.settings);
-  const beats = (k, v) => bests[k] !== undefined && v > bests[k] + 1e-9;
-  if (hasLoadRecords(cat)) {
-    if (!(c.w > 0 && c.r > 0)) return false;
-    return beats('e1rm', est1RM(c.w, c.r, S.settings.formula)) || beats('weight', c.w);
-  }
-  if (cat === 'reps') return beats('reps', c.r || 0);
-  if (cat === 'cardio') return beats('distance', c.d || 0);
-  if (cat === 'duration') return beats('time', c.t || 0);
-  return false;
+  return newRecords(draftToSet(set, S.settings), cat, bests, S.settings.formula, Date.now()).length > 0;
 }
 
 function SetRow({
@@ -482,27 +479,150 @@ function selectAll(e) {
   setTimeout(() => { try { el.setSelectionRange(0, el.value.length); } catch (err) { /* ignore */ } }, 0);
 }
 
-// ---------- reorder ----------
+// ---------- reorder (drag and drop) ----------
+// Rows follow the finger and the others slide out of the way. Drag by the ≡
+// handle right away, or press and hold anywhere on a row. The handle also
+// takes ↑/↓ from a keyboard.
 function reorder(draft, onChange) {
   openScreenModal((close) => html`<${Reorder} draft=${draft} onChange=${onChange} close=${close} />`);
 }
+
+const HOLD_MS = 320;
+const EDGE = 64; // px from the top/bottom of the list where dragging scrolls it
+
 function Reorder({ draft, onChange, close }) {
   const force = useForce();
-  const move = (i, d) => {
-    const j = i + d;
-    if (j < 0 || j >= draft.exercises.length) return;
-    const list = draft.exercises;
-    [list[i], list[j]] = [list[j], list[i]];
-    onChange(); force();
+  const listRef = useRef();
+  const scrollRef = useRef();
+  const drag = useRef(null);
+  const hold = useRef(null);
+  const [settling, setSettling] = useState(false);
+  const list = draft.exercises;
+
+  const measure = () => [...listRef.current.children].map((el) => ({ top: el.offsetTop, h: el.offsetHeight }));
+  const offset = (d) => d.y - d.startY + (scrollRef.current.scrollTop - d.startScroll);
+  const target = (d) => {
+    const r = d.rows[d.from];
+    const center = r.top + r.h / 2 + offset(d);
+    return d.rows.filter((x, j) => j !== d.from && x.top + x.h / 2 < center).length;
   };
-  return html`<${NavBar} title=${tr('Reorder')} solid right=${html`<button class="nav-btn strong" onClick=${() => close()}>${tr('Done')}</button>`} />
-    <div class="scroll"><div class="page" style="padding-top:12px">
-      <div class="group">${draft.exercises.map((e, i) => html`<div class="reorder-row" key=${e.id}>
+
+  const begin = (id, y) => {
+    const from = list.findIndex((e) => e.id === id);
+    if (from < 0 || drag.current) return;
+    drag.current = { id, from, over: from, startY: y, y, rows: measure(), startScroll: scrollRef.current.scrollTop };
+    try { navigator.vibrate?.(8); } catch (e) { /* not supported */ }
+    force();
+    const tick = () => {
+      const d = drag.current;
+      if (!d) return;
+      const box = scrollRef.current.getBoundingClientRect();
+      const speed = d.y < box.top + EDGE ? -Math.ceil((box.top + EDGE - d.y) / 6)
+        : d.y > box.bottom - EDGE ? Math.ceil((d.y - box.bottom + EDGE) / 6) : 0;
+      if (speed) { scrollRef.current.scrollTop += speed; d.over = target(d); force(); }
+      d.raf = requestAnimationFrame(tick);
+    };
+    drag.current.raf = requestAnimationFrame(tick);
+  };
+  const moveTo = (y) => {
+    const d = drag.current;
+    if (!d) return;
+    d.y = y;
+    d.over = target(d);
+    force();
+  };
+  const end = () => {
+    const d = drag.current;
+    if (!d) return;
+    cancelAnimationFrame(d.raf);
+    drag.current = null;
+    if (d.over !== d.from) {
+      const [e] = list.splice(d.from, 1);
+      list.splice(d.over, 0, e);
+      onChange();
+    }
+    // drop without sliding back: transitions stay off for one frame
+    setSettling(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setSettling(false)));
+    force();
+  };
+  const step = (i, by) => {
+    const j = i + by;
+    if (j < 0 || j >= list.length) return;
+    const [e] = list.splice(i, 1);
+    list.splice(j, 0, e);
+    onChange(); force();
+    setTimeout(() => listRef.current?.children[j]?.querySelector('.drag-handle')?.focus(), 0);
+  };
+
+  // press and hold a row (touch); the list scrolls normally until the hold kicks in
+  useEffect(() => {
+    const el = listRef.current;
+    const onStart = (e) => {
+      if (e.touches.length !== 1 || e.target.closest('.drag-handle')) return;
+      const row = e.target.closest('.reorder-row');
+      if (!row) return;
+      const t = e.touches[0];
+      const h = { x0: t.clientX, y0: t.clientY, y: t.clientY };
+      h.timer = setTimeout(() => { if (hold.current === h) { hold.current = null; begin(row.dataset.id, h.y); } }, HOLD_MS);
+      hold.current = h;
+    };
+    const onMove = (e) => {
+      const t = e.touches[0];
+      if (drag.current) { e.preventDefault(); moveTo(t.clientY); return; }
+      const h = hold.current;
+      if (h) {
+        h.y = t.clientY;
+        if (Math.abs(t.clientX - h.x0) > 8 || Math.abs(t.clientY - h.y0) > 8) { clearTimeout(h.timer); hold.current = null; }
+      }
+    };
+    const onEnd = () => {
+      if (hold.current) { clearTimeout(hold.current.timer); hold.current = null; }
+      end();
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, []);
+
+  // the handle: drag right away with a finger, pen or mouse
+  const onHandleDown = (e, id) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    begin(id, e.clientY);
+  };
+  const onHandleMove = (e) => { if (drag.current) moveTo(e.clientY); };
+
+  const d = drag.current;
+  const style = (i) => {
+    if (!d) return settling ? 'transition:none' : '';
+    if (i === d.from) return `transform:translateY(${offset(d)}px) scale(1.02);transition:none`;
+    const h = d.rows[d.from].h;
+    if (d.from < d.over && i > d.from && i <= d.over) return `transform:translateY(${-h}px)`;
+    if (d.over < d.from && i >= d.over && i < d.from) return `transform:translateY(${h}px)`;
+    return '';
+  };
+  return html`<${NavBar} title=${tr('Reorder')} solid right=${html`<button class="nav-btn strong" id="reorder-done" onClick=${() => close()}>${tr('Done')}</button>`} />
+    <div class="scroll" ref=${scrollRef}><div class="page" style="padding-top:12px">
+      <div class=${'group reorder-list' + (d ? ' dragging' : '')} ref=${listRef}>${list.map((e, i) => html`<div
+        class=${'reorder-row' + (d && d.from === i ? ' lifted' : '')} key=${e.id} data-id=${e.id} style=${style(i)}>
         <div class="grow"><div class="cell-title ellipsis">${S.exercises.get(e.exerciseId)?.name}</div>
           <div class="cell-sub">${plural(e.sets.length, 'set')}${e.supersetId ? ` · ${tr('superset')}` : ''}</div></div>
-        <button class="icon-btn" disabled=${i === 0} onClick=${() => move(i, -1)} aria-label=${tr('Move up')}><${Icon} name="arrowUp" /></button>
-        <button class="icon-btn" disabled=${i === draft.exercises.length - 1} onClick=${() => move(i, 1)} aria-label=${tr('Move down')}><${Icon} name="arrowDown" /></button>
+        <button class="icon-btn drag-handle" aria-label=${tr('Move {name}', { name: S.exercises.get(e.exerciseId)?.name || '' })}
+          aria-describedby="reorder-hint"
+          onPointerDown=${(ev) => onHandleDown(ev, e.id)} onPointerMove=${onHandleMove} onPointerUp=${end} onPointerCancel=${end}
+          onKeyDown=${(ev) => { if (ev.key === 'ArrowUp') { ev.preventDefault(); step(i, -1); } if (ev.key === 'ArrowDown') { ev.preventDefault(); step(i, 1); } }}>
+          <${Icon} name="grip" /></button>
       </div>`)}</div>
+      <p class="footnote" id="reorder-hint">${tr('Drag ≡ to move an exercise, or press and hold it.')}</p>
     </div></div>`;
 }
 

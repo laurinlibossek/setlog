@@ -18,6 +18,28 @@ import {
 import { volume, setText, metricValue } from './format.js';
 
 // ---------- start ----------
+/** How much the running workout holds: checked sets, and sets with typed numbers. */
+function progressOf(a) {
+  let done = 0, typed = 0;
+  for (const e of a.exercises) {
+    for (const s of e.sets) {
+      if (s.done) done++;
+      else if (['w', 'r', 'd', 't'].some((k) => String(s[k] || '').trim())) typed++;
+    }
+  }
+  return { done, typed };
+}
+/** One confirm for every way of throwing a running workout away. */
+function confirmDiscard(a, title) {
+  const { done, typed } = progressOf(a);
+  return confirmDialog({
+    title,
+    message: done ? tr('Everything you logged in it will be deleted.')
+      : typed ? tr('The numbers you typed in it will be lost.') : tr('Nothing has been logged yet.'),
+    ok: tr('Discard'), cancel: tr('Keep going'), destructive: true,
+  });
+}
+
 export async function beginWorkout(opts = {}) {
   if (S.active) {
     const c = await actionSheet({
@@ -30,6 +52,8 @@ export async function beginWorkout(opts = {}) {
     });
     if (c === 'resume') { openSheet(); return; }
     if (c !== 'new') return;
+    const { done, typed } = progressOf(S.active);
+    if ((done || typed) && !(await confirmDiscard(S.active, tr('Discard “{name}”?', { name: S.active.name })))) return;
     discardActive();
   }
   startWorkout(opts);
@@ -81,8 +105,8 @@ function RestModal({ close }) {
       <div><div class="t">${fmtClock(Math.ceil(left))}</div><div class="of">${tr('of {time}', { time: fmtClock(r.total) })}${r.label ? html`<br />${r.label}` : ''}</div></div>
     </div>
     <div class="btns two">
-      <button class="btn" onClick=${() => adjustRest(-15)}>−15 s</button>
-      <button class="btn" onClick=${() => adjustRest(15)}>+15 s</button>
+      <button class="btn" onClick=${() => adjustRest(-15)}>${tr('−15 s')}</button>
+      <button class="btn" onClick=${() => adjustRest(15)}>${tr('+15 s')}</button>
     </div>
     <button class="btn btn-primary btn-block" onClick=${() => { skipRest(); close(); }}>${tr('Skip rest')}</button>
     <p class="small muted">${tr('Keep the app open to hear the end signal — a locked phone pauses web apps.')}</p>
@@ -118,12 +142,7 @@ export function WorkoutSheet() {
     if (c === 'discard') discard();
   };
   const discard = async () => {
-    const hasSets = a.exercises.some((e) => e.sets.some((s) => s.done));
-    const ok = await confirmDialog({
-      title: tr('Discard this workout?'),
-      message: hasSets ? tr('Everything you logged in it will be deleted.') : tr('Nothing has been logged yet.'),
-      ok: tr('Discard'), cancel: tr('Keep going'), destructive: true,
-    });
+    const ok = await confirmDiscard(a, tr('Discard this workout?'));
     if (ok) { discardActive(); closeSheet(); toast(tr('Workout discarded')); }
   };
 
@@ -137,6 +156,7 @@ export function WorkoutSheet() {
       <span><${Icon} name="calendar" />${fmt.medium(a.startedAt)}</span>
       <span class="tnum"><${Icon} name="clock" />${tr('Started {time}', { time: fmt.time(a.startedAt) })}</span>
     </div>
+    ${a.templateNotes && html`<div class="card small ink2 tpl-notes"><${Icon} name="note" size=${16} /><span>${a.templateNotes}</span></div>`}
     ${(a.showNotes || a.notes) && html`<textarea class="textarea wo-notes" placeholder=${tr('How did it go?')} value=${a.notes}
       onInput=${(e) => { a.notes = e.target.value; touchActive(); }}></textarea>`}
   </div>`;

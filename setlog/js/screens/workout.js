@@ -3,7 +3,7 @@ import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
   S, useStore, setSetting, getTemplate, saveTemplate, deleteTemplate, copyTemplate, templateFolders, getWorkout,
-  addFolder, renameFolder, removeFolder, setTemplateArchived, suggestTemplate,
+  addFolder, renameFolder, removeFolder, setTemplateArchived, suggestTemplate, applyExercisePatches,
 } from '../store.js';
 import { EXAMPLE_TEMPLATES } from '../seed.js';
 import { WorkoutEditor } from '../editor.js';
@@ -11,7 +11,7 @@ import { beginWorkout } from '../sheet.js';
 import { entryToDraft, draftEntries, remapSupersets } from '../drafts.js';
 import {
   Screen, openSheet, openScreenModal, NavBar, actionSheet, confirmDialog, toast, push, pop, useForce, promptDialog,
-  closeAllModals, setTab,
+  closeAllModals, setTab, useLeaveGuard,
 } from '../ui.js';
 import {
   relDay, relDayLower, fmtClock, uid, fmt, plural, isIOS, isStandalone,
@@ -21,6 +21,7 @@ import {
   shareText, templateShareText, parseSharedTemplate, addSharedTemplate,
 } from '../io.js';
 import { setText } from '../format.js';
+import { usesWeight } from '../calc.js';
 
 function lastUsed(t) {
   let at = t.lastUsedAt || 0;
@@ -218,6 +219,7 @@ export function WorkoutTab() {
     folders.get(f).push(t);
   }
   const order = [...folders.keys()].sort((a, b) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
+  const archivedIn = (f) => archived.filter((t) => (t.folder || '') === f).length;
   const a = S.active;
   const sug = a ? null : suggestTemplate();
   const grid = (list) => html`<div class="tpl-grid">${list.map((t) => html`<${TemplateCard} key=${t.id} t=${t}
@@ -252,8 +254,10 @@ export function WorkoutTab() {
         ${(f || order.length > 1 || archived.length > 0) && html`<div class="folder-head"><button class=${closed[f] ? 'closed' : ''}
           onClick=${() => toggle(f)}><${Icon} name="chevronDown" />${f || tr('My templates')}
           <span class="muted small">(${list.length})</span></button>
-          ${f && html`<button class="icon-btn accent folder-more" onClick=${() => folderMenu(f, list.length)} aria-label=${tr('Options for folder {name}', { name: f })}><${Icon} name="more" /></button>`}</div>`}
-        ${!closed[f] && (list.length ? grid(list) : html`<p class="footnote" style="margin-top:0">${tr('Empty. Use ⋯ → Move to folder on a template to put it here.')}</p>`)}
+          ${f && html`<button class="icon-btn accent folder-more" onClick=${() => folderMenu(f, list.length + archivedIn(f))} aria-label=${tr('Options for folder {name}', { name: f })}><${Icon} name="more" /></button>`}</div>`}
+        ${!closed[f] && (list.length ? grid(list) : html`<p class="footnote" style="margin-top:0">${archivedIn(f)
+          ? (archivedIn(f) === 1 ? tr('Its template is archived. Find it under Archived below.') : tr('Its {n} templates are archived. Find them under Archived below.', { n: archivedIn(f) }))
+          : tr('Empty. Use ⋯ → Move to folder on a template to put it here.')}</p>`)}
       </div>`;
     })}
     ${archived.length > 0 && html`<div>
@@ -295,7 +299,10 @@ function TemplatePreview({ t, close }) {
       ${cur.notes && html`<div class="card small ink2">${cur.notes}</div>`}
       <div class="group">${cur.exercises.filter((e) => S.exercises.has(e.exerciseId)).map((e, i) => {
         const ex = S.exercises.get(e.exerciseId);
-        const targets = e.sets.map((s) => (s.w || s.r || s.t || s.d ? setText(s, ex.category, { short: true }) : null)).filter(Boolean);
+        const targets = e.sets.map((s) => {
+          if (usesWeight(ex.category) && (s.w === undefined || s.w === null) && s.r) return plural(s.r, 'rep');
+          return s.w || s.r || s.t || s.d ? setText(s, ex.category, { short: true }) : null;
+        }).filter(Boolean);
         return html`<div class="cell" key=${i}>
           <div class="cell-main"><div class="cell-title">${ex.name}</div>
             <div class="cell-sub">${plural(e.sets.length, 'set')}${targets.length ? ' · ' + [...new Set(targets)].join(', ') : ''}${e.restSec ? ` · ${tr('rest {time}', { time: fmtClock(e.restSec) })}` : ''}</div></div>
@@ -309,10 +316,11 @@ function TemplatePreview({ t, close }) {
 }
 
 // ---------- template editor (pushed screen) ----------
-export function TemplateEditScreen({ id = null, fromWorkoutId = null }) {
+export function TemplateEditScreen({ id = null, fromWorkoutId = null, navKey }) {
   useStore('exercises');
   const force = useForce();
   const dirty = useRef(false);
+  useLeaveGuard(navKey, () => dirty.current);
   const [draft] = useState(() => {
     const st = S.settings;
     const src = id ? getTemplate(id) : fromWorkoutId ? getWorkout(fromWorkoutId) : null;
@@ -345,6 +353,8 @@ export function TemplateEditScreen({ id = null, fromWorkoutId = null }) {
       })),
     };
     saveTemplate(t);
+    applyExercisePatches(draft);
+    dirty.current = false;
     toast(id ? tr('Template saved') : tr('“{name}” created', { name }));
     pop();
   };

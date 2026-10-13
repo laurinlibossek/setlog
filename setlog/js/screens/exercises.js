@@ -3,10 +3,10 @@ import { tr } from '../i18n.js';
 import { html, useState, useMemo } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
-  S, useStore, stats, exerciseList, updateExercise, deleteExercise, mergeExercise, exerciseUsage,
+  S, useStore, stats, exerciseList, updateExercise, deleteExercise, mergeExercise, exerciseUsage, allSessions,
 } from '../store.js';
 import {
-  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking, formulaLabel,
+  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking, formulaLabel, loggedFields,
 } from '../calc.js';
 import { BODY_PARTS, BODY_PART_LABEL, CATEGORY_LABEL } from '../seed.js';
 import { editExercise, pickExercises, matchExercise } from '../pickers.js';
@@ -27,12 +27,12 @@ export function ExercisesTab() {
   const [part, setPart] = useState('all');
   const [sort, setSort] = useState('name');
   const [showHidden, setShowHidden] = useState(false);
-  const st = stats();
+  const all = allSessions();
   let list = exerciseList().filter((e) => (showHidden ? true : !e.hidden) && (part === 'all' || e.bodyPart === part) && matchExercise(e, q));
-  const count = (id) => st.byExercise.get(id)?.length || 0;
+  const count = (id) => all.get(id)?.length || 0;
   if (sort === 'freq') list = [...list].sort((a, b) => count(b.id) - count(a.id) || a.name.localeCompare(b.name));
   if (sort === 'recent') {
-    const last = (id) => st.byExercise.get(id)?.[0]?.startedAt || 0;
+    const last = (id) => all.get(id)?.[0]?.startedAt || 0;
     list = [...list].sort((a, b) => last(b.id) - last(a.id) || a.name.localeCompare(b.name));
   }
   const create = async () => { const ex = await editExercise(null, { name: q.trim() }); if (ex) push('exercise', { id: ex.id }); };
@@ -64,7 +64,7 @@ export function ExercisesTab() {
         const head = L && L !== lastL;
         lastL = L;
         const n = count(ex.id);
-        const last = st.byExercise.get(ex.id)?.[0]?.startedAt;
+        const last = all.get(ex.id)?.[0]?.startedAt;
         return html`${head && html`<div class="letter-head" style="padding-left:14px;background:var(--surface)">${L}</div>`}
           <button class="cell" key=${ex.id} onClick=${() => push('exercise', { id: ex.id })}>
             <div class="cell-main"><div class="cell-title">${ex.name}${ex.hidden ? html` <span class="tag">${tr('Hidden')}</span>` : ''}</div>
@@ -81,8 +81,10 @@ export function ExercisesTab() {
 export function ExerciseDetailScreen({ id }) {
   useStore('exercises', 'workouts', 'settings');
   const ex = S.exercises.get(id);
+  // charts and records follow "Start history from"; History and the counts show everything
   const sessions = stats().byExercise.get(id) || [];
-  const [tab, setTab] = useState(sessions.length >= 2 ? 'charts' : sessions.length ? 'history' : 'about');
+  const every = allSessions(id);
+  const [tab, setTab] = useState(sessions.length >= 2 ? 'charts' : every.length ? 'history' : 'about');
   if (!ex) return html`<${Screen} nav=${{ back: '' }}><${Empty} title=${tr('Exercise not found')} text=${tr('It may have been merged or deleted.')} /><//>`;
 
   const menu = async () => {
@@ -106,9 +108,13 @@ export function ExerciseDetailScreen({ id }) {
       const into = await pickExercises({ multi: false, title: tr('Merge “{name}” into', { name: ex.name }) });
       if (!into || into === ex.id) return;
       const target = S.exercises.get(into);
+      if (loggedFields(target.category).join() !== loggedFields(ex.category).join()) {
+        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: ex.name, to: target.name }));
+        return;
+      }
       const ok = await confirmDialog({
         title: tr('Merge exercises?'),
-        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: plural(sessions.length, 'session'), from: ex.name, to: target.name }),
+        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: plural(every.length, 'session'), from: ex.name, to: target.name }),
         ok: tr('Merge'), destructive: true,
       });
       if (!ok) return;
@@ -144,8 +150,8 @@ export function ExerciseDetailScreen({ id }) {
       { value: 'about', label: tr('About') }, { value: 'history', label: tr('History') },
       { value: 'charts', label: tr('Charts') }, { value: 'records', label: tr('Records') }]} />
     <div style="margin-top:14px">
-      ${tab === 'about' && html`<${About} ex=${ex} sessions=${sessions} />`}
-      ${tab === 'history' && html`<${ExHistory} ex=${ex} sessions=${sessions} />`}
+      ${tab === 'about' && html`<${About} ex=${ex} sessions=${every} />`}
+      ${tab === 'history' && html`<${ExHistory} ex=${ex} sessions=${every} />`}
       ${tab === 'charts' && html`<${ExCharts} ex=${ex} sessions=${sessions} />`}
       ${tab === 'records' && html`<${ExRecords} ex=${ex} sessions=${sessions} />`}
     </div>

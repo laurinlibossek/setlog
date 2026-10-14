@@ -207,6 +207,21 @@ test('template links round-trip and reject junk', () => {
   assert.equal(core.decodeTemplate('#template=!!!notbase64'), null);
 });
 
+// ---------- search ----------
+test('exercise search: shortcuts as whole words, accents ignored', () => {
+  const find = (q) => core.SEED_EXERCISES.filter((e) => core.matchExercise(e, q)).map((e) => e.name);
+  const benchBB = find('bench bb');
+  assert.ok(benchBB.includes('Bench Press (Barbell)'));
+  assert.ok(!benchBB.some((n) => /Dumbbell/.test(n)), benchBB.join(', '));
+  assert.ok(find('bench db').every((n) => /Dumbbell/.test(n)));
+  assert.ok(find('ohp').some((n) => n.startsWith('Overhead Press')));
+  assert.ok(find('pullup').includes('Pull Up'));
+  assert.ok(!find('bi').some((n) => /Bike|Cycling/.test(n)));
+  assert.equal(core.matchExercise({ name: 'Rückenstrecker' }, 'ruck'), true);
+  assert.equal(core.matchExercise({ name: 'Rückenstrecker' }, 'rück'), true);
+  assert.equal(core.matchExercise({ name: 'Leg Press' }, ''), true);
+});
+
 // ---------- i18n ----------
 const DE = core.DICTIONARIES.de;
 test('translator fills placeholders and falls back to English', () => {
@@ -231,6 +246,21 @@ test('every label in core and every tr() text in the web app has German', () => 
     for (const m of read(f).matchAll(/\btr\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g)) {
       const key = m[2].replace(/\\'/g, "'");
       if (!key.includes('${') && DE[key] === undefined) missing.add(key);
+    }
+  }
+  assert.deepEqual([...missing], []);
+});
+
+test('every tr() text in the iPhone and Android app has German', () => {
+  const keep = new Set(['English', 'Deutsch']);
+  const files = [];
+  const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else if (/\.tsx?$/.test(p)) files.push(p); } };
+  walk(path.join(ROOT, 'app/src'));
+  const missing = new Set();
+  for (const f of files) {
+    for (const m of read(f).matchAll(/\btr\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g)) {
+      const key = m[2].replace(/\\'/g, "'");
+      if (!key.includes('${') && !keep.has(key) && DE[key] === undefined) missing.add(`${path.relative(ROOT, f)}: ${key}`);
     }
   }
   assert.deepEqual([...missing], []);

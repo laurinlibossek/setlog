@@ -6,35 +6,14 @@ import {
   S, exerciseList, allSessions, addExercise, updateExercise, findExerciseByName,
 } from './store.js';
 import { loggedFields } from './calc.js';
+import { matchExercise } from './core/search.js';
 import {
   BODY_PARTS, BODY_PART_LABEL, CATEGORIES, CATEGORY_LABEL,
 } from './seed.js';
 import { NavBar, openScreenModal, toast, confirmDialog } from './ui.js';
 import { plural } from './util.js';
 
-const ALIASES = {
-  db: 'dumbbell', bb: 'barbell', ohp: 'overhead press', rdl: 'romanian deadlift', bp: 'bench press',
-  dl: 'deadlift', kb: 'kettlebell', ez: 'ez bar', smith: 'smith', tri: 'triceps', tris: 'triceps', bi: 'bicep',
-  bis: 'bicep', lat: 'lat', pulldown: 'pulldown', pullup: 'pull up', pushup: 'push up', chinup: 'chin up',
-  situp: 'sit up', hamstring: 'leg curl', quad: 'leg extension', delt: 'raise', abs: 'crunch',
-};
-// letters beyond a–z count too: "ü" finds "u" and "ü", "é" finds "e"
-const fold = (s) => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
-const norm = (s) => fold(s).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-const compactStr = (s) => fold(s).replace(/[^\p{L}\p{N}]/gu, '');
-
-export function matchExercise(ex, query) {
-  const q = norm(query);
-  if (!q) return true;
-  const name = norm(ex.name);
-  const nameC = compactStr(ex.name);
-  return q.split(' ').every((tok) => {
-    const al = ALIASES[tok];
-    if (name.includes(tok) || nameC.includes(tok)) return true;
-    if (al) return al.split(' ').every((a) => name.includes(a));
-    return false;
-  });
-}
+export { matchExercise };
 
 export function recentExerciseIds(limit = 8) {
   const out = [];

@@ -677,4 +677,12 @@ export default {
   '“{name}” is in {n}. Their sets stay as they are, but records and volume are worked out the new way.': '„{name}“ kommt in {n} vor. Die Sätze bleiben, wie sie sind, aber Rekorde und Volumen werden neu berechnet.',
   '“{name}” is in {n}, logged with other fields. Those sets may show up empty or incomplete afterwards.': '„{name}“ kommt in {n} vor, mit anderen Werten erfasst. Diese Sätze können danach leer oder unvollständig erscheinen.',
   Change: 'Ändern',
+
+  // the iPhone and Android app (app/ in this repo)
+  'Bring your workouts over from the Setlog web app: make a backup there, then restore it here in Settings.': 'Hol deine Trainings aus der Setlog-Web-App: Erstell dort ein Backup und stell es hier in den Einstellungen wieder her.',
+  'Units, theme, language, backup, Strong import': 'Einheiten, Design, Sprache, Backup, Strong-Import',
+  'A backup file from the Setlog web app or this app': 'Eine Backup-Datei aus der Setlog-Web-App oder dieser App',
+  'Template not found': 'Vorlage nicht gefunden',
+  'Coming next': 'Kommt als Nächstes',
+  'Logging workouts comes in the next update. Until then, keep logging in the Setlog web app.': 'Trainings eintragen kommt mit dem nächsten Update. Bis dahin trägst du sie weiter in der Setlog-Web-App ein.',
 };

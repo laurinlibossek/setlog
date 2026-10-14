@@ -6,8 +6,9 @@ import { useEffect, useReducer } from './lib.js';
 import { SEED_EXERCISES, SEED_VERSION } from './seed.js';
 import { buildSampleData } from './demo.js';
 import {
-  buildStats, prsForNewWorkout, workoutVolume, configureCalc, DEFAULT_WARMUP, sessionsByExercise,
+  buildStats, prsForNewWorkout, workoutVolume, configureCalc, sessionsByExercise,
 } from './calc.js';
+import { DEFAULT_SETTINGS, KG_PLATES, LB_PLATES } from './core/settings.js';
 import {
   uid, debounce, workoutNameForTime, slug,
 } from './util.js';
@@ -20,35 +21,9 @@ import { previousSetsFrom, bodyweightFrom } from './core/sessions.js';
 
 export { templateChanges, templateDiffers } from './core/templates.js';
 
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.6.1';
 
-export const DEFAULT_SETTINGS = {
-  unit: 'kg',
-  distUnit: 'km',
-  defaultRest: 120,
-  sound: true,
-  keepAwake: true,
-  showExamples: true,
-  askTemplateUpdate: true,
-  language: 'auto', // 'auto' | 'en' | 'de'; mirrored to localStorage by i18n.js
-  templateSort: 'name',
-  formula: 'epley',
-  dumbbellTwice: false,
-  bwWeighted: false,
-  bwAssisted: false,
-  historyStart: null, // ms; workouts before it are ignored for previous values, records and charts
-  prevSource: 'any', // 'any' | 'template'
-  warmup: DEFAULT_WARMUP,
-  bodyUnit: null, // null = same as the lifting unit
-  sizeUnit: null, // null = cm with km, in with mi
-  weekStart: 1,
-  weeklyGoal: 3,
-  theme: 'system',
-  bar: 20,
-  plates: [25, 20, 15, 10, 5, 2.5, 1.25],
-};
-const LB_PLATES = [45, 35, 25, 10, 5, 2.5];
-const KG_PLATES = DEFAULT_SETTINGS.plates;
+export { DEFAULT_SETTINGS };
 
 export const S = {
   ready: false,

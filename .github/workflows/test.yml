@@ -1,6 +1,5 @@
 name: Tests
 
-# Unit tests for the shared core (setlog/js/core), in plain Node.
 on:
   push:
   pull_request:
@@ -9,6 +8,7 @@ permissions:
   contents: read
 
 jobs:
+  # Unit tests for the shared core (setlog/js/core), in plain Node.
   core:
     runs-on: ubuntu-latest
     steps:
@@ -17,3 +17,20 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+
+  # The iPhone and Android app: types check and both bundles build.
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run bundle

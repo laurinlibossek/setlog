@@ -683,6 +683,6 @@ export default {
   'Units, theme, language, backup, Strong import': 'Einheiten, Design, Sprache, Backup, Strong-Import',
   'A backup file from the Setlog web app or this app': 'Eine Backup-Datei aus der Setlog-Web-App oder dieser App',
   'Template not found': 'Vorlage nicht gefunden',
-  'Coming next': 'Kommt als Nächstes',
-  'Logging workouts comes in the next update. Until then, keep logging in the Setlog web app.': 'Trainings eintragen kommt mit dem nächsten Update. Bis dahin trägst du sie weiter in der Setlog-Web-App ein.',
+  'No workout running': 'Kein Training läuft',
+  Search: 'Suchen',
 };

@@ -29,6 +29,20 @@ export const ICONS = {
   swap: { ios: 'arrow.left.arrow.right', android: 'swap_horiz', web: 'swap_horiz' },
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },
+  more: { ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' },
+  chevronDown: { ios: 'chevron.down', android: 'expand_more', web: 'expand_more' },
+  timer: { ios: 'timer', android: 'timer', web: 'timer' },
+  note: { ios: 'note.text', android: 'sticky_note_2', web: 'sticky_note_2' },
+  pin: { ios: 'pin', android: 'push_pin', web: 'push_pin' },
+  link: { ios: 'link', android: 'link', web: 'link' },
+  unlink: { ios: 'xmark.circle', android: 'link_off', web: 'link_off' },
+  flame: { ios: 'flame', android: 'local_fire_department', web: 'local_fire_department' },
+  grip: { ios: 'line.3.horizontal', android: 'drag_handle', web: 'drag_handle' },
+  reorder: { ios: 'arrow.up.arrow.down', android: 'swap_vert', web: 'swap_vert' },
+  trash: { ios: 'trash', android: 'delete', web: 'delete' },
+  calendar: { ios: 'calendar', android: 'calendar_today', web: 'calendar_today' },
+  close: { ios: 'xmark', android: 'close', web: 'close' },
+  repeat: { ios: 'arrow.clockwise', android: 'replay', web: 'replay' },
 } as const;
 export type IconName = keyof typeof ICONS;
 
@@ -213,7 +227,7 @@ export function SearchField({ value, onChange, placeholder, testID }: { value: s
     <View style={[styles.search, { backgroundColor: c.surface3 }]}>
       <Icon name="search" size={16} color={c.ink3} />
       <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={c.ink3} testID={testID}
-        autoCorrect={false} autoCapitalize="none" clearButtonMode="while-editing" style={{ flex: 1, color: c.ink, fontSize: 16, paddingVertical: 8 }} />
+        autoCorrect={false} autoCapitalize="none" clearButtonMode="while-editing" style={{ flex: 1, minWidth: 0, color: c.ink, fontSize: 16, paddingVertical: 8 }} />
     </View>
   );
 }

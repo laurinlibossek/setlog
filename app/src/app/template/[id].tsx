@@ -5,7 +5,7 @@ import { EXAMPLE_TEMPLATES, usesWeight } from '@setlog/core';
 import { useAppState } from '@/data/store';
 import type { Template } from '@/data/types';
 import { useFormat } from '@/lib/format';
-import { notYet } from '@/lib/notice';
+import { beginWorkout } from '@/lib/workout';
 import {
   Button, Card, Cell, Empty, Group, Page, Txt,
 } from '@/ui/kit';
@@ -49,7 +49,7 @@ export default function TemplatePreview() {
         })}
       </Group>
       <View style={{ marginTop: 18 }}>
-        <Button large icon="play" title={tr('Start workout')} onPress={() => notYet(tr)} testID="start-template" />
+        <Button large icon="play" title={tr('Start workout')} onPress={() => beginWorkout({ template: t }, f)} testID="start-template" />
       </View>
     </Page>
   );

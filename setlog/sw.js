@@ -1,7 +1,7 @@
 // Offline support. Everything the app needs is cached on install, so it opens
 // instantly and works in a basement gym with no signal.
 // When you change any file, bump VERSION so phones pick up the update.
-const VERSION = 'setlog-v1.6.1';
+const VERSION = 'setlog-v1.6.2';
 const ASSETS = [
   './',
   './index.html',
@@ -50,6 +50,7 @@ const ASSETS = [
   './js/core/suggest.js',
   './js/core/templates.js',
   './js/core/units.js',
+  './js/core/workout.js',
   './js/vendor/hooks.js',
   './js/vendor/htm.js',
   './js/vendor/preact.js',

@@ -138,6 +138,97 @@ test('previous sets prefer the same template; body weight on a day', () => {
   assert.equal(core.bodyweightFrom(ms, 400), 82);
 });
 
+// ---------- the running workout ----------
+const ST = { ...core.DEFAULT_SETTINGS, unit: 'kg', distUnit: 'km' };
+const BENCH = core.SEED_EXERCISES.find((e) => e.name === 'Bench Press (Barbell)');
+const PULLUP = core.SEED_EXERCISES.find((e) => e.name === 'Pull Up');
+test('starting from a template: targets as placeholders, last time beats the template', () => {
+  const tpl = { id: 't1', name: 'Push', notes: 'Heavy day', exercises: [E(BENCH.id, [S('warmup', 40, 8), S('normal', 80, 8), S('normal', 80, 8)], { supersetId: 'g' }), E('gone', [S('normal', 10, 10)])] };
+  const a = core.newActiveWorkout({ template: tpl, hasExercise: (id) => id !== 'gone', settings: ST, now: 1000 });
+  assert.equal(a.name, 'Push');
+  assert.equal(a.templateId, 't1');
+  assert.equal(a.templateNotes, 'Heavy day');
+  assert.equal(a.exercises.length, 1);
+  assert.notEqual(a.exercises[0].supersetId, 'g');
+  assert.equal(core.newActiveWorkout({ template: { ...tpl, example: true }, settings: ST }).templateId, null);
+  const entry = a.exercises[0];
+  // no history: the template's targets
+  assert.deepEqual(core.placeholders(entry, null, ST).map((r) => [r.ph.w, r.ph.r]), [['40', '8'], ['80', '8'], ['80', '8']]);
+  // history: last time's sets, warm-ups paired with warm-ups
+  const rows = core.placeholders(entry, [S('normal', 85, 6)], ST);
+  assert.deepEqual(rows.map((r) => r.ph.w), ['40', '85', '80']);
+  assert.equal(rows[1].prev.w, 85);
+  assert.equal(core.workoutNameKey(new Date(2026, 0, 1, 7).getTime()), 'Morning Workout');
+});
+
+test('checking off: fills from placeholders, says what is missing, rest after the superset round', () => {
+  const a = core.newActiveWorkout({ settings: ST, name: 'Evening Workout' });
+  a.exercises.push(...core.newEntries([BENCH.id, PULLUP.id], { previousSets: () => null }));
+  const [bench, pull] = a.exercises;
+  // nothing typed and nothing to fall back on
+  let r = core.checkOffSet(a, bench, 0, { category: BENCH.category, ph: { w: '', r: '' }, rest: 120, settings: ST });
+  assert.equal(r.problem, core.WORKOUT_MESSAGES.repsFirst);
+  bench.sets[0].r = '8';
+  r = core.checkOffSet(a, bench, 0, { category: BENCH.category, ph: { w: '', r: '' }, rest: 120, settings: ST });
+  assert.equal(r.problem, core.WORKOUT_MESSAGES.weightFirst);
+  r = core.checkOffSet(a, bench, 0, { category: BENCH.category, ph: { w: '80', r: '5', orig: { w: ['80', 80] } }, rest: 120, settings: ST });
+  assert.deepEqual(r, { rest: 120 });
+  assert.equal(bench.sets[0].done, true);
+  assert.deepEqual([bench.sets[0].w, bench.sets[0].r], ['80', '8']);
+  // body weight exercises need no weight
+  r = core.checkOffSet(a, pull, 0, { category: PULLUP.category, ph: { r: '10' }, rest: 90, settings: ST });
+  assert.equal(r.rest, 90);
+  // supersets: rest only after the last exercise of the round
+  core.joinSuperset(a.exercises, bench, pull);
+  assert.deepEqual(a.exercises, [pull, bench], 'bench moves behind the exercise it joined');
+  core.addSet(pull);
+  r = core.checkOffSet(a, pull, 1, { category: PULLUP.category, ph: { r: '10' }, rest: 90, settings: ST });
+  assert.equal(r.rest, 0, 'no rest between the exercises of a superset');
+  core.addSet(bench); bench.sets[1].type = 'warmup';
+  r = core.checkOffSet(a, bench, 1, { category: BENCH.category, ph: { w: '40', r: '5' }, rest: 120, settings: ST });
+  assert.equal(r.rest, 60, 'after the round; warm-ups rest at most a minute');
+  core.leaveSuperset(a.exercises, bench);
+  assert.equal(pull.supersetId, null);
+});
+
+test('finishing: unchecked sets with numbers, progress, the saved workout', () => {
+  const a = core.newActiveWorkout({ settings: ST, now: 10000, name: 'Morning Workout' });
+  a.exercises.push(...core.newEntries([BENCH.id], { previousSets: () => [S('normal', 80, 5), S('normal', 80, 5)] }));
+  const bench = a.exercises[0];
+  assert.equal(bench.sets.length, 2);
+  bench.sets[0].w = '82,5'; bench.sets[0].r = '5'; bench.sets[0].done = true;
+  bench.sets[1].r = '4';
+  assert.deepEqual(core.progressOf(a), { done: 1, typed: 1 });
+  const prev = () => [S('normal', 80, 5), S('normal', 80, 5)];
+  const pending = core.pendingSets(a, { exercises: new Map([[BENCH.id, BENCH]]), previousSets: prev, settings: ST });
+  assert.equal(pending.length, 1);
+  assert.deepEqual([pending[0].filled.w, pending[0].filled.r], ['80', '4'], 'the missing weight comes from last time');
+  const noHistory = core.pendingSets(a, { exercises: new Map([[BENCH.id, BENCH]]), previousSets: () => null, settings: ST });
+  assert.equal(noHistory[0].filled.w, '82,5', 'without history, from the row above');
+  const w = core.finishWorkout(a, { settings: ST, exercises: new Map([[BENCH.id, BENCH]]), now: 20000, defaultName: 'X' });
+  assert.equal(w.name, 'Morning Workout');
+  assert.equal(w.endedAt, 10000 + 60000, 'at least a minute');
+  assert.deepEqual(w.exercises[0].sets.map((s) => [s.w, s.r]), [[82.5, 5]]);
+  a.name = '  ';
+  assert.equal(core.finishWorkout(a, { settings: ST, exercises: new Map([[BENCH.id, BENCH]]), defaultName: 'X' }).name, 'X');
+});
+
+test('warm-ups, replacing an exercise, moving entries', () => {
+  const entry = core.newEntryDraft(BENCH.id, 1);
+  const rows = core.placeholders(entry, [S('normal', 100, 5)], ST);
+  assert.deepEqual(core.addWarmups(entry, rows, 'barbell', ST), { added: 4 });
+  assert.deepEqual(entry.sets.map((s) => [s.type, s.w]), [['warmup', '20'], ['warmup', '40'], ['warmup', '60'], ['warmup', '80'], ['normal', '']]);
+  assert.deepEqual(core.addWarmups(core.newEntryDraft(BENCH.id, 1), [{ ph: {} }], 'barbell', ST), { problem: core.WORKOUT_MESSAGES.warmupNeedsWeight });
+  entry.restSec = 180; entry.focus = 'volume'; entry.sets[4].w = '100'; entry.sets[4].r = '5';
+  core.replaceExercise(entry, BENCH, PULLUP);
+  assert.deepEqual([entry.exerciseId, entry.restSec, entry.focus, entry.sets[4].w], [PULLUP.id, null, null, '']);
+  const list = ['a', 'b', 'c'];
+  assert.equal(core.moveItem(list, 0, 2), true);
+  assert.deepEqual(list, ['b', 'c', 'a']);
+  assert.equal(core.restFor({ restSec: null }, { restSec: 90 }, 120), 90);
+  assert.equal(core.restFor({}, {}, 120), 120);
+});
+
 // ---------- Strong CSV ----------
 const STRONG = `Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
 2026-09-01 18:00:00,"Upper",1h 5m,"T Bar Row",W,60,6,0,0,"","Felt strong",
@@ -237,7 +328,8 @@ test('every label in core and every tr() text in the web app has German', () => 
   const labels = [
     ...core.CATEGORIES, ...core.BODY_PARTS, ...core.MEASUREMENTS, ...core.FORMULAS,
     ...['barbell', 'reps', 'cardio', 'duration', 'assisted_bw'].flatMap((c) => core.chartMetricsFor(c)),
-  ].map((x) => x.label).concat(Object.values(core.PR_LABEL), core.EXAMPLE_TEMPLATES.flatMap((t) => [t.name, t.folder]));
+  ].map((x) => x.label).concat(Object.values(core.PR_LABEL), Object.values(core.FOCUS_LABEL), Object.values(core.WORKOUT_MESSAGES),
+    ['Night Workout', 'Morning Workout', 'Afternoon Workout', 'Evening Workout'], core.EXAMPLE_TEMPLATES.flatMap((t) => [t.name, t.folder]));
   const missing = new Set(labels.filter((l) => !keep.has(l) && DE[l] === undefined));
   const files = [];
   const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) { if (f !== 'vendor' && f !== 'core') walk(p); } else if (p.endsWith('.js')) files.push(p); } };

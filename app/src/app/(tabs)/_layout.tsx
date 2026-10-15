@@ -1,8 +1,11 @@
 import { Tabs } from 'expo-router';
+import { BottomTabBar } from 'expo-router/tabs';
+import { View } from 'react-native';
 
 import { useLang } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { Icon, type IconName } from '@/ui/kit';
+import { MiniBar } from '@/ui/workout/MiniBar';
 
 // Same tabs, in the same order, as the web app. Workout is in the middle and
 // opens first.
@@ -20,6 +23,7 @@ export default function TabLayout() {
   return (
     <Tabs
       initialRouteName="index"
+      tabBar={(props) => <View><MiniBar /><BottomTabBar {...props} /></View>}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: c.accent,

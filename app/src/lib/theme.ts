@@ -6,14 +6,14 @@ import { useColorScheme } from 'react-native';
 import { DarkTheme, DefaultTheme } from 'expo-router';
 import { paletteFor } from '@setlog/core';
 
-import { useAppState } from '@/data/store';
+import { useSettings } from '@/data/store';
 
 export type Palette = ReturnType<typeof paletteFor>;
 export type Colors = Palette['colors'];
 
 export function usePalette(): Palette {
   const scheme = useColorScheme();
-  const { settings } = useAppState();
+  const settings = useSettings();
   return paletteFor(settings.theme, scheme === 'dark');
 }
 

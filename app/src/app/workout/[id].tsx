@@ -6,9 +6,10 @@ import {
 
 import { stats, useAppState } from '@/data/store';
 import { setLabels, useFormat } from '@/lib/format';
+import { beginWorkout } from '@/lib/workout';
 import { useColors } from '@/lib/theme';
 import {
-  Card, Empty, Icon, Page, Txt,
+  Button, Card, Empty, Icon, Page, Txt,
 } from '@/ui/kit';
 
 export default function WorkoutDetail() {
@@ -67,6 +68,9 @@ export default function WorkoutDetail() {
           </View>
         );
       })}
+      <View style={{ marginTop: 24 }}>
+        <Button kind="tinted" icon="repeat" title={tr('Do this workout again')} onPress={() => beginWorkout({ fromWorkout: w }, f)} testID="do-again" />
+      </View>
     </Page>
   );
 }

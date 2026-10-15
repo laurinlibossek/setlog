@@ -12,16 +12,15 @@ import { DEFAULT_SETTINGS, KG_PLATES, LB_PLATES } from './core/settings.js';
 import {
   uid, debounce, workoutNameForTime, slug,
 } from './util.js';
-import {
-  entryToDraft, newEntryDraft, draftEntries, remapSupersets, convertDraftUnits,
-} from './core/drafts.js';
+import { convertDraftUnits } from './core/drafts.js';
+import { newActiveWorkout, finishWorkout, newEntries } from './core/workout.js';
 import { applyWorkoutToTemplate, cleanTemplateExercises } from './core/templates.js';
 import { suggestTemplate as suggestFrom } from './core/suggest.js';
 import { previousSetsFrom, bodyweightFrom } from './core/sessions.js';
 
 export { templateChanges, templateDiffers } from './core/templates.js';
 
-export const APP_VERSION = '1.6.1';
+export const APP_VERSION = '1.6.2';
 
 export { DEFAULT_SETTINGS };
 
@@ -480,33 +479,9 @@ export function touchActive() {
 
 export function startWorkout({ template = null, fromWorkout = null } = {}) {
   const now = Date.now();
-  const st = S.settings;
-  let exercises = [];
-  let name = workoutNameForTime(now);
-  let notes = '';
-  let templateNotes = '';
-  if (template) {
-    name = template.name;
-    templateNotes = template.notes || '';
-    exercises = remapSupersets(template.exercises.filter((e) => S.exercises.has(e.exerciseId))
-      .map((e) => entryToDraft(e, st, { asTemplateTargets: true })));
-  } else if (fromWorkout) {
-    name = fromWorkout.name;
-    exercises = remapSupersets(fromWorkout.exercises.filter((e) => S.exercises.has(e.exerciseId))
-      .map((e) => entryToDraft({ ...e, notes: '' }, st, { asTemplateTargets: true })));
-  }
-  S.active = {
-    id: uid(),
-    kind: 'workout',
-    name,
-    notes,
-    startedAt: now,
-    templateId: template && !template.example ? template.id : null,
-    templateNotes,
-    exercises,
-    rest: null,
-    updatedAt: now,
-  };
+  S.active = newActiveWorkout({
+    template, fromWorkout, hasExercise: (id) => S.exercises.has(id), settings: S.settings, now, name: workoutNameForTime(now),
+  });
   touchActive();
   flushActive();
   checkPersisted(true);
@@ -530,16 +505,9 @@ export function finishActive(mode = 'done') {
   const a = S.active;
   if (!a) return null;
   const now = Date.now();
-  const exercises = draftEntries(a, S.settings, S.exercises, { onlyDone: mode === 'done' });
-  const workout = {
-    id: a.id,
-    name: (a.name || '').trim() || workoutNameForTime(a.startedAt),
-    notes: (a.notes || '').trim(),
-    startedAt: a.startedAt,
-    endedAt: Math.max(now, a.startedAt + 60000),
-    templateId: a.templateId || null,
-    exercises,
-  };
+  const workout = finishWorkout(a, {
+    settings: S.settings, exercises: S.exercises, now, mode, defaultName: workoutNameForTime(a.startedAt),
+  });
   const prs = prsForNewWorkout(workout, stats(), S.exercises, S.settings.formula);
   saveWorkout(workout);
   if (workout.templateId) {
@@ -573,11 +541,7 @@ export function applyExercisePatches(draft) {
 }
 
 export function addEntries(draft, exerciseIds) {
-  for (const id of exerciseIds) {
-    const prev = previousSets(id);
-    const count = prev ? Math.min(prev.filter((s) => s.type !== 'warmup').length || 1, 6) : 1;
-    draft.exercises.push(newEntryDraft(id, draft.kind === 'template' ? Math.max(count, 3) : count));
-  }
+  draft.exercises.push(...newEntries(exerciseIds, { previousSets: (id) => previousSets(id), kind: draft.kind }));
 }
 
 // ---------- rest timer ----------

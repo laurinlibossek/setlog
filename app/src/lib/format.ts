@@ -5,7 +5,7 @@ import {
   kgTo, kmTo, roundW, fmtClock, usesWeight, startOfDay, DAY,
 } from '@setlog/core';
 
-import { useAppState } from '@/data/store';
+import { useSettings } from '@/data/store';
 import type { Category, Settings, WorkSet } from '@/data/types';
 import { useLang, type Tr } from './i18n';
 
@@ -110,7 +110,7 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
 export type Format = ReturnType<typeof makeFormat>;
 
 export function useFormat(): Format & { tr: Tr; lang: 'en' | 'de' } {
-  const { settings } = useAppState();
+  const settings = useSettings();
   const { lang, locale, tr } = useLang();
   return useMemo(() => ({ ...makeFormat(settings, locale, lang, tr), tr, lang }), [settings, locale, lang, tr]);
 }

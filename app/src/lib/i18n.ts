@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { translator, pickLanguage, configureUnits } from '@setlog/core';
 
-import { useAppState } from '@/data/store';
+import { useSettings } from '@/data/store';
 
 export type Tr = (text: string, vars?: Record<string, string | number>) => string;
 
@@ -28,7 +28,7 @@ export function localeFor(lang: 'en' | 'de'): string {
 }
 
 export function useLang() {
-  const { settings } = useAppState();
+  const settings = useSettings();
   const lang = resolveLanguage(settings.language);
   return useMemo(() => {
     const locale = localeFor(lang);

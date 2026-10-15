@@ -50,6 +50,7 @@ export interface Template {
   archived?: boolean;
   lastUsedAt?: number;
   createdAt?: number;
+  updatedAt?: number;
   example?: boolean;
 }
 
@@ -92,7 +93,63 @@ export interface Settings {
   bwAssisted: boolean;
   bodyUnit: 'kg' | 'lb' | null;
   sizeUnit: 'cm' | 'in' | null;
+  defaultRest: number;
+  askTemplateUpdate: boolean;
+  prevSource: 'any' | 'template';
+  bar: number;
+  plates: number[];
+  warmup: { barReps: number; steps: [number, number][] };
   [key: string]: unknown;
+}
+
+// ---------- the running workout ----------
+// The editable form (see core/drafts.js): numbers are the strings the user
+// typed, in display units, so "62," survives while typing.
+export interface SetDraft {
+  id: string;
+  type: SetType;
+  w: string;
+  r: string;
+  d: string;
+  t: string;
+  rpe: string;
+  done: boolean;
+  /** template target, shown as the placeholder */
+  tpl?: { w: number | null; r: number | null; d: number | null; t: number | null };
+  /** stored numbers behind untouched text */
+  orig?: Record<string, [string, number]>;
+}
+
+export interface EntryDraft {
+  id: string;
+  exerciseId: string;
+  notes: string;
+  showNotes: boolean;
+  supersetId: string | null;
+  restSec: number | null;
+  focus?: string | null;
+  sets: SetDraft[];
+}
+
+export interface Rest {
+  start: number;
+  end: number;
+  total: number;
+  label: string;
+}
+
+export interface ActiveWorkout {
+  id: string;
+  kind: 'workout';
+  name: string;
+  notes: string;
+  showNotes?: boolean;
+  startedAt: number;
+  templateId: string | null;
+  templateNotes: string;
+  exercises: EntryDraft[];
+  rest: Rest | null;
+  updatedAt: number;
 }
 
 export interface Profile {
@@ -105,6 +162,7 @@ export interface Kv {
   settings?: Partial<Settings>;
   profile?: Partial<Profile>;
   meta?: Meta;
+  active?: ActiveWorkout | null;
 }
 
 /** Everything that is stored; also the `data` part of a backup file. */

@@ -2,7 +2,16 @@
 
 The store version of Setlog, built with [Expo](https://expo.dev) (React Native). One codebase becomes a real iPhone app and a real Android app. The training logic isn't rewritten: the app imports the same core as the web app (`../setlog/js/core`, as `@setlog/core`), so records, the suggested workout, the Strong import, backups, translations and colour themes work exactly as they do on the web.
 
-**Status:** first version. Your data comes over from the web app with a backup file, and you can browse it: templates, history, workout details, exercise history and records, measurements, settings (units, theme, language). Logging a workout is next.
+**Status:** you can log workouts. Start one empty, from a template or again from History. Last time's numbers show as grey placeholders, and checking a set off saves them. It also has the rest timer, set types and RPE, supersets, warm-up sets, drag-and-drop reordering, and Finish with records and the "update the template?" question. Pull the workout down and it waits in a bar above the tabs; it survives closing the app.
+
+Your data comes over from the web app with a backup file. You can browse templates, history, exercise records and measurements, and change units, theme and language.
+
+Still to come:
+- rest timer alerts while the phone is locked
+- editing templates and finished workouts
+- charts
+- logging measurements
+- making backups
 
 ## Try it on your iPhone (free, no Apple Developer account)
 
@@ -23,15 +32,21 @@ Android works the same with Expo Go from the Play Store. `npx expo start --web` 
 ## How it's organised
 
 ```
-src/app/            screens (Expo Router: every file is a route)
-  (tabs)/           Profile, History, Workout, Exercises, Measure
-  settings.tsx      units, theme, language, restore a backup, Strong import
-  workout/[id].tsx  a finished workout
-  exercise/[id].tsx an exercise's history and records
-  template/[id].tsx a template preview
-src/data/           state (store.ts) and storage: SQLite on the phone, localStorage on web
-src/lib/            language, colours, number and date formatting
-src/ui/kit.tsx      shared building blocks (large titles, grouped rows, buttons)
+src/app/              screens (Expo Router: every file is a route)
+  (tabs)/             Profile, History, Workout, Exercises, Measure
+  active.tsx          the running workout (slides up; pull down to minimize)
+  pick-exercises.tsx  adding or replacing exercises
+  reorder.tsx         drag-and-drop order of the running workout
+  summary/[id].tsx    after Finish: records, and the template question
+  settings.tsx        units, theme, language, restore a backup, Strong import
+  workout/[id].tsx    a finished workout ("Do this workout again")
+  exercise/[id].tsx   an exercise's history and records
+  template/[id].tsx   a template preview
+src/data/             state (store.ts) and storage: SQLite on the phone, localStorage on web
+src/lib/              language, colours, formatting, starting and finishing a workout
+src/ui/kit.tsx        shared building blocks (large titles, grouped rows, buttons)
+src/ui/overlay.tsx    action sheets, dialogs and toasts (each modal screen has its own host)
+src/ui/workout/       exercise blocks, set rows, rest timer, the bar above the tabs
 ```
 
 ## Rules

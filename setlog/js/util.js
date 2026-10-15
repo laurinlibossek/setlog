@@ -2,6 +2,7 @@
 // formatting, relative dates and plurals in the app language, platform checks.
 import { tr, getLang } from './i18n.js';
 import { configureUnits, startOfDay, DAY } from './core/units.js';
+import { workoutNameKey } from './core/workout.js';
 
 export {
   uid, clamp, debounce, slug, parseNum, numToInput, parsePlates, KG_PER_LB, KM_PER_MI, kgTo, toKg, kmTo, toKm, roundW,
@@ -115,14 +116,7 @@ export function fromLocalInput(s) {
   return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime();
 }
 
-export function workoutNameForTime(t) {
-  const h = new Date(t).getHours();
-  if (h < 5) return tr('Night Workout');
-  if (h < 12) return tr('Morning Workout');
-  if (h < 17) return tr('Afternoon Workout');
-  if (h < 22) return tr('Evening Workout');
-  return tr('Night Workout');
-}
+export const workoutNameForTime = (t) => tr(workoutNameKey(t));
 
 /** "3 sets" — both forms go through the dictionary ("set" → "Satz", "sets" → "Sätze"). */
 export function plural(n, one, many) { return `${fmtNum(n, 0)} ${n === 1 ? tr(one) : tr(many || one + "s")}`; }

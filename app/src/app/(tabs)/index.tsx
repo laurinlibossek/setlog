@@ -6,7 +6,7 @@ import { EXAMPLE_TEMPLATES } from '@setlog/core';
 import { suggestion, useAppState } from '@/data/store';
 import type { Template } from '@/data/types';
 import { useFormat } from '@/lib/format';
-import { notYet } from '@/lib/notice';
+import { beginWorkout } from '@/lib/workout';
 import { useColors } from '@/lib/theme';
 import {
   Button, Card, Icon, Screen, SectionTitle, Txt,
@@ -79,11 +79,11 @@ export default function WorkoutTab() {
         {sug && (
           <View style={{ gap: 8 }}>
             <Text style={[st.label, { color: c.label }]}>{tr('Suggested')}</Text>
-            <Button large icon="play" title={tr('Start {name}', { name: sug.template.name })} onPress={() => notYet(tr)} testID="start-suggested" />
+            <Button large icon="play" title={tr('Start {name}', { name: sug.template.name })} onPress={() => beginWorkout({ template: sug.template }, f)} testID="start-suggested" />
             <Txt tone="ink3" style={{ fontSize: 13, textAlign: 'center' }}>{why(sug.why)}</Txt>
           </View>
         )}
-        <Button large icon="plus" kind={sug ? 'tinted' : 'primary'} title={tr('Start an empty workout')} onPress={() => notYet(tr)} testID="start-empty" />
+        <Button large icon="plus" kind={sug ? 'tinted' : 'primary'} title={tr('Start an empty workout')} onPress={() => beginWorkout({}, f)} testID="start-empty" />
       </Card>
 
       <SectionTitle>{tr('Templates')}</SectionTitle>

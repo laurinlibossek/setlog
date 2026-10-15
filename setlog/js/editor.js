@@ -8,15 +8,17 @@ import { Icon } from './icons.js';
 import {
   S, previousSets, stats, startRest, addEntries, touchActive, exerciseView, patchExercise,
 } from './store.js';
+import { usesWeight, loggedFields } from './calc.js';
 import {
-  usesWeight, setIsValid, warmupSets, countsVolume, setVolume, isWorking, loggedFields, newRecords,
-} from './calc.js';
-import { newSetDraft, setToDraft, draftToSet } from './core/drafts.js';
+  REST_CHOICES, RPE_CHOICES, SET_TYPES, FOCUS_LABEL as FOCUS_KEYS, draftTemplateId, restFor as restFrom, placeholders,
+  checkOffSet, copyPrevious, pendingSets as pendingFrom, addSet as addSetTo, joinSuperset, leaveSuperset, replaceExercise,
+  addWarmups as addWarmupsTo, isLiveRecord, focusOptions, focusValues as focusFrom,
+} from './core/workout.js';
 import {
   setText, setLabels, SET_TYPE_NAME, wUnit, dUnit, volume as fmtVolume, w as fmtW,
 } from './format.js';
 import {
-  uid, fmtDigits, fmtClock, parseNum, fmtNum, plural, numToInput,
+  fmtDigits, fmtClock, parseNum, fmtNum, plural,
 } from './util.js';
 import {
   actionSheet, promptDialog, toast, openScreenModal, openDialog, NavBar, useForce, push, closeSheet,
@@ -25,69 +27,19 @@ import { pickExercises } from './pickers.js';
 import { openTools } from './tools.js';
 
 const SS_COLORS = ['var(--accent)', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
-const REST_CHOICES = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 
 const fieldsFor = loggedFields;
-
-/** Copy a placeholder value into a set, with the stored number behind it (no rounding drift). */
-function fillFrom(set, f, ph) {
-  set[f] = ph[f];
-  if (ph.orig && ph.orig[f]) set.orig = { ...(set.orig || {}), [f]: ph.orig[f] };
-}
-
-/** The template a draft belongs to (for "previous values from the same template"). */
-const draftTemplateId = (draft) => (draft.kind === 'template' ? draft.id : draft.templateId || null);
-
-export function restFor(entry, ex) {
-  if (entry.restSec !== null && entry.restSec !== undefined) return entry.restSec;
-  if (ex && ex.restSec !== null && ex.restSec !== undefined) return ex.restSec;
-  return S.settings.defaultRest;
-}
-
-/** Placeholder strings + "previous" sets for each row of an entry. */
-function computePrev(entry, prevSets) {
-  const st = S.settings;
-  const prevWarm = (prevSets || []).filter((s) => s.type === 'warmup');
-  const prevWork = (prevSets || []).filter((s) => s.type !== 'warmup');
-  let wi = 0, ki = 0;
-  let lastPh = null;
-  return entry.sets.map((s) => {
-    const p = s.type === 'warmup' ? prevWarm[wi++] : prevWork[ki++];
-    let ph;
-    if (p) ph = setToDraft(p, st);
-    else if (s.tpl) ph = setToDraft(s.tpl, st);
-    else if (lastPh) ph = lastPh;
-    else ph = { w: '', r: '', d: '', t: '' };
-    // next rows fall back to what this row has (typed values beat placeholders)
-    lastPh = {
-      w: s.w || ph.w, r: s.r || ph.r, d: s.d || ph.d, t: s.t || ph.t,
-    };
-    return { prev: p || null, ph };
-  });
-}
+const computePrev = (entry, prevSets) => placeholders(entry, prevSets, S.settings);
+export const restFor = (entry, ex) => restFrom(entry, ex, S.settings.defaultRest);
 
 /**
  * Unchecked sets the user started typing into. Missing fields are completed
  * from the grey placeholders, exactly like tapping the check button would.
  * Returns [{ set, filled }] for sets that would be valid.
  */
-export function pendingSets(draft) {
-  const out = [];
-  for (const entry of draft.exercises) {
-    const ex = S.exercises.get(entry.exerciseId);
-    if (!ex) continue;
-    const fields = fieldsFor(ex.category);
-    const rows = computePrev(entry, previousSets(entry.exerciseId, { templateId: draftTemplateId(draft) }));
-    entry.sets.forEach((set, i) => {
-      if (set.done || !fields.some((f) => String(set[f] || '').trim())) return;
-      const filled = { ...set };
-      for (const f of fields) if (!String(filled[f] || '').trim() && rows[i].ph[f]) fillFrom(filled, f, rows[i].ph);
-      if (usesWeight(ex.category) && !String(filled.w || '').trim() && (ex.category === 'weighted_bw' || ex.category === 'assisted_bw')) filled.w = '0';
-      if (setIsValid(draftToSet(filled, S.settings), ex.category)) out.push({ set, filled });
-    });
-  }
-  return out;
-}
+export const pendingSets = (draft) => pendingFrom(draft, {
+  exercises: S.exercises, settings: S.settings, previousSets: (id, templateId) => previousSets(id, { templateId }),
+});
 
 export function WorkoutEditor({
   draft, mode, onChange, before = Infinity, excludeWorkoutId = null, header = null, footer = null,
@@ -133,11 +85,7 @@ function ExerciseBlock({
   const bests = stats().bests.get(entry.exerciseId);
   const rest = restFor(entry, ex);
 
-  const addSet = () => {
-    const last = entry.sets[entry.sets.length - 1];
-    entry.sets.push(newSetDraft(last && last.type === 'drop' ? 'drop' : 'normal'));
-    onChange();
-  };
+  const addSet = () => { addSetTo(entry); onChange(); };
   const removeSet = (set) => {
     const i = entry.sets.indexOf(set);
     if (i < 0) return;
@@ -148,34 +96,25 @@ function ExerciseBlock({
 
   const toggleDone = (set, i) => {
     if (set.done) { set.done = false; onChange(); return; }
-    const ph = rows[i].ph;
-    for (const f of fields) if (!String(set[f] || '').trim() && ph[f]) fillFrom(set, f, ph);
-    if (usesWeight(cat) && !String(set.w || '').trim() && (cat === 'weighted_bw' || cat === 'assisted_bw')) set.w = '0';
-    const c = draftToSet(set, S.settings);
-    if (!setIsValid(c, cat)) {
+    const r = checkOffSet(draft, entry, i, {
+      category: cat, ph: rows[i].ph, rest, settings: S.settings,
+    });
+    if (r.problem) {
       setShakeId(set.id);
       setTimeout(() => setShakeId(null), 400);
-      const msg = usesWeight(cat) ? (c.r > 0 ? 'Enter the weight first' : 'Enter reps first')
-        : cat === 'reps' ? 'Enter reps first' : cat === 'cardio' ? 'Enter distance or time first' : 'Enter a time first';
-      toast(tr(msg));
+      toast(tr(r.problem));
       onChange();
       return;
     }
-    set.done = true;
     onChange();
-    // rest timer: inside a superset only after the last exercise of the round
-    if (entry.supersetId) {
-      const group = draft.exercises.filter((e) => e.supersetId === entry.supersetId);
-      if (group[group.length - 1] !== entry) return;
-    }
-    if (rest > 0) startRest(set.type === 'warmup' ? Math.min(rest, 60) : rest, ex.name);
+    if (r.rest > 0) startRest(r.rest, ex.name);
   };
 
   const setMenu = async (set, i) => {
     const choice = await actionSheet({
       title: tr('Set {label}', { label: labels[i] }),
       actions: [
-        ...['normal', 'warmup', 'drop', 'failure'].map((t) => ({ label: SET_TYPE_NAME[t], value: t, checked: set.type === t })),
+        ...SET_TYPES.map((t) => ({ label: SET_TYPE_NAME[t], value: t, checked: set.type === t })),
         usesWeight(cat) || cat === 'reps' ? { label: set.rpe ? `RPE (${set.rpe})` : tr('Add RPE'), value: 'rpe' } : null,
         { label: tr('Delete set'), value: 'delete', destructive: true },
       ],
@@ -186,7 +125,7 @@ function ExerciseBlock({
       const v = await actionSheet({
         title: tr('Rate of perceived exertion'),
         message: tr('10 = nothing left, 8 = two reps left'),
-        actions: [...[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((n) => ({ label: fmtNum(n, 1), value: String(n), checked: parseNum(set.rpe) === n })),
+        actions: [...RPE_CHOICES.map((n) => ({ label: fmtNum(n, 1), value: String(n), checked: parseNum(set.rpe) === n })),
           set.rpe ? { label: tr('Clear RPE'), value: 'clear', destructive: true } : null],
       });
       if (!v) return;
@@ -198,13 +137,7 @@ function ExerciseBlock({
     onChange();
   };
 
-  const copyPrev = (set, i) => {
-    const p = rows[i].prev;
-    if (!p || set.done) return;
-    const d = setToDraft(p, S.settings);
-    for (const f of fields) fillFrom(set, f, d);
-    onChange();
-  };
+  const copyPrev = (set, i) => { if (copyPrevious(set, rows[i].prev, cat, S.settings)) onChange(); };
 
   const menu = async () => {
     const isBarbell = cat === 'barbell';
@@ -236,13 +169,8 @@ function ExerciseBlock({
       const id = await pickExercises({ multi: false, title: tr('Replace exercise') });
       if (!id) return;
       const nex = S.exercises.get(id);
-      const sameKind = nex && fieldsFor(nex.category).join() === fields.join();
-      entry.exerciseId = id;
-      if (!sameKind) for (const s of entry.sets) { s.w = ''; s.r = ''; s.d = ''; s.t = ''; s.done = false; delete s.orig; }
-      for (const s of entry.sets) delete s.tpl;
-      // the rest timer and focus metric belonged to the old exercise
-      entry.restSec = null;
-      if (nex && !focusOptions(nex.category).includes(entry.focus)) entry.focus = null;
+      if (!nex) return;
+      replaceExercise(entry, ex, nex);
       onChange();
     }
     if (choice === 'superset') {
@@ -251,29 +179,11 @@ function ExerciseBlock({
         actions: others.map((o) => ({ label: S.exercises.get(o.exerciseId)?.name || tr('Exercise'), value: o.id })),
       });
       if (!target) return;
-      const other = draft.exercises.find((e) => e.id === target);
       // only this exercise moves: it joins the other one's group (or they start a new one)
-      const old = entry.supersetId;
-      const id = other.supersetId || uid();
-      other.supersetId = id; entry.supersetId = id;
-      if (old && old !== id) {
-        const left = draft.exercises.filter((e) => e.supersetId === old);
-        if (left.length < 2) for (const e of left) e.supersetId = null;
-      }
-      // keep the group together: move this entry right after the other one
-      const list = draft.exercises;
-      list.splice(list.indexOf(entry), 1);
-      const lastOfGroup = list.map((e, i2) => (e.supersetId === id ? i2 : -1)).filter((i2) => i2 >= 0).pop();
-      list.splice(lastOfGroup + 1, 0, entry);
+      joinSuperset(draft.exercises, entry, draft.exercises.find((e) => e.id === target));
       onChange();
     }
-    if (choice === 'unsuperset') {
-      const id = entry.supersetId;
-      entry.supersetId = null;
-      const rest2 = draft.exercises.filter((e) => e.supersetId === id);
-      if (rest2.length < 2) for (const e of rest2) e.supersetId = null;
-      onChange();
-    }
+    if (choice === 'unsuperset') { leaveSuperset(draft.exercises, entry); onChange(); }
     if (choice === 'rest') {
       const v = await actionSheet({
         title: `${tr('Rest timer')} · ${ex.name}`,
@@ -306,20 +216,10 @@ function ExerciseBlock({
   };
 
   const addWarmups = () => {
-    const firstWorkIdx = entry.sets.findIndex((s) => s.type !== 'warmup');
-    const src = firstWorkIdx >= 0 ? (parseNum(entry.sets[firstWorkIdx].w) ?? parseNum(rows[firstWorkIdx].ph.w)) : null;
-    if (!src) { toast(tr('Enter the weight of your first working set first')); return; }
-    const st = S.settings;
-    // worked out in the unit you lift in (bar and plates are stored in it), so lb
-    // dumbbells land on 5 lb steps instead of converted 2 kg steps
-    const ws = warmupSets(src, st.bar, st.plates, cat === 'barbell', st.warmup, st.unit === 'lb' ? 5 : 2);
-    if (!ws.length) { toast(tr('That weight is too light for warm-up sets')); return; }
-    const existing = entry.sets.filter((s) => s.type === 'warmup' && !s.done);
-    entry.sets = entry.sets.filter((s) => !existing.includes(s));
-    const newSets = ws.map((x) => newSetDraft('warmup', { w: numToInput(x.w), r: String(x.r) }));
-    entry.sets.unshift(...newSets);
+    const r = addWarmupsTo(entry, rows, cat, S.settings);
+    if (r.problem) { toast(tr(r.problem)); return; }
     onChange();
-    toast(tr('{n} warm-up sets added', { n: ws.length }));
+    toast(tr('{n} warm-up sets added', { n: r.added }));
   };
 
   const focusOpts = focusOptions(cat);
@@ -370,33 +270,8 @@ function ExerciseBlock({
 // One number per exercise the user wants to push (Strong's "focus metric").
 // It's worked out from the sets as they stand (typed values, else the grey
 // placeholders) and compared with the previous session.
-const FOCUS_LABEL = {
-  volume: tr('Total volume'), volumeChange: tr('Volume increase'), reps: tr('Total reps'), weightPerRep: tr('Weight/rep'), repsChange: tr('Reps increase'),
-};
-function focusOptions(cat) {
-  if (usesWeight(cat) && countsVolume(cat)) return ['volume', 'volumeChange', 'reps', 'weightPerRep'];
-  if (cat === 'reps' || cat === 'assisted_bw') return ['reps', 'repsChange'];
-  return [];
-}
-function focusValues(entry, rows, cat, prevSets) {
-  const st = S.settings;
-  const now = Date.now();
-  const cur = entry.sets.map((s, i) => draftToSet({ ...s, w: s.w || rows[i].ph.w, r: s.r || rows[i].ph.r }, st))
-    .filter((s) => isWorking(s) && s.r > 0);
-  const prev = (prevSets || []).filter((s) => isWorking(s) && s.r > 0);
-  const sum = (list, f) => list.reduce((a, s) => a + f(s), 0);
-  const vol = sum(cur, (s) => setVolume(s, cat, now));
-  const pvol = sum(prev, (s) => setVolume(s, cat, now));
-  const reps = sum(cur, (s) => s.r);
-  const preps = sum(prev, (s) => s.r);
-  return {
-    volume: vol,
-    volumeChange: pvol > 0 && vol > 0 ? (vol - pvol) / pvol : null,
-    reps,
-    weightPerRep: reps > 0 && vol > 0 ? vol / reps : null,
-    repsChange: preps > 0 && reps > 0 ? (reps - preps) / preps : null,
-  };
-}
+const FOCUS_LABEL = Object.fromEntries(Object.entries(FOCUS_KEYS).map(([k, v]) => [k, tr(v)]));
+const focusValues = (entry, rows, cat, prevSets) => focusFrom(entry, rows, cat, prevSets, S.settings);
 function fmtFocus(key, v) {
   const x = v[key];
   if (x === null || x === undefined) return '—';
@@ -418,11 +293,7 @@ function FocusDialog({ close, options, values, current }) {
   </div>`;
 }
 
-/** Would this checked set beat the stored records? Same rules as the summary's records. */
-function isPR(set, cat, bests) {
-  if (!bests || !set.done || set.type === 'warmup') return false;
-  return newRecords(draftToSet(set, S.settings), cat, bests, S.settings.formula, Date.now()).length > 0;
-}
+const isPR = (set, cat, bests) => isLiveRecord(set, cat, bests, S.settings);
 
 function SetRow({
   set, i, label, cat, fields, gridCls, showCheck, row, shake, bests, onInput, onToggle, onMenu, onPrev, onDelete,

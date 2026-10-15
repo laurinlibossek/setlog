@@ -16,19 +16,9 @@ import {
   fmtClock, fmtDur, fmt, toLocalInput, fromLocalInput, plural,
 } from './util.js';
 import { volume, setText, metricValue } from './format.js';
+import { progressOf, REST_PRESETS } from './core/workout.js';
 
 // ---------- start ----------
-/** How much the running workout holds: checked sets, and sets with typed numbers. */
-function progressOf(a) {
-  let done = 0, typed = 0;
-  for (const e of a.exercises) {
-    for (const s of e.sets) {
-      if (s.done) done++;
-      else if (['w', 'r', 'd', 't'].some((k) => String(s[k] || '').trim())) typed++;
-    }
-  }
-  return { done, typed };
-}
 /** One confirm for every way of throwing a running workout away. */
 function confirmDiscard(a, title) {
   const { done, typed } = progressOf(a);
@@ -87,11 +77,11 @@ function RestModal({ close }) {
   if (r) wasRunning.current = true;
   const R = 96, C = 2 * Math.PI * R;
   if (!r) {
-    const presets = [30, 60, 90, 120, 150, 180, 240, 300, 0];
+    const presets = REST_PRESETS;
     return html`<div class="dialog">
       <h3>${tr('Rest timer')}</h3>
       <p>${tr('Starts on its own when you check off a set. Start one by hand:')}</p>
-      <div class="preset-grid">${presets.filter(Boolean).map((s) => html`<button class="btn" key=${s} onClick=${() => startRest(s, tr('Rest'))}>${fmtClock(s)}</button>`)}</div>
+      <div class="preset-grid">${presets.map((s) => html`<button class="btn" key=${s} onClick=${() => startRest(s, tr('Rest'))}>${fmtClock(s)}</button>`)}</div>
       <button class="btn btn-ghost" onClick=${() => close()}>${tr('Close')}</button>
     </div>`;
   }

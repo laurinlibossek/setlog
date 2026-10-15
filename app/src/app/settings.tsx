@@ -91,7 +91,7 @@ export default function SettingsScreen() {
           <Txt style={{ fontSize: 16, flexShrink: 0 }}>{tr('Your name')}</Txt>
           <TextInput value={name} onChangeText={setName} onEndEditing={() => setProfile({ name: name.trim() })} onBlur={() => setProfile({ name: name.trim() })}
             placeholder={tr('Not set')} placeholderTextColor={c.ink3} returnKeyType="done" testID="set-name"
-            style={{ flex: 1, textAlign: 'right', color: c.ink, fontSize: 16, paddingVertical: 10 }} />
+            style={{ flex: 1, minWidth: 0, textAlign: 'right', color: c.ink, fontSize: 16, paddingVertical: 10 }} />
         </View>
       </Group>
 

@@ -48,6 +48,8 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <
  * Read a shared template out of a link (or any text containing one), keeping
  * only sane values. `categories` / `bodyParts` are the valid ids. Returns null
  * if the text holds none.
+ * @param {string} text
+ * @param {{ categories?: string[], bodyParts?: string[] }} [o]
  */
 export function decodeTemplate(text, { categories = [], bodyParts = [] } = {}) {
   const m = String(text || '').match(/template=([A-Za-z0-9_-]{8,})/);

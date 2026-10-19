@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   distUnit: 'km',
   defaultRest: 120,
   sound: true,
+  restAlert: true, // iPhone/Android app: a notification when rest is over and the app isn't open
   keepAwake: true,
   showExamples: true,
   askTemplateUpdate: true,
@@ -33,3 +34,20 @@ export const DEFAULT_SETTINGS = {
 
 /** The stored settings over the defaults. */
 export const withDefaults = (stored) => ({ ...DEFAULT_SETTINGS, ...(stored || {}) });
+
+/**
+ * Settings after changing one. Switching the lifting unit swaps the default
+ * plates and bar for the other unit's (custom plates are kept).
+ * @param {any} settings
+ * @param {string} key
+ * @param {any} value
+ */
+export function changeSetting(settings, key, value) {
+  const next = { ...settings, [key]: value };
+  if (key === 'unit' && settings.unit !== value) {
+    const plates = JSON.stringify(settings.plates);
+    if (value === 'lb' && plates === JSON.stringify(KG_PLATES)) { next.plates = LB_PLATES; next.bar = 45; }
+    if (value === 'kg' && plates === JSON.stringify(LB_PLATES)) { next.plates = KG_PLATES; next.bar = 20; }
+  }
+  return next;
+}

@@ -8,6 +8,8 @@ export * from './drafts.js';
 export * from './templates.js';
 export * from './sessions.js';
 export * from './workout.js';
+export * from './editing.js';
+export * from './chart.js';
 export * from './suggest.js';
 export * from './csv.js';
 export * from './backup.js';

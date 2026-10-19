@@ -15,6 +15,17 @@ export const CATEGORIES = [
   { id: 'duration', label: 'Duration' },
 ];
 export const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+/** What each kind of exercise logs, shown under the choice when creating one. */
+export const CATEGORY_HELP = {
+  barbell: 'Weight × reps. Gets the plate calculator and warm-up sets.',
+  dumbbell: 'Weight × reps. Enter the weight of one dumbbell.',
+  machine: 'Weight × reps for machines, cables, kettlebells and anything else with a load.',
+  weighted_bw: 'Extra weight × reps (belt, vest). Leave the weight at 0 for plain bodyweight.',
+  assisted_bw: 'Assistance weight × reps. Less assistance means progress.',
+  reps: 'Reps only, e.g. push-ups or pull-ups.',
+  cardio: 'Distance and time, with pace.',
+  duration: 'Time only, e.g. planks.',
+};
 
 export const BODY_PARTS = [
   { id: 'chest', label: 'Chest' },

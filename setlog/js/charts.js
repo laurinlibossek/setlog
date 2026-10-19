@@ -4,6 +4,9 @@
 import { tr } from './i18n.js';
 import { html, useState, useRef, useLayoutEffect } from './lib.js';
 import { fmt } from './util.js';
+import { niceTicks } from './core/chart.js';
+
+export { niceTicks };
 
 function useWidth() {
   const ref = useRef();
@@ -18,25 +21,6 @@ function useWidth() {
     return () => ro.disconnect();
   }, []);
   return [ref, w];
-}
-
-const TIME_STEPS = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
-function niceStep(range, count, time) {
-  const raw = range / count;
-  if (time) return TIME_STEPS.find((s) => s >= raw) || Math.ceil(raw / 3600) * 3600;
-  const mag = 10 ** Math.floor(Math.log10(raw || 1));
-  const n = raw / mag;
-  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
-}
-export function niceTicks(min, max, count = 4, { zero = false, time = false } = {}) {
-  if (zero) min = Math.min(0, min);
-  if (min === max) { const pad = Math.abs(min) * 0.1 || 1; min -= pad; max += pad; if (zero) min = Math.max(0, min); }
-  const step = niceStep(max - min, count, time);
-  const lo = Math.floor(min / step) * step;
-  const hi = Math.ceil(max / step) * step;
-  const out = [];
-  for (let v = lo; v <= hi + step * 1e-6; v += step) out.push(Math.round(v * 1e6) / 1e6);
-  return out;
 }
 
 /**

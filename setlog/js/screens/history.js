@@ -8,7 +8,8 @@ import {
 import { workoutVolume, bestSet, est1RM, hasLoadRecords, PR_LABEL } from '../calc.js';
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
-import { entryToDraft, draftEntries } from '../core/drafts.js';
+import { workoutEditDraft, workoutFromEditDraft } from '../core/editing.js';
+import { weeklyCounts as weeklyFrom, weekStreak as streakFrom } from '../core/chart.js';
 import {
   Screen, Empty, push, pop, actionSheet, confirmDialog, toast, useForce, Seg, useLeaveGuard,
 } from '../ui.js';
@@ -215,39 +216,14 @@ export function WorkoutEditScreen({ id, navKey }) {
   useLeaveGuard(navKey, () => dirty.current);
   const [draft] = useState(() => {
     const w = getWorkout(id);
-    if (!w) return null;
-    return {
-      kind: 'edit',
-      id: w.id,
-      name: w.name,
-      notes: w.notes || '',
-      startedAt: w.startedAt,
-      durationMin: String(Math.max(1, Math.round((w.endedAt - w.startedAt) / 60000))),
-      templateId: w.templateId || null,
-      exercises: w.exercises.filter((e) => S.exercises.has(e.exerciseId)).map((e) => {
-        const d = entryToDraft(e, S.settings);
-        d.id = e.id;
-        return d;
-      }),
-      source: w.source,
-    };
+    return w ? workoutEditDraft(w, S.settings, (x) => S.exercises.has(x)) : null;
   });
   if (!draft) return html`<${Screen} nav=${{ back: '' }}><${Empty} title=${tr('Workout not found')} /><//>`;
   const onChange = () => { dirty.current = true; force(); };
   const save = () => {
-    const exercises = draftEntries(draft, S.settings, S.exercises, {});
-    if (!exercises.length) { toast(tr('Keep at least one complete set')); return; }
-    const mins = Math.max(1, Math.round(parseFloat(String(draft.durationMin).replace(',', '.')) || 1));
-    saveWorkout({
-      id: draft.id,
-      name: draft.name.trim() || tr('Workout'),
-      notes: draft.notes.trim(),
-      startedAt: draft.startedAt,
-      endedAt: draft.startedAt + mins * 60000,
-      templateId: draft.templateId,
-      exercises,
-      ...(draft.source ? { source: draft.source } : {}),
-    });
+    const r = workoutFromEditDraft(draft, { settings: S.settings, exercises: S.exercises, defaultName: tr('Workout') });
+    if (r.problem) { toast(tr(r.problem)); return; }
+    saveWorkout(r.workout);
     applyExercisePatches(draft);
     dirty.current = false;
     toast(tr('Workout saved'));
@@ -285,28 +261,6 @@ export function WorkoutEditScreen({ id, navKey }) {
 }
 
 // helpers used by the profile screen
-export function weeklyCounts(weeks = 12) {
-  const ws = S.settings.weekStart;
-  const thisWeek = startOfWeek(Date.now(), ws);
-  const out = [];
-  for (let i = weeks - 1; i >= 0; i--) {
-    const start = addDays(thisWeek, -7 * i);
-    const end = addDays(start, 7);
-    const n = S.workouts.filter((w) => w.startedAt >= start && w.startedAt < end).length;
-    out.push({ start, value: n });
-  }
-  return out;
-}
-export function weekStreak() {
-  const ws = S.settings.weekStart;
-  const goal = S.settings.weeklyGoal || 1;
-  let week = startOfWeek(Date.now(), ws);
-  const count = (s) => S.workouts.filter((w) => w.startedAt >= s && w.startedAt < addDays(s, 7)).length;
-  let streak = 0;
-  // the current week counts once the goal is met; otherwise start from last week
-  if (count(week) >= goal) streak++;
-  week = addDays(week, -7);
-  while (count(week) >= goal && streak < 520) { streak++; week = addDays(week, -7); }
-  return streak;
-}
+export const weeklyCounts = (weeks = 12) => weeklyFrom(S.workouts, { weeks, weekStart: S.settings.weekStart });
+export const weekStreak = () => streakFrom(S.workouts, { goal: S.settings.weeklyGoal || 1, weekStart: S.settings.weekStart });
 export { DAY, fmtNum, wUnit, exName, Seg };

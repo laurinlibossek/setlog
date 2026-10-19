@@ -8,13 +8,16 @@ import { buildSampleData } from './demo.js';
 import {
   buildStats, prsForNewWorkout, workoutVolume, configureCalc, sessionsByExercise,
 } from './calc.js';
-import { DEFAULT_SETTINGS, KG_PLATES, LB_PLATES } from './core/settings.js';
+import { DEFAULT_SETTINGS, changeSetting } from './core/settings.js';
 import {
-  uid, debounce, workoutNameForTime, slug,
+  uid, debounce, workoutNameForTime,
 } from './util.js';
 import { convertDraftUnits } from './core/drafts.js';
 import { newActiveWorkout, finishWorkout, newEntries } from './core/workout.js';
-import { applyWorkoutToTemplate, cleanTemplateExercises } from './core/templates.js';
+import { applyWorkoutToTemplate } from './core/templates.js';
+import {
+  copyTemplateRecord, folderNames, findExerciseByName as findByName, newExerciseRecord, exerciseInDraft, patchDraftExercise,
+} from './core/editing.js';
 import { suggestTemplate as suggestFrom } from './core/suggest.js';
 import { previousSetsFrom, bodyweightFrom } from './core/sessions.js';
 
@@ -233,12 +236,7 @@ export function previousSets(exerciseId, { before = Infinity, excludeWorkoutId =
 // ---------- settings / profile / meta ----------
 export function setSetting(key, value) {
   const prev = { ...S.settings };
-  S.settings[key] = value;
-  if (key === 'unit' && prev.unit !== value) {
-    const plates = JSON.stringify(S.settings.plates);
-    if (value === 'lb' && plates === JSON.stringify(KG_PLATES)) { S.settings.plates = LB_PLATES; S.settings.bar = 45; }
-    if (value === 'kg' && plates === JSON.stringify(LB_PLATES)) { S.settings.plates = KG_PLATES; S.settings.bar = 20; }
-  }
+  Object.assign(S.settings, changeSetting(prev, key, value));
   if ((key === 'unit' || key === 'distUnit') && S.active) {
     convertDraftUnits(S.active, prev, S.settings);
     touchActive();
@@ -269,17 +267,13 @@ export function exerciseList() {
 }
 export const exName = (id) => S.exercises.get(id)?.name || tr('Unknown exercise');
 
-export function findExerciseByName(name) {
-  const n = String(name).trim().toLowerCase().replace(/\s+/g, ' ');
-  for (const e of S.exercises.values()) if (e.name.toLowerCase() === n) return e;
-  return null;
-}
+export const findExerciseByName = (name) => findByName(S.exercises, name);
 
 export function addExercise({ name, category, bodyPart, notes = '' }) {
-  let id = 'c-' + slug(name);
-  if (!id || id === 'c-' || S.exercises.has(id)) id = 'c-' + uid();
-  const ex = { id, name: name.trim(), category, bodyPart, notes, createdAt: Date.now() };
-  S.exercises.set(id, ex);
+  const ex = newExerciseRecord({
+    name, category, bodyPart, notes,
+  }, { hasId: (id) => S.exercises.has(id) });
+  S.exercises.set(ex.id, ex);
   save('exercises', ex);
   emit('exercises');
   return ex;
@@ -388,23 +382,12 @@ export function deleteTemplate(id) {
   emit('templates');
 }
 export function copyTemplate(src, patch = {}) {
-  const t = {
-    id: uid(),
-    name: src.name,
-    folder: src.folder || '',
-    notes: src.notes || '',
-    exercises: cleanTemplateExercises(src.exercises, (id) => S.exercises.has(id)),
-    createdAt: Date.now(),
-    ...patch,
-  };
+  const t = copyTemplateRecord(src, { patch, hasExercise: (id) => S.exercises.has(id) });
   saveTemplate(t);
   return t;
 }
 /** Folder names: the ones templates use plus empty ones created with "New folder". */
-export function templateFolders() {
-  const names = [...S.templates.map((t) => t.folder || ''), ...(S.meta.folders || [])];
-  return [...new Set(names.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-}
+export const templateFolders = () => folderNames(S.templates, S.meta.folders);
 export function addFolder(name) {
   const n = String(name || '').trim();
   if (!n || templateFolders().includes(n)) return false;
@@ -525,15 +508,10 @@ export function finishActive(mode = 'done') {
  * pinned note) wait in draft.exPatches until the screen is saved, so Cancel
  * really discards them. The running workout applies them right away.
  */
-export function exerciseView(draft, id) {
-  const ex = S.exercises.get(id);
-  const p = draft && draft.exPatches && draft.exPatches[id];
-  return ex && p ? { ...ex, ...p } : ex;
-}
+export const exerciseView = (draft, id) => exerciseInDraft(S.exercises, draft, id);
 export function patchExercise(draft, id, patch) {
   if (!draft || draft.kind === 'workout') { updateExercise(id, patch); return; }
-  draft.exPatches = draft.exPatches || {};
-  draft.exPatches[id] = { ...(draft.exPatches[id] || {}), ...patch };
+  patchDraftExercise(draft, id, patch);
 }
 export function applyExercisePatches(draft) {
   for (const [id, patch] of Object.entries(draft.exPatches || {})) if (S.exercises.has(id)) updateExercise(id, patch);

@@ -96,7 +96,7 @@ Setlog is a Progressive Web App written as plain JavaScript modules. There's no 
 - **Records:** a single chronological pass over the history works out the personal records for every set (estimated 1RM, weight, set volume, reps, distance and time).
 - **Import:** a CSV parser for both of Strong's export layouts that skips workouts it already has.
 - **iPhone and Android:** an Expo (React Native) app in `app/` reuses the core unchanged and is being built screen by screen; data moves over with a backup file.
-- **Shared core:** the training logic (math, records, template updates, the suggested workout, Strong import and export, backups, translations and colour palettes) lives in `setlog/js/core/`. It doesn't touch the DOM, storage or a UI framework, so a native app can reuse it as is; the web app adds state, language and screens on top.
+- **Shared core:** the training logic (math, records, template updates, editing templates and finished workouts, the suggested workout, chart axes, Strong import and export, backups, translations and colour palettes) lives in `setlog/js/core/`. It doesn't touch the DOM, storage or a UI framework, so a native app can reuse it as is; the web app adds state, language and screens on top.
 - **Testing:** end-to-end tests in an emulated iPhone browser (Playwright) cover a real 86-workout import, backup round-trips and starting offline. Unit tests for the core run in plain Node (`npm test`) on every push, and also check that the core stays free of browser code and that the offline cache lists every module.
 - Developed with the assistance of Claude (Anthropic).
 

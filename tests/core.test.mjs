@@ -229,6 +229,92 @@ test('warm-ups, replacing an exercise, moving entries', () => {
   assert.equal(core.restFor({}, {}, 120), 120);
 });
 
+// ---------- editing templates and finished workouts ----------
+test('template editor: from a template or a workout, saving, problems', () => {
+  const ex = new Map([[BENCH.id, BENCH], [PULLUP.id, PULLUP]]);
+  const tpl = {
+    id: 't1', name: 'Upper', folder: 'A', notes: 'n', createdAt: 5, lastUsedAt: 9,
+    exercises: [
+      { exerciseId: BENCH.id, notes: 'grip', supersetId: 'g', restSec: 90, sets: [{ type: 'normal', w: 80, r: 5 }, { type: 'normal', r: 8 }] },
+      { exerciseId: PULLUP.id, supersetId: 'g', sets: [{ type: 'normal', r: 10 }] },
+      { exerciseId: 'gone', sets: [{ type: 'normal', r: 1 }] },
+    ],
+  };
+  const d = core.templateDraft({ template: tpl, settings: ST, hasExercise: (id) => ex.has(id) });
+  assert.deepEqual([d.kind, d.id, d.name, d.folder, d.notes, d.exercises.length], ['template', 't1', 'Upper', 'A', 'n', 2]);
+  assert.notEqual(d.exercises[0].supersetId, 'g', 'fresh superset ids');
+  assert.equal(d.exercises[0].supersetId, d.exercises[1].supersetId);
+  assert.deepEqual([d.exercises[0].sets[0].w, d.exercises[0].sets[1].w, d.exercises[0].notes], ['80', '', 'grip']);
+  d.exercises[0].sets[1].w = '85';
+  const r = core.templateFromDraft(d, { settings: ST, exercises: ex, existing: tpl, now: 100 });
+  assert.equal(r.problem, undefined);
+  assert.deepEqual([r.template.createdAt, r.template.lastUsedAt, r.template.name], [5, 9, 'Upper'], 'other fields are kept');
+  assert.deepEqual(r.template.exercises[0].sets, [{ type: 'normal', w: 80, r: 5 }, { type: 'normal', w: 85, r: 8 }]);
+  assert.equal(r.template.exercises[0].restSec, 90);
+  assert.equal('id' in r.template.exercises[0].sets[0], false, 'template sets have no ids');
+  d.name = '  ';
+  assert.equal(core.templateFromDraft(d, { settings: ST, exercises: ex }).problem, core.EDIT_MESSAGES.templateName);
+  const fromWorkout = core.templateDraft({ workout: { name: 'Leg day', notes: 'tired', exercises: [{ exerciseId: BENCH.id, notes: 'x', sets: [S('normal', 100, 3)] }] }, settings: ST });
+  assert.deepEqual([fromWorkout.name, fromWorkout.notes, fromWorkout.exercises[0].notes, fromWorkout.folder], ['Leg day', '', '', '']);
+  assert.notEqual(fromWorkout.id, undefined);
+  const empty = core.templateDraft({ settings: ST });
+  empty.name = 'New';
+  assert.equal(core.templateFromDraft(empty, { settings: ST, exercises: ex }).problem, core.EDIT_MESSAGES.templateEmpty);
+  empty.exercises.push(core.newEntryDraft(BENCH.id, 3));
+  const made = core.templateFromDraft(empty, { settings: ST, exercises: ex, now: 7 }).template;
+  assert.deepEqual([made.createdAt, made.exercises[0].sets.length], [7, 3], 'empty sets are kept in templates');
+});
+
+test('edit workout: kept ids, duration in minutes, incomplete sets dropped', () => {
+  const ex = new Map([[BENCH.id, BENCH]]);
+  const w = {
+    id: 'w1', name: 'Push', startedAt: 1000, endedAt: 1000 + 61 * 60000, templateId: 't', source: 'strong',
+    exercises: [{ id: 'e1', exerciseId: BENCH.id, sets: [S('normal', 80, 5), S('normal', 80, 4)] }],
+  };
+  const d = core.workoutEditDraft(w, ST, (id) => ex.has(id));
+  assert.deepEqual([d.kind, d.id, d.durationMin, d.exercises[0].id, d.templateId], ['edit', 'w1', '61', 'e1', 't']);
+  d.exercises[0].sets[1].r = '';
+  d.durationMin = '45,4';
+  const r = core.workoutFromEditDraft(d, { settings: ST, exercises: ex, defaultName: 'Workout' });
+  assert.deepEqual([r.workout.endedAt, r.workout.exercises[0].sets.length, r.workout.source, r.workout.name], [1000 + 45 * 60000, 1, 'strong', 'Push']);
+  assert.equal(r.workout.exercises[0].sets[0].w, 80, 'untouched weights keep the stored number');
+  d.exercises[0].sets[0].r = '';
+  assert.equal(core.workoutFromEditDraft(d, { settings: ST, exercises: ex }).problem, core.EDIT_MESSAGES.workoutEmpty);
+});
+
+test('copies, folders, new exercises, exercise changes waiting in a draft', () => {
+  const c = core.copyTemplateRecord({ name: 'A', folder: 'F', exercises: [{ exerciseId: 'x', sets: [{ w: 1, r: 2, id: 'z' }] }, { exerciseId: 'gone', sets: [] }] }, { patch: { name: 'A (copy)' }, hasExercise: (id) => id === 'x', now: 3 });
+  assert.deepEqual([c.name, c.folder, c.createdAt, c.exercises.length, c.exercises[0].sets[0]], ['A (copy)', 'F', 3, 1, { type: 'normal', w: 1, r: 2 }]);
+  assert.deepEqual(core.folderNames([{ folder: 'B' }, { folder: '' }, { folder: 'A' }, { folder: 'B' }], ['C', 'A']), ['A', 'B', 'C']);
+  const lib = new Map([[BENCH.id, BENCH]]);
+  assert.equal(core.findExerciseByName(lib, `  ${BENCH.name.toUpperCase()} `), BENCH);
+  assert.equal(core.findExerciseByName([BENCH], 'nope'), null);
+  const e = core.newExerciseRecord({ name: ' Incline Row (Dumbbell) ', category: 'dumbbell', bodyPart: 'back' }, { now: 1 });
+  assert.deepEqual([e.id, e.name, e.createdAt], ['c-incline-row-dumbbell', 'Incline Row (Dumbbell)', 1]);
+  assert.notEqual(core.newExerciseRecord({ name: 'Incline Row (Dumbbell)' }, { hasId: () => true }).id, 'c-incline-row-dumbbell');
+  const draft = { exercises: [] };
+  core.patchDraftExercise(draft, BENCH.id, { restSec: 60 });
+  core.patchDraftExercise(draft, BENCH.id, { pinnedNote: 'p' });
+  assert.deepEqual([core.exerciseInDraft(lib, draft, BENCH.id).restSec, core.exerciseInDraft(lib, draft, BENCH.id).pinnedNote], [60, 'p']);
+  assert.equal(core.exerciseInDraft(lib, null, BENCH.id), BENCH);
+});
+
+test('chart ticks, weekly counts and the streak', () => {
+  assert.deepEqual(core.niceTicks(81, 99), [80, 85, 90, 95, 100]);
+  assert.deepEqual(core.niceTicks(0, 3, 3, { zero: true }), [0, 1, 2, 3]);
+  assert.deepEqual(core.niceTicks(50, 50), [45, 47.5, 50, 52.5, 55]);
+  assert.equal(core.niceTicks(100, 400, 4, { time: true })[1] - core.niceTicks(100, 400, 4, { time: true })[0], 120);
+  assert.equal(core.tickDecimals([1, 1.5, 2]), 1);
+  const now = new Date(2026, 9, 21, 12).getTime(); // a Wednesday
+  const day = (d) => new Date(2026, 9, d, 18).getTime();
+  const ws = [day(20), day(19), day(14), day(13), day(12), day(6)].map((t) => ({ startedAt: t }));
+  const weeks = core.weeklyCounts(ws, { weeks: 3, weekStart: 1, now });
+  assert.deepEqual(weeks.map((x) => x.value), [1, 3, 2]);
+  assert.equal(weeks[2].start, new Date(2026, 9, 19).getTime());
+  assert.equal(core.weekStreak(ws, { goal: 2, weekStart: 1, now }), 2);
+  assert.equal(core.weekStreak(ws, { goal: 3, weekStart: 1, now }), 1, 'this week doesn’t count until it reaches the goal');
+});
+
 // ---------- Strong CSV ----------
 const STRONG = `Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
 2026-09-01 18:00:00,"Upper",1h 5m,"T Bar Row",W,60,6,0,0,"","Felt strong",
@@ -329,6 +415,7 @@ test('every label in core and every tr() text in the web app has German', () => 
     ...core.CATEGORIES, ...core.BODY_PARTS, ...core.MEASUREMENTS, ...core.FORMULAS,
     ...['barbell', 'reps', 'cardio', 'duration', 'assisted_bw'].flatMap((c) => core.chartMetricsFor(c)),
   ].map((x) => x.label).concat(Object.values(core.PR_LABEL), Object.values(core.FOCUS_LABEL), Object.values(core.WORKOUT_MESSAGES),
+    Object.values(core.EDIT_MESSAGES), Object.values(core.CATEGORY_HELP), [...core.EXERCISE_RANGES, ...core.MEASURE_RANGES].map((r) => r.label),
     ['Night Workout', 'Morning Workout', 'Afternoon Workout', 'Evening Workout'], core.EXAMPLE_TEMPLATES.flatMap((t) => [t.name, t.folder]));
   const missing = new Set(labels.filter((l) => !keep.has(l) && DE[l] === undefined));
   const files = [];

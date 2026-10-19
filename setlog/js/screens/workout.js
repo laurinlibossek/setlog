@@ -8,13 +8,13 @@ import {
 import { EXAMPLE_TEMPLATES } from '../seed.js';
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
-import { entryToDraft, draftEntries, remapSupersets } from '../core/drafts.js';
+import { templateDraft, templateFromDraft } from '../core/editing.js';
 import {
   Screen, openSheet, openScreenModal, NavBar, actionSheet, confirmDialog, toast, push, pop, useForce, promptDialog,
   closeAllModals, setTab, useLeaveGuard,
 } from '../ui.js';
 import {
-  relDay, relDayLower, fmtClock, uid, fmt, plural, isIOS, isStandalone,
+  relDay, relDayLower, fmtClock, fmt, plural, isIOS, isStandalone,
 } from '../util.js';
 import { tr, getLang } from '../i18n.js';
 import {
@@ -321,37 +321,23 @@ export function TemplateEditScreen({ id = null, fromWorkoutId = null, navKey }) 
   const force = useForce();
   const dirty = useRef(false);
   useLeaveGuard(navKey, () => dirty.current);
-  const [draft] = useState(() => {
-    const st = S.settings;
-    const src = id ? getTemplate(id) : fromWorkoutId ? getWorkout(fromWorkoutId) : null;
-    return {
-      kind: 'template',
-      id: id || uid(),
-      name: src?.name || '',
-      folder: (id && src?.folder) || '',
-      notes: (id && src?.notes) || '',
-      exercises: src ? remapSupersets(src.exercises.filter((e) => S.exercises.has(e.exerciseId))
-        .map((e) => entryToDraft({ ...e, notes: id ? e.notes : '' }, st))) : [],
-    };
-  });
+  const [draft] = useState(() => templateDraft({
+    template: id ? getTemplate(id) : null,
+    workout: !id && fromWorkoutId ? getWorkout(fromWorkoutId) : null,
+    settings: S.settings,
+    hasExercise: (x) => S.exercises.has(x),
+  }));
   const onChange = () => { dirty.current = true; force(); };
   const folders = templateFolders();
   const save = () => {
-    const name = draft.name.trim();
-    if (!name) { toast(tr('Give the template a name')); document.getElementById('tpl-name')?.focus(); return; }
-    if (!draft.exercises.length) { toast(tr('Add at least one exercise')); return; }
-    const existing = id ? getTemplate(id) : null;
-    const t = {
-      ...(existing || { createdAt: Date.now() }),
-      id: draft.id,
-      name,
-      folder: draft.folder.trim(),
-      notes: draft.notes.trim(),
-      exercises: draftEntries(draft, S.settings, S.exercises, { keepEmpty: true }).map((e) => ({
-        exerciseId: e.exerciseId, notes: e.notes, supersetId: e.supersetId, restSec: e.restSec, focus: e.focus,
-        sets: e.sets.map(({ id: _id, ...rest }) => rest),
-      })),
-    };
+    const r = templateFromDraft(draft, { settings: S.settings, exercises: S.exercises, existing: id ? getTemplate(id) : null });
+    if (r.problem) {
+      toast(tr(r.problem));
+      if (!draft.name.trim()) document.getElementById('tpl-name')?.focus();
+      return;
+    }
+    const t = r.template;
+    const { name } = t;
     saveTemplate(t);
     applyExercisePatches(draft);
     dirty.current = false;

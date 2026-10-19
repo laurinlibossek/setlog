@@ -7,6 +7,7 @@ import {
 } from './store.js';
 import { loggedFields } from './calc.js';
 import { matchExercise } from './core/search.js';
+import { CATEGORY_HELP } from './core/seed.js';
 import {
   BODY_PARTS, BODY_PART_LABEL, CATEGORIES, CATEGORY_LABEL,
 } from './seed.js';
@@ -175,14 +176,4 @@ function ExerciseForm({ ex, preset, close }) {
     </div></div>`;
 }
 
-const CATEGORY_HELP = {
-  barbell: 'Weight × reps. Gets the plate calculator and warm-up sets.',
-  dumbbell: 'Weight × reps. Enter the weight of one dumbbell.',
-  machine: 'Weight × reps for machines, cables, kettlebells and anything else with a load.',
-  weighted_bw: 'Extra weight × reps (belt, vest). Leave the weight at 0 for plain bodyweight.',
-  assisted_bw: 'Assistance weight × reps. Less assistance means progress.',
-  reps: 'Reps only, e.g. push-ups or pull-ups.',
-  cardio: 'Distance and time, with pace.',
-  duration: 'Time only, e.g. planks.',
-};
 export { CATEGORY_LABEL };

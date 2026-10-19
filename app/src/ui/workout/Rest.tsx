@@ -9,6 +9,8 @@ import {
   adjustRest, getState, skipRest, startRest, useAppSelector,
 } from '@/data/store';
 import { useFormat } from '@/lib/format';
+import { useLang } from '@/lib/i18n';
+import { cancelRestAlert, scheduleRestAlert } from '@/lib/restAlert';
 import { useColors } from '@/lib/theme';
 import { useNow } from '@/lib/useNow';
 import { Button, Icon } from '@/ui/kit';
@@ -89,16 +91,29 @@ export function RestPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Ends the rest timer on time (with a buzz), wherever the app is. */
+/**
+ * Ends the rest timer on time (with a buzz), wherever the app is, and keeps
+ * the notification for a locked phone in step with it.
+ */
 export function RestWatcher() {
   const r = useRest();
   const end = r?.end;
+  const label = r?.label || '';
+  const alerts = useAppSelector((s) => s.settings.restAlert !== false);
+  const { tr } = useLang();
+  useEffect(() => {
+    if (!end || !alerts) { cancelRestAlert(); return; }
+    const named = label && label !== tr('Rest');
+    scheduleRestAlert(end, tr('Rest is over'), named ? tr('Time for your next set of {name}', { name: label }) : tr('Time for your next set'));
+  }, [end, alerts]); // label and language don't move the alert
   useEffect(() => {
     if (!end) return undefined;
     const t = setTimeout(() => {
       if (getState().active?.rest?.end !== end) return;
+      // back from the background long after the end: the notification already said so
+      const late = Date.now() - end > 3000;
       skipRest();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      if (!late) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }, Math.max(0, end - Date.now()));
     return () => clearTimeout(t);
   }, [end]);

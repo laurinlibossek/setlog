@@ -10,9 +10,12 @@ import { BODY_PARTS, matchExercise } from '@setlog/core';
 
 import { allSessions, useAppSelector } from '@/data/store';
 import { useFormat } from '@/lib/format';
+import { editExercise } from '@/lib/exerciseForm';
 import { currentPick, finishPick } from '@/lib/picker';
 import { useColors } from '@/lib/theme';
-import { Empty, Icon, SearchField } from '@/ui/kit';
+import {
+  Button, Empty, Icon, SearchField,
+} from '@/ui/kit';
 
 export default function PickExercises() {
   const exercises = useAppSelector((s) => s.exercises);
@@ -41,6 +44,14 @@ export default function PickExercises() {
     if (!multi) { done([id]); return; }
     setChosen((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   };
+  const create = async () => {
+    const ex = await editExercise({ name: q.trim() });
+    if (!ex) return;
+    if (!multi) { done([ex.id]); return; }
+    setChosen((cur) => [...cur, ex.id]);
+    setQ('');
+    setPart('all');
+  };
   const top = Platform.OS === 'ios' ? 0 : insets.top;
 
   return (
@@ -59,7 +70,14 @@ export default function PickExercises() {
         </View>
       </View>
       <View style={{ paddingHorizontal: 16, gap: 10, paddingBottom: 10 }}>
-        <SearchField value={q} onChange={setQ} placeholder={tr('Search')} testID="pick-search" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flex: 1 }}><SearchField value={q} onChange={setQ} placeholder={tr('Search')} testID="pick-search" /></View>
+          <Pressable onPress={create} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('New exercise')} testID="pick-new"
+            style={({ pressed }) => ({ height: 36, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: pressed ? c.surface3 : c.accentSoft })}>
+            <Icon name="plus" size={15} color={c.accentText} />
+            <Text style={{ color: c.accentText, fontSize: 15, fontWeight: '600' }}>{tr('New')}</Text>
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} keyboardShouldPersistTaps="handled">
           {parts.map((p) => {
             const on = p.id === part;
@@ -79,7 +97,11 @@ export default function PickExercises() {
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24 }}
         initialNumToRender={20}
-        ListEmptyComponent={<Empty title={tr('Nothing found')} text={tr('Try another word, or create your own exercise.')} />}
+        ListEmptyComponent={(
+          <Empty title={q.trim() ? tr('No match for “{q}”', { q: q.trim() }) : tr('Nothing found')} text={tr('Create it as your own exercise.')}>
+            <Button kind="tinted" icon="plus" title={tr('Create “{name}”', { name: q.trim() || tr('new exercise') })} onPress={create} testID="pick-create" />
+          </Empty>
+        )}
         renderItem={({ item, index }) => {
           const n = sessions.get(item.id)?.length || 0;
           const on = chosen.includes(item.id);

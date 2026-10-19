@@ -1,16 +1,16 @@
 // The running workout. It slides up over the app; pulling it down (or the
 // chevron) minimizes it to the bar above the tabs, and it keeps running.
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
-import { newEntries, supersetLetters } from '@setlog/core';
+import { newEntries } from '@setlog/core';
 
 import {
-  discardActive, editActive, getState, patchActive, previousSets, stats, useAppSelector, useSettings,
+  discardActive, editActive, getState, patchActive, previousSets, useAppSelector, useSettings,
 } from '@/data/store';
 import type { ActiveWorkout } from '@/data/types';
 import { useFormat } from '@/lib/format';
@@ -19,10 +19,11 @@ import { useColors } from '@/lib/theme';
 import { useNow } from '@/lib/useNow';
 import { confirmDiscard, finishFlow } from '@/lib/workout';
 import { Button, Empty, Icon } from '@/ui/kit';
-import { OverlayHost, actionSheet, toast } from '@/ui/overlay';
-import { ExerciseBlock } from '@/ui/workout/ExerciseBlock';
+import {
+  OverlayHost, actionSheet, pickDateTime, toast,
+} from '@/ui/overlay';
+import { DraftBlocks, KeyboardDoneBar } from '@/ui/workout/DraftBlocks';
 import { RestPanel, RestPill } from '@/ui/workout/Rest';
-import { KEYBOARD_BAR } from '@/ui/workout/SetRow';
 
 function KeepAwake() { useKeepAwake('workout'); return null; }
 
@@ -69,6 +70,14 @@ export default function ActiveWorkoutScreen() {
     router.back();
     setTimeout(() => toast(tr('Workout discarded')), 300);
   };
+  const changeStart = async () => {
+    const cur = getState().active;
+    if (!cur) return;
+    const t = await pickDateTime({
+      title: tr('Start time'), value: cur.startedAt, max: Date.now(), maxMessage: tr('The start time has to be in the past'), ok: tr('Set'),
+    });
+    if (t !== null && getState().active) patchActive({ startedAt: t });
+  };
   const workoutMenu = async () => {
     const cur = getState().active;
     if (!cur) return;
@@ -76,6 +85,7 @@ export default function ActiveWorkoutScreen() {
       title: cur.name,
       actions: [
         { label: cur.showNotes || cur.notes ? tr('Remove workout note') : tr('Add workout note'), value: 'note', icon: 'note', testID: 'menu-workout-note' },
+        { label: tr('Change start time'), value: 'time', icon: 'clock', testID: 'menu-start-time' },
         { label: tr('Discard workout'), value: 'discard', destructive: true, icon: 'trash' },
       ],
     });
@@ -83,6 +93,7 @@ export default function ActiveWorkoutScreen() {
       const on = !(cur.showNotes || cur.notes);
       patchActive({ showNotes: on, notes: on ? cur.notes : '' });
     }
+    if (v === 'time') changeStart();
     if (v === 'discard') discard();
   };
 
@@ -108,8 +119,8 @@ export default function ActiveWorkoutScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: insets.bottom + 48 }}
         keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
-        <WorkoutHead a={a} onMenu={workoutMenu} />
-        <Blocks a={a} />
+        <WorkoutHead a={a} onMenu={workoutMenu} onStart={changeStart} />
+        <DraftBlocks draftKey="active" mode="active" draft={a} />
         {!a.exercises.length && <Empty title={tr('No exercises yet')} text={tr('Add the exercises you’re about to do. Your numbers from last time show up next to every set.')} />}
         <View style={{ gap: 10, marginTop: 16 }}>
           <Button large kind="tinted" icon="plus" title={tr('Add exercises')} onPress={addExercises} testID="add-exercises" />
@@ -117,22 +128,14 @@ export default function ActiveWorkoutScreen() {
         </View>
       </ScrollView>
 
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID={KEYBOARD_BAR} backgroundColor={c.surface2}>
-          <View style={[styles.keys, { borderTopColor: c.line }]}>
-            <Pressable onPress={() => Keyboard.dismiss()} hitSlop={8} accessibilityRole="button">
-              <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '600' }}>{tr('Done')}</Text>
-            </Pressable>
-          </View>
-        </InputAccessoryView>
-      )}
+      <KeyboardDoneBar />
       {restOpen && <RestPanel onClose={closeRest} />}
       <OverlayHost />
     </View>
   );
 }
 
-function WorkoutHead({ a, onMenu }: { a: ActiveWorkout; onMenu: () => void }) {
+function WorkoutHead({ a, onMenu, onStart }: { a: ActiveWorkout; onMenu: () => void; onStart: () => void }) {
   const f = useFormat();
   const { tr } = f;
   const c = useColors();
@@ -146,10 +149,10 @@ function WorkoutHead({ a, onMenu }: { a: ActiveWorkout; onMenu: () => void }) {
           <Icon name="more" size={18} color={c.accentText} />
         </Pressable>
       </View>
-      <View style={{ flexDirection: 'row', gap: 14, marginTop: 2 }}>
+      <Pressable onPress={onStart} accessibilityRole="button" accessibilityHint={tr('Change start time')} testID="start-time" style={{ flexDirection: 'row', gap: 14, marginTop: 2, alignSelf: 'flex-start' }}>
         <View style={styles.meta}><Icon name="calendar" size={13} color={c.ink3} /><Text style={{ color: c.ink3, fontSize: 14 }}>{f.date.medium(a.startedAt)}</Text></View>
-        <View style={styles.meta}><Icon name="clock" size={13} color={c.ink3} /><Text style={{ color: c.ink3, fontSize: 14 }}>{tr('Started {time}', { time: f.date.time(a.startedAt) })}</Text></View>
-      </View>
+        <View style={styles.meta}><Icon name="clock" size={13} color={c.ink3} /><Text style={{ color: c.ink3, fontSize: 14 }} testID="started-at">{tr('Started {time}', { time: f.date.time(a.startedAt) })}</Text></View>
+      </Pressable>
       {!!a.templateNotes && (
         <View style={[styles.tplNotes, { backgroundColor: c.surface }]}>
           <Icon name="note" size={15} color={c.ink2} />
@@ -164,25 +167,6 @@ function WorkoutHead({ a, onMenu }: { a: ActiveWorkout; onMenu: () => void }) {
   );
 }
 
-/** The exercise blocks, each with what it needs from the history. */
-function Blocks({ a }: { a: ActiveWorkout }) {
-  const exercises = useAppSelector((s) => s.exercises);
-  const workouts = useAppSelector((s) => s.workouts);
-  const settings = useSettings();
-  // records and previous values follow the history and the settings
-  const st = useMemo(() => stats(), [workouts, exercises, settings]);
-  const letters = supersetLetters(a.exercises) as Map<string, { index: number; letter: string }>;
-  return (
-    <>
-      {a.exercises.map((e) => (
-        <ExerciseBlock key={e.id} entry={e} ex={exercises.get(e.exerciseId)} settings={settings}
-          prevSets={previousSets(e.exerciseId, { templateId: a.templateId })}
-          bests={st.bests.get(e.exerciseId)} superset={e.supersetId ? letters.get(e.supersetId) : undefined} />
-      ))}
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   side: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -191,5 +175,4 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   tplNotes: { flexDirection: 'row', gap: 8, borderRadius: 12, padding: 10, marginTop: 10, alignItems: 'flex-start' },
   notes: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginTop: 10, fontSize: 15, minHeight: 60 },
-  keys: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
 });

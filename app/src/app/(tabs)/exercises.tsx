@@ -5,11 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BODY_PARTS, matchExercise } from '@setlog/core';
 
 import { allSessions, useAppState } from '@/data/store';
+import { editExercise } from '@/lib/exerciseForm';
 import { useFormat } from '@/lib/format';
 
 import { useColors } from '@/lib/theme';
 import {
-  Cell, Empty, LargeTitle, SearchField, Txt,
+  Button, Cell, Empty, IconButton, LargeTitle, SearchField, Txt,
 } from '@/ui/kit';
 
 export default function ExercisesTab() {
@@ -28,10 +29,14 @@ export default function ExercisesTab() {
   const total = useMemo(() => [...s.exercises.values()].filter((e) => !e.hidden).length, [s.exercises]);
   const parts = [{ id: 'all', label: tr('All') }, ...(BODY_PARTS as { id: string; label: string }[]).map((b) => ({ id: b.id, label: tr(b.label) }))];
   const partLabel = (id: string) => tr((BODY_PARTS as { id: string; label: string }[]).find((b) => b.id === id)?.label || 'Other');
+  const create = async () => {
+    const ex = await editExercise({ name: q.trim() });
+    if (ex) router.push({ pathname: '/exercise/[id]', params: { id: ex.id } });
+  };
 
   const header = (
     <View>
-      <LargeTitle title={tr('Exercises')} />
+      <LargeTitle title={tr('Exercises')} right={<IconButton icon="plus" label={tr('New exercise')} onPress={create} testID="new-exercise" />} />
       <View style={{ paddingHorizontal: 16, gap: 10, marginBottom: 12 }}>
         <SearchField value={q} onChange={setQ} placeholder={tr('Search {n} exercises', { n: total })} testID="exercise-search" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
@@ -68,7 +73,11 @@ export default function ExercisesTab() {
           </View>
         );
       }}
-      ListEmptyComponent={<Empty title={tr('Nothing found')} text={tr('Try another word, or create your own exercise.')} />}
+      ListEmptyComponent={(
+        <Empty title={tr('Nothing found')} text={tr('Try another word, or create your own exercise.')}>
+          <Button kind="tinted" icon="plus" title={tr('Create “{name}”', { name: q.trim() || tr('new exercise') })} onPress={create} />
+        </Empty>
+      )}
       initialNumToRender={20}
     />
   );

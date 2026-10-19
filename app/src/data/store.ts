@@ -6,12 +6,15 @@ import { AppState } from 'react-native';
 import {
   SEED_EXERCISES, SEED_VERSION, withDefaults, buildStats, sessionsByExercise, configureCalc, bodyweightFrom,
   parseBackup, parseStrongCSV, suggestTemplate, previousSetsFrom, newActiveWorkout, finishWorkout, prsForNewWorkout,
-  workoutVolume, applyWorkoutToTemplate,
+  workoutVolume, applyWorkoutToTemplate, makeBackup, uid,
+  templateFromDraft, workoutFromEditDraft, copyTemplateRecord, folderNames, findExerciseByName, newExerciseRecord,
+  exerciseInDraft, patchDraftExercise, changeSetting, convertDraftUnits,
 } from '@setlog/core';
 
 import * as db from './storage';
 import type {
-  ActiveWorkout, Data, EntryDraft, Exercise, Measurement, Meta, Profile, Settings, Template, TemplateEntry, WorkSet, Workout,
+  ActiveWorkout, AnyDraft, Data, DraftKey, EditDraft, EntryDraft, Exercise, Measurement, Meta, Profile, Settings, Template,
+  TemplateDraft, TemplateEntry, WorkSet, Workout, WorkoutEditDraft,
 } from './types';
 
 export interface State {
@@ -28,6 +31,8 @@ export interface State {
   meta: Meta;
   /** the running workout, or null */
   active: ActiveWorkout | null;
+  /** the template or finished workout being edited, or null (not stored) */
+  edit: EditDraft | null;
 }
 
 let state: State = {
@@ -41,6 +46,7 @@ let state: State = {
   profile: { name: '' },
   meta: {},
   active: null,
+  edit: null,
 };
 
 const listeners = new Set<() => void>();
@@ -146,9 +152,23 @@ export const exerciseName = (id: string, s: State = state) => s.exercises.get(id
 
 // ---------- settings ----------
 export async function setSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
-  const settings = { ...state.settings, [key]: value };
-  setState({ settings });
+  const prev = state.settings;
+  const settings = changeSetting(prev, key as string, value) as Settings;
+  const patch: Partial<State> = { settings };
+  // numbers typed in the running workout (or an editor) follow a unit change
+  if ((key === 'unit' || key === 'distUnit') && prev[key] !== value) {
+    if (state.active) { const a = clone(state.active); convertDraftUnits(a, prev, settings); patch.active = a; }
+    if (state.edit) { const d = clone(state.edit); convertDraftUnits(d, prev, settings); patch.edit = d; }
+  }
+  setState(patch);
+  if (patch.active) persistActive(true);
   await db.kvSet('settings', settings);
+}
+
+export async function setMeta(patch: Partial<Meta>) {
+  const meta = { ...state.meta, ...patch };
+  setState({ meta });
+  await db.kvSet('meta', meta);
 }
 
 export async function setProfile(patch: Partial<Profile>) {
@@ -181,6 +201,17 @@ export async function restoreBackup(preview: BackupPreview) {
   if (active) await db.kvSet('active', active);
   await ensureSeed();
 }
+
+/** Everything in the app as a backup file's text (the same format as the web app's). */
+export function backupText(appVersion: string) {
+  const s = state;
+  return makeBackup({
+    exercises: [...s.exercises.values()], workouts: s.workouts, templates: s.templates, measurements: s.measurements,
+    kv: { settings: s.settings, profile: s.profile, meta: s.meta },
+  }, appVersion) as string;
+}
+
+export const markBackedUp = () => setMeta({ lastBackupAt: Date.now() });
 
 // ---------- Strong import ----------
 export type StrongImport = ReturnType<typeof readStrong>;
@@ -232,13 +263,135 @@ export async function updateExercise(id: string, patch: Partial<Exercise>) {
   await db.put('exercises', next);
 }
 
+export const findExercise = (name: string): Exercise | null => findExerciseByName(state.exercises, name) as Exercise | null;
+
+/** Create a custom exercise. */
+export async function addExercise(o: { name: string; category: Exercise['category']; bodyPart: string; notes?: string }): Promise<Exercise> {
+  const ex = newExerciseRecord(o, { hasId: (id: string) => state.exercises.has(id) }) as Exercise;
+  const exercises = new Map(state.exercises);
+  exercises.set(ex.id, ex);
+  setState({ exercises });
+  await db.put('exercises', ex);
+  return ex;
+}
+
+/** Where an exercise is used: workouts, templates, the running workout. */
+export function exerciseUsage(id: string) {
+  return {
+    sessions: allSessions().get(id)?.length || 0,
+    templates: state.templates.filter((t) => t.exercises.some((e) => e.exerciseId === id)).length,
+    inActive: !!state.active?.exercises.some((e) => e.exerciseId === id),
+  };
+}
+
+/** Delete an exercise nobody has logged; it leaves the templates too. */
+export async function deleteExercise(id: string) {
+  const exercises = new Map(state.exercises);
+  exercises.delete(id);
+  const changed: Template[] = [];
+  const templates = state.templates.map((t) => {
+    if (!t.exercises.some((e) => e.exerciseId === id)) return t;
+    const next = { ...t, exercises: t.exercises.filter((e) => e.exerciseId !== id) };
+    changed.push(next);
+    return next;
+  });
+  setState({ exercises, templates });
+  await db.remove('exercises', id);
+  await db.putMany('templates', changed);
+}
+
+// ---------- workouts ----------
+export async function saveWorkout(w: Workout) {
+  setState({ workouts: [...state.workouts.filter((x) => x.id !== w.id), w].sort(byNewest) });
+  await db.put('workouts', w);
+}
+
+/** Delete a finished workout. Returns it, for undo. */
+export async function deleteWorkout(id: string): Promise<Workout | null> {
+  const w = state.workouts.find((x) => x.id === id) || null;
+  if (!w) return null;
+  setState({ workouts: state.workouts.filter((x) => x.id !== id) });
+  await db.remove('workouts', id);
+  return w;
+}
+
+// ---------- measurements ----------
+export async function addMeasurement(m: { type: string; value: number; at?: number; id?: string }): Promise<Measurement> {
+  const rec: Measurement = { id: m.id || uid(), type: m.type, value: m.value, at: m.at || Date.now() };
+  setState({ measurements: [...state.measurements, rec].sort(byNewest) });
+  await db.put('measurements', rec);
+  return rec;
+}
+
+export async function deleteMeasurement(id: string): Promise<Measurement | null> {
+  const m = state.measurements.find((x) => x.id === id) || null;
+  if (!m) return null;
+  setState({ measurements: state.measurements.filter((x) => x.id !== id) });
+  await db.remove('measurements', id);
+  return m;
+}
+
 // ---------- templates ----------
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
-async function saveTemplate(t: Template) {
+export async function saveTemplate(t: Template) {
   const next = { ...t, updatedAt: Date.now() };
   setState({ templates: state.templates.some((x) => x.id === t.id) ? state.templates.map((x) => (x.id === t.id ? next : x)) : [...state.templates, next] });
   await db.put('templates', next);
+}
+
+/** Change a template's own fields (name, folder, archived). */
+export async function patchTemplate(id: string, patch: Partial<Template>) {
+  const t = state.templates.find((x) => x.id === id);
+  if (!t) return;
+  const next: Template = { ...t, ...patch };
+  if (patch.archived === false) delete next.archived;
+  await saveTemplate(next);
+}
+
+/** Delete a template. Returns it, for undo. */
+export async function deleteTemplate(id: string): Promise<Template | null> {
+  const t = state.templates.find((x) => x.id === id) || null;
+  if (!t) return null;
+  setState({ templates: state.templates.filter((x) => x.id !== id) });
+  await db.remove('templates', id);
+  return t;
+}
+
+/** A new template copied from another (Duplicate, Add to my templates). */
+export async function copyTemplate(src: Template, patch: Partial<Template> = {}): Promise<Template> {
+  const t = copyTemplateRecord(src, { patch, hasExercise: (id: string) => state.exercises.has(id) }) as Template;
+  await saveTemplate(t);
+  return t;
+}
+
+/** Folder names in use, plus empty ones made with "New folder". */
+export const templateFolders = (s: State = state): string[] => folderNames(s.templates, s.meta.folders);
+
+export async function addFolder(name: string): Promise<boolean> {
+  const n = name.trim();
+  if (!n || templateFolders().includes(n)) return false;
+  await setMeta({ folders: [...(state.meta.folders || []), n] });
+  return true;
+}
+
+export async function renameFolder(from: string, to: string) {
+  const n = to.trim();
+  if (!n || n === from) return;
+  const changed: Template[] = [];
+  const templates = state.templates.map((t) => ((t.folder || '') === from ? (changed.push({ ...t, folder: n }), changed[changed.length - 1]) : t));
+  setState({ templates });
+  await db.putMany('templates', changed);
+  await setMeta({ folders: [...new Set((state.meta.folders || []).map((f) => (f === from ? n : f)))] });
+}
+
+/** Remove a folder; its templates move out of it (nothing is deleted). */
+export async function removeFolder(name: string) {
+  const changed: Template[] = [];
+  const templates = state.templates.map((t) => ((t.folder || '') === name ? (changed.push({ ...t, folder: '' }), changed[changed.length - 1]) : t));
+  setState({ templates });
+  await db.putMany('templates', changed);
+  await setMeta({ folders: (state.meta.folders || []).filter((f) => f !== name) });
 }
 
 /** Save a finished workout into its template. Returns the template's previous exercises, for undo. */
@@ -268,15 +421,18 @@ function persistActive(now = false) {
 }
 export function flushActive() { if (activeTimer) persistActive(true); }
 
+export const getDraft = (key: DraftKey, s: State = state): AnyDraft | null => (key === 'active' ? s.active : s.edit);
+
 /**
- * Change the running workout. `fn` gets a copy to change in place (the core's
- * functions work that way). With `entryId` only that exercise is copied, so
- * the other exercises keep their identity and don't re-render.
+ * Change a draft: the running workout ('active') or the one being edited
+ * ('edit'). `fn` gets a copy to change in place (the core's functions work
+ * that way). With `entryId` only that exercise is copied, so the other
+ * exercises keep their identity and don't re-render.
  */
-export function editActive(fn: (a: ActiveWorkout, entry: EntryDraft) => void, entryId?: string) {
-  const cur = state.active;
+export function editDraft<D extends AnyDraft>(key: DraftKey, fn: (d: D, entry: EntryDraft) => void, entryId?: string) {
+  const cur = getDraft(key) as D | null;
   if (!cur) return;
-  let a: ActiveWorkout;
+  let d: D;
   let entry: EntryDraft | undefined;
   if (entryId) {
     const i = cur.exercises.findIndex((e) => e.id === entryId);
@@ -284,21 +440,81 @@ export function editActive(fn: (a: ActiveWorkout, entry: EntryDraft) => void, en
     entry = clone(cur.exercises[i]);
     const exercises = cur.exercises.slice();
     exercises[i] = entry;
-    a = { ...cur, exercises };
+    d = { ...cur, exercises };
   } else {
-    a = clone(cur);
+    d = clone(cur);
   }
-  fn(a, entry as EntryDraft);
-  a.updatedAt = Date.now();
-  setState({ active: a });
-  persistActive();
+  fn(d, entry as EntryDraft);
+  if (key === 'active') {
+    (d as ActiveWorkout).updatedAt = Date.now();
+    setState({ active: d as ActiveWorkout });
+    persistActive();
+  } else {
+    (d as EditDraft).dirty = true;
+    setState({ edit: d as EditDraft });
+  }
 }
 
-/** Change top-level fields (name, notes, rest) without touching the exercises. */
-export function patchActive(patch: Partial<ActiveWorkout>) {
-  if (!state.active) return;
-  setState({ active: { ...state.active, ...patch, updatedAt: Date.now() } });
-  persistActive();
+/** Change the running workout (see editDraft). */
+export const editActive = (fn: (a: ActiveWorkout, entry: EntryDraft) => void, entryId?: string) => editDraft<ActiveWorkout>('active', fn, entryId);
+
+/** Change top-level fields of a draft (name, notes, rest…) without touching the exercises. */
+export function patchDraft(key: DraftKey, patch: Partial<ActiveWorkout> | Partial<TemplateDraft> | Partial<WorkoutEditDraft>) {
+  const cur = getDraft(key);
+  if (!cur) return;
+  if (key === 'active') {
+    setState({ active: { ...(cur as ActiveWorkout), ...(patch as Partial<ActiveWorkout>), updatedAt: Date.now() } });
+    persistActive();
+  } else {
+    setState({ edit: { ...(cur as EditDraft), ...(patch as Partial<EditDraft>), dirty: true } as EditDraft });
+  }
+}
+
+/** Change top-level fields of the running workout. */
+export const patchActive = (patch: Partial<ActiveWorkout>) => patchDraft('active', patch);
+
+// ---------- editing templates and finished workouts ----------
+/** Start editing (the screen calls this once with core's templateDraft / workoutEditDraft). */
+export function openEdit(d: EditDraft) { setState({ edit: { ...d, dirty: false } }); }
+/** Stop editing (only if `id` is still the draft being edited). */
+export function closeEdit(id?: string) { if (state.edit && (!id || state.edit.id === id)) setState({ edit: null }); }
+
+/** The exercise as a draft sees it, with changes waiting for Save. */
+export const exerciseFor = (key: DraftKey, id: string, s: State = state) => exerciseInDraft(s.exercises, getDraft(key, s), id) as Exercise | undefined;
+
+/** Change an exercise from an editor: at once in the running workout, at Save elsewhere. */
+export function changeExercise(key: DraftKey, id: string, patch: Partial<Exercise>) {
+  if (key === 'active') { updateExercise(id, patch); return; }
+  editDraft<EditDraft>('edit', (d) => { patchDraftExercise(d, id, patch); });
+}
+
+async function applyExercisePatches(d: EditDraft) {
+  for (const [id, patch] of Object.entries(d.exPatches || {})) if (state.exercises.has(id)) await updateExercise(id, patch);
+}
+
+/** Save the template editor. Returns { problem } (an English text) or { template }. */
+export async function saveTemplateDraft(): Promise<{ problem?: string; template?: Template; created?: boolean }> {
+  const d = state.edit;
+  if (!d || d.kind !== 'template') return { problem: 'Nothing to save' };
+  const existing = state.templates.find((t) => t.id === d.id) || null;
+  const r = templateFromDraft(d, { settings: state.settings, exercises: state.exercises, existing }) as { problem?: string; template?: Template };
+  if (r.problem || !r.template) return { problem: r.problem };
+  await saveTemplate(r.template);
+  await applyExercisePatches(d);
+  setState({ edit: { ...d, dirty: false } });
+  return { template: r.template, created: !existing };
+}
+
+/** Save "Edit workout". Returns { problem } or { workout }. */
+export async function saveWorkoutEdit(defaultName: string): Promise<{ problem?: string; workout?: Workout }> {
+  const d = state.edit;
+  if (!d || d.kind !== 'edit') return { problem: 'Nothing to save' };
+  const r = workoutFromEditDraft(d, { settings: state.settings, exercises: state.exercises, defaultName }) as { problem?: string; workout?: Workout };
+  if (r.problem || !r.workout) return { problem: r.problem };
+  await saveWorkout(r.workout);
+  await applyExercisePatches(d);
+  setState({ edit: { ...d, dirty: false } });
+  return { workout: r.workout };
 }
 
 export function startWorkout(from: { template?: Template | null; fromWorkout?: Workout | null }, defaultName: string) {

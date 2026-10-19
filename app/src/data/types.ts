@@ -152,11 +152,39 @@ export interface ActiveWorkout {
   updatedAt: number;
 }
 
+// ---------- drafts outside the running workout ----------
+// The template editor and "Edit workout" (see core/editing.js). Exercise
+// changes made there (rest timer, pinned note) wait in exPatches until Save.
+interface DraftBase {
+  id: string;
+  name: string;
+  notes: string;
+  exercises: EntryDraft[];
+  exPatches?: Record<string, Partial<Exercise>>;
+  /** changed since it was opened */
+  dirty?: boolean;
+}
+export interface TemplateDraft extends DraftBase {
+  kind: 'template';
+  folder: string;
+}
+export interface WorkoutEditDraft extends DraftBase {
+  kind: 'edit';
+  startedAt: number;
+  durationMin: string;
+  templateId: string | null;
+  source?: string;
+}
+export type EditDraft = TemplateDraft | WorkoutEditDraft;
+export type AnyDraft = ActiveWorkout | EditDraft;
+/** Which draft an editor works on: the running workout or the one being edited. */
+export type DraftKey = 'active' | 'edit';
+
 export interface Profile {
   name: string;
 }
 
-export type Meta = Record<string, unknown> & { seedVersion?: number; lastBackupAt?: number };
+export type Meta = Record<string, unknown> & { seedVersion?: number; lastBackupAt?: number; folders?: string[]; createdAt?: number };
 
 export interface Kv {
   settings?: Partial<Settings>;

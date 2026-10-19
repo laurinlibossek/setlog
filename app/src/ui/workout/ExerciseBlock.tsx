@@ -1,18 +1,24 @@
-// One exercise of the running workout: name and menu, superset and rest tags,
-// pinned note, its note, the set table and "Add set". Only this exercise
-// re-renders when one of its sets changes (see editActive in the store).
+// One exercise of a draft: the running workout ('active'), a template in the
+// editor ('template') or a finished workout being edited ('edit'). Name and
+// menu, focus metric, superset and rest tags, pinned note, its note, the set
+// table and "Add set". Only this exercise re-renders when one of its sets
+// changes (see editDraft in the store). Check-off, rest timer and live
+// records belong to the running workout only.
 import { memo, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
   placeholders, restFor, checkOffSet, copyPrevious, addSet, joinSuperset, leaveSuperset, replaceExercise, addWarmups,
-  isLiveRecord, loggedFields, usesWeight, numToInput, parseNum, REST_CHOICES, RPE_CHOICES, SET_TYPES,
+  isLiveRecord, loggedFields, usesWeight, numToInput, parseNum, focusOptions, focusValues, REST_CHOICES, RPE_CHOICES, SET_TYPES,
+  FOCUS_LABEL,
 } from '@setlog/core';
 
-import { editActive, getState, startRest, updateExercise } from '@/data/store';
+import {
+  changeExercise, editDraft, getDraft, getState, startRest,
+} from '@/data/store';
 import type {
-  EntryDraft, Exercise, Settings, SetType, WorkSet,
+  DraftKey, EntryDraft, Exercise, Settings, SetType, WorkSet,
 } from '@/data/types';
 import { setLabels, useFormat } from '@/lib/format';
 import { pickExercises } from '@/lib/picker';
@@ -23,7 +29,11 @@ import { COLS, SetRow, type Field } from './SetRow';
 
 export const SS_COLORS = ['accent', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
 
+export type EditorMode = 'active' | 'edit' | 'template';
+
 type Props = {
+  draftKey: DraftKey;
+  mode: EditorMode;
   entry: EntryDraft;
   ex: Exercise | undefined;
   prevSets: WorkSet[] | null;
@@ -34,8 +44,10 @@ type Props = {
 
 const SET_TYPE_NAME: Record<SetType, string> = { normal: 'Normal', warmup: 'Warm-up', drop: 'Drop set', failure: 'Failure' };
 
+type FocusKey = keyof typeof FOCUS_LABEL;
+
 export const ExerciseBlock = memo(function ExerciseBlock({
-  entry, ex, prevSets, bests, settings, superset,
+  draftKey, mode, entry, ex, prevSets, bests, settings, superset,
 }: Props) {
   const f = useFormat();
   const { tr } = f;
@@ -49,14 +61,15 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   const labels = setLabels(entry.sets);
   const ssColor = superset ? (superset.index % SS_COLORS.length === 0 ? c.accent : SS_COLORS[superset.index % SS_COLORS.length]) : null;
   const done = entry.sets.filter((s) => s.done).length;
-  const edit = (fn: (e: EntryDraft) => void) => editActive((_a, e) => fn(e), entry.id);
+  const active = mode === 'active';
+  const edit = (fn: (e: EntryDraft) => void) => editDraft(draftKey, (_a, e) => fn(e), entry.id);
   const now = Date.now();
 
   // ---------- sets ----------
   const toggle = (i: number) => {
     if (entry.sets[i].done) { edit((e) => { e.sets[i].done = false; }); return; }
     let r: { problem?: string; rest?: number } = {};
-    editActive((a, e) => { r = checkOffSet(a, e, i, { category: cat, ph: rows[i].ph, rest, settings }); }, entry.id);
+    editDraft(draftKey, (a, e) => { r = checkOffSet(a, e, i, { category: cat, ph: rows[i].ph, rest, settings }); }, entry.id);
     if (r.problem) {
       setShake({ id: entry.sets[i].id, n: Date.now() });
       toast(tr(r.problem));
@@ -100,7 +113,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
 
   // ---------- the exercise ----------
   const menu = async () => {
-    const a = getState().active;
+    const a = getDraft(draftKey);
     if (!a) return;
     const others = a.exercises.filter((e) => e.id !== entry.id);
     const choice = await actionSheet<string>({
@@ -113,6 +126,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
         entry.supersetId ? { label: tr('Remove from superset'), value: 'unsuperset', icon: 'unlink' } : null,
         { label: tr('Rest timer: {time}', { time: rest ? f.clock(rest) : tr('off') }), value: 'rest', icon: 'timer', testID: 'menu-rest' },
         usesWeight(cat) && cat !== 'assisted_bw' ? { label: tr('Add warm-up sets'), value: 'warmup', icon: 'flame', testID: 'menu-warmup' } : null,
+        cat === 'barbell' ? { label: tr('Plate calculator'), value: 'plates', icon: 'plate', testID: 'menu-plates' } : null,
         a.exercises.length > 1 ? { label: tr('Reorder exercises'), value: 'reorder', icon: 'reorder', testID: 'menu-reorder' } : null,
         { label: tr('History & records'), value: 'info', icon: 'history' },
         { label: tr('Remove exercise'), value: 'remove', destructive: true, icon: 'trash', testID: 'menu-remove' },
@@ -124,7 +138,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       const v = await prompt({
         title: tr('Pinned note'), message: tr('Shown every time you do this exercise.'), value: ex.pinnedNote || '', placeholder: tr('Seat height 4, grip on the rings…'), multiline: true,
       });
-      if (v !== null) updateExercise(ex.id, { pinnedNote: v.trim() });
+      if (v !== null) changeExercise(draftKey, ex.id, { pinnedNote: v.trim() });
     }
     if (choice === 'replace') {
       const ids = await pickExercises({ multi: false, title: tr('Replace exercise') });
@@ -138,9 +152,9 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       });
       if (!target) return;
       // only this exercise moves: it joins the other one's group (or they start a new one)
-      editActive((d) => joinSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id), d.exercises.find((e) => e.id === target)));
+      editDraft(draftKey, (d) => joinSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id), d.exercises.find((e) => e.id === target)));
     }
-    if (choice === 'unsuperset') editActive((d) => leaveSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id)));
+    if (choice === 'unsuperset') editDraft(draftKey, (d) => leaveSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id)));
     if (choice === 'rest') {
       const v = await actionSheet<string>({
         title: `${tr('Rest timer')} · ${ex.name}`, message: tr('Starts when you check off a set. Saved for this exercise.'),
@@ -148,25 +162,59 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       });
       if (v === undefined) return;
       edit((e) => { e.restSec = Number(v); });
-      updateExercise(ex.id, { restSec: Number(v) });
+      changeExercise(draftKey, ex.id, { restSec: Number(v) });
     }
     if (choice === 'warmup') {
       let r: { added?: number; problem?: string } = {};
       edit((e) => { r = addWarmups(e, rows, cat, settings); });
       toast(r.problem ? tr(r.problem) : tr('{n} warm-up sets added', { n: r.added ?? 0 }));
     }
-    if (choice === 'reorder') router.push('/reorder');
+    if (choice === 'plates') {
+      const k = entry.sets.findIndex((x) => x.type !== 'warmup');
+      const w = k >= 0 ? (parseNum(entry.sets[k].w) ?? parseNum(rows[k]?.ph.w)) : null;
+      router.push({ pathname: '/tools', params: w ? { w: String(w) } : {} });
+    }
+    if (choice === 'reorder') router.push({ pathname: '/reorder', params: { draft: draftKey } });
     if (choice === 'info') {
-      // the exercise page opens behind the workout, which minimizes first
-      router.back();
-      setTimeout(() => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }), Platform.OS === 'web' ? 50 : 450);
+      if (active) {
+        // the exercise page opens behind the workout, which minimizes first
+        router.back();
+        setTimeout(() => router.push({ pathname: '/exercise/[id]', params: { id: ex.id } }), Platform.OS === 'web' ? 50 : 450);
+      } else {
+        router.push({ pathname: '/exercise/[id]', params: { id: ex.id } });
+      }
     }
     if (choice === 'remove') {
       const i = a.exercises.findIndex((e) => e.id === entry.id);
       const removed = a.exercises[i];
-      editActive((d) => { d.exercises.splice(i, 1); });
-      toast(tr('{name} removed', { name: ex.name }), { label: tr('Undo'), fn: () => editActive((d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
+      editDraft(draftKey, (d) => { d.exercises.splice(i, 1); });
+      toast(tr('{name} removed', { name: ex.name }), { label: tr('Undo'), fn: () => editDraft(draftKey, (d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
     }
+  };
+
+  // ---------- focus metric ----------
+  // The number to push for this exercise (Strong's "focus metric"), from the
+  // sets as they stand (typed, else the grey placeholders), against last time.
+  const focusOpts = focusOptions(cat) as FocusKey[];
+  const focus = focusOpts.includes(entry.focus as FocusKey) ? (entry.focus as FocusKey) : null;
+  const focusVals = focusOpts.length ? focusValues(entry, rows, cat, prevSets, settings) as Record<FocusKey, number | null> : null;
+  const fmtFocus = (k: FocusKey) => {
+    const x = focusVals?.[k];
+    if (x === null || x === undefined) return '—';
+    if (k === 'volume') return f.volume(x);
+    if (k === 'reps') return f.plural(x, 'rep');
+    if (k === 'weightPerRep') return `${f.w(x, 1)} ${f.unit}`;
+    const pct = Math.round(x * 100);
+    return `${pct > 0 ? '+' : pct < 0 ? '−' : '±'}${Math.abs(pct)}%`;
+  };
+  const pickFocus = async () => {
+    const v = await actionSheet<FocusKey>({
+      title: tr('Set a focus metric'),
+      message: tr('The number you want to push for this exercise. It shows next to the name and updates as you log; increases compare with last time. Tap it again to turn it off.'),
+      actions: focusOpts.map((k) => ({ label: `${tr(FOCUS_LABEL[k])} · ${fmtFocus(k)}`, value: k, checked: focus === k, testID: `focus-${k}` })),
+    });
+    if (!v) return;
+    edit((e) => { e.focus = v === focus ? null : v; });
   };
 
   const wLabel = (cat === 'assisted_bw' ? '−' : cat === 'weighted_bw' ? '+' : '') + f.unit.toUpperCase();
@@ -180,13 +228,21 @@ export const ExerciseBlock = memo(function ExerciseBlock({
         <Pressable onPress={menu} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" testID={`ex-title-${ex.id}`}>
           <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '700' }} numberOfLines={2}>{ex.name}</Text>
         </Pressable>
-        {entry.sets.length > 0 && <Text style={{ color: c.ink3, fontSize: 13, fontVariant: ['tabular-nums'] }}>{`${done}/${entry.sets.length}`}</Text>}
+        {active && entry.sets.length > 0 && <Text style={{ color: c.ink3, fontSize: 13, fontVariant: ['tabular-nums'] }}>{`${done}/${entry.sets.length}`}</Text>}
+        {focusOpts.length > 0 && (
+          <Pressable onPress={pickFocus} hitSlop={6} accessibilityRole="button" testID={`focus-${ex.id}`}
+            accessibilityLabel={focus ? `${tr(FOCUS_LABEL[focus])}: ${fmtFocus(focus)}` : tr('Focus metric for {name}', { name: ex.name })}
+            style={({ pressed }) => [styles.focus, { backgroundColor: focus ? c.accentSoft : pressed ? c.surface3 : c.surface2 }]}>
+            <Icon name="trend" size={15} color={focus ? c.accentText : c.ink3} />
+            {focus && <Text style={{ color: c.accentText, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} numberOfLines={1}>{fmtFocus(focus)}</Text>}
+          </Pressable>
+        )}
         <Pressable onPress={menu} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name: ex.name })} testID={`ex-menu-${ex.id}`}
           style={({ pressed }) => [styles.more, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
           <Icon name="more" size={18} color={c.accentText} />
         </Pressable>
       </View>
-      {(superset || rest > 0) && (
+      {(superset || (active && rest > 0)) && (
         <View style={styles.tags}>
           {superset && ssColor && (
             <View style={[styles.tag, { backgroundColor: c.accentSoft }]}>
@@ -194,7 +250,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
               <Text style={{ color: ssColor, fontSize: 12, fontWeight: '700' }}>{tr('Superset {letter}', { letter: superset.letter })}</Text>
             </View>
           )}
-          {rest > 0 && (
+          {active && rest > 0 && (
             <View style={[styles.tag, { backgroundColor: c.surface2 }]} testID={`rest-tag-${ex.id}`}>
               <Icon name="timer" size={12} color={c.ink2} />
               <Text style={{ color: c.ink2, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{f.clock(rest)}</Text>
@@ -216,15 +272,15 @@ export const ExerciseBlock = memo(function ExerciseBlock({
         <Text style={[styles.hdrText, { width: COLS.label, color: c.label }]}>{tr('Set')}</Text>
         <Text style={[styles.hdrText, { flex: 1, textAlign: 'left', paddingLeft: 4, color: c.label }]}>{tr('Previous')}</Text>
         {headers.map((h, i) => <Text key={h} style={[styles.hdrText, { width: widths[i], color: c.label }]}>{h}</Text>)}
-        <View style={{ width: COLS.check }} />
+        {active && <View style={{ width: COLS.check }} />}
       </View>
       {entry.sets.map((set, i) => {
         const prev = rows[i]?.prev;
-        const pr = isLiveRecord(set, cat, bests, settings, now);
+        const pr = active && isLiveRecord(set, cat, bests, settings, now);
         return (
           <SetRow key={set.id} set={set} label={labels[i]} fields={fields} ph={rows[i]?.ph || {}}
             prevText={prev ? f.setText(prev, cat, true) : '—'} badge={pr ? 'pr' : set.rpe || null}
-            shake={shake && shake.id === set.id ? shake.n : 0} showCheck
+            shake={shake && shake.id === set.id ? shake.n : 0} showCheck={active}
             labels={{
               set: tr('Set {label}, change type', { label: labels[i] }), prev: tr('Previous: {value}', { value: prev ? f.setText(prev, cat, true) : '—' }),
               field: fieldNames, check: tr('Mark set as done'), uncheck: tr('Mark set as not done'), delete: tr('Delete'),
@@ -248,6 +304,7 @@ const styles = StyleSheet.create({
   block: { borderRadius: 14, overflow: 'hidden', marginTop: 12, paddingBottom: 6 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 14, paddingRight: 10, paddingTop: 12 },
   more: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  focus: { height: 28, minWidth: 32, maxWidth: 130, borderRadius: 14, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   tags: { flexDirection: 'row', gap: 6, paddingHorizontal: 14, marginTop: 6 },
   tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   pinned: { flexDirection: 'row', gap: 8, marginHorizontal: 14, marginTop: 8, borderRadius: 10, padding: 9, alignItems: 'flex-start' },

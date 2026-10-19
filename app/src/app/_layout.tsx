@@ -36,11 +36,17 @@ export default function RootLayout() {
             <Stack.Screen name="workout/[id]" options={{ title: '' }} />
             <Stack.Screen name="template/[id]" options={{ title: '' }} />
             <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
+            <Stack.Screen name="measure/[type]" options={{ title: '' }} />
+            {/* editors: Cancel / Save in the bar, no swipe-back past unsaved changes */}
+            <Stack.Screen name="template-edit" options={{ title: '', gestureEnabled: false }} />
+            <Stack.Screen name="workout-edit/[id]" options={{ title: '', gestureEnabled: false }} />
             {/* the running workout and what opens from it slide up over the app */}
             <Stack.Screen name="active" options={{ presentation: 'modal', headerShown: false, title: tr('Current workout') }} />
             <Stack.Screen name="pick-exercises" options={{ presentation: 'modal', headerShown: false, title: tr('Add exercises') }} />
             <Stack.Screen name="reorder" options={{ presentation: 'modal', headerShown: false, title: tr('Reorder') }} />
             <Stack.Screen name="summary/[id]" options={{ presentation: 'modal', headerShown: false, title: tr('Workout saved') }} />
+            <Stack.Screen name="tools" options={{ presentation: 'modal', headerShown: false, title: tr('Tools') }} />
+            <Stack.Screen name="exercise-form" options={{ presentation: 'modal', headerShown: false, title: tr('New exercise') }} />
           </Stack>
           <RestWatcher />
           <OverlayHost />

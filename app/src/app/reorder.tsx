@@ -1,16 +1,17 @@
-// Reordering the exercises of the running workout: drag the ≡ handle, or
-// press and hold a row and drag it. The others slide out of the way.
+// Reordering the exercises of a draft (the running workout, or the template
+// or workout being edited: ?draft=edit): drag the ≡ handle, or press and
+// hold a row and drag it. The others slide out of the way.
 import { useRef, useState } from 'react';
 import {
   Animated, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moveItem } from '@setlog/core';
 
-import { editActive, useAppSelector } from '@/data/store';
-import type { EntryDraft } from '@/data/types';
+import { editDraft, getDraft, useAppSelector } from '@/data/store';
+import type { DraftKey, EntryDraft } from '@/data/types';
 import { useFormat } from '@/lib/format';
 import { useColors } from '@/lib/theme';
 import { Icon } from '@/ui/kit';
@@ -19,7 +20,9 @@ const ROW = 64;
 type Drag = { from: number; over: number };
 
 export default function Reorder() {
-  const a = useAppSelector((s) => s.active);
+  const { draft } = useLocalSearchParams<{ draft?: string }>();
+  const key: DraftKey = draft === 'edit' ? 'edit' : 'active';
+  const a = useAppSelector((s) => getDraft(key, s));
   const exercises = useAppSelector((s) => s.exercises);
   const f = useFormat();
   const { tr } = f;
@@ -51,14 +54,14 @@ export default function Reorder() {
     end: () => {
       const d = dragRef.current;
       if (!d) return;
-      if (d.over !== d.from) editActive((x) => { moveItem(x.exercises, d.from, d.over); });
+      if (d.over !== d.from) editDraft(key, (x) => { moveItem(x.exercises, d.from, d.over); });
       dy.setValue(0);
       set(null);
     },
     step: (i: number, by: number) => {
       const j = i + by;
       if (j < 0 || j >= countRef.current) return;
-      editActive((x) => { moveItem(x.exercises, i, j); });
+      editDraft(key, (x) => { moveItem(x.exercises, i, j); });
     },
     dragging: (i: number) => dragRef.current?.from === i,
   };

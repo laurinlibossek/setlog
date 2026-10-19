@@ -4,13 +4,36 @@ import {
   workoutVolume, est1RM, hasLoadRecords, PR_LABEL,
 } from '@setlog/core';
 
-import { stats, useAppState } from '@/data/store';
-import { setLabels, useFormat } from '@/lib/format';
+import {
+  deleteWorkout, saveWorkout, stats, useAppState, type State,
+} from '@/data/store';
+import type { Workout } from '@/data/types';
+import { setLabels, useFormat, type Format } from '@/lib/format';
+import type { Tr } from '@/lib/i18n';
+import { openTemplateEditor, shareText } from '@/lib/templates';
 import { beginWorkout } from '@/lib/workout';
 import { useColors } from '@/lib/theme';
 import {
-  Button, Card, Empty, Icon, Page, Txt,
+  Button, Card, Empty, Icon, IconButton, Page, Txt,
 } from '@/ui/kit';
+import { actionSheet, ask, toast } from '@/ui/overlay';
+
+/** A finished workout as plain text, for sharing. */
+function workoutAsText(w: Workout, s: State, f: Format & { tr: Tr }) {
+  const { tr } = f;
+  const lines = [`${w.name} — ${f.date.medium(w.startedAt)}`];
+  const vol = workoutVolume(w, s.exercises);
+  lines.push([f.dur(w.endedAt - w.startedAt), vol ? f.volume(vol) : null].filter(Boolean).join(' · '));
+  if (w.notes) lines.push(w.notes);
+  for (const e of w.exercises) {
+    const ex = s.exercises.get(e.exerciseId);
+    lines.push('', ex?.name || tr('Exercise'));
+    const labels = setLabels(e.sets);
+    e.sets.forEach((x, i) => lines.push(`  ${labels[i].padEnd(2)} ${f.setText(x, ex?.category)}`));
+    if (e.notes) lines.push(`  ${tr('“{name}”', { name: e.notes })}`);
+  }
+  return lines.join('\n');
+}
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,10 +49,38 @@ export default function WorkoutDetail() {
   const prs = st.prsByWorkout.get(w.id) || [];
   const sets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
   const label = (k: string) => tr((PR_LABEL as Record<string, string>)[k] || k);
+  const menu = async () => {
+    const c = await actionSheet<string>({
+      title: w.name,
+      actions: [
+        { label: tr('Edit workout'), value: 'edit', icon: 'edit', testID: 'wo-menu-edit' },
+        { label: tr('Do this workout again'), value: 'again', icon: 'play' },
+        { label: tr('Save as template'), value: 'template', icon: 'copy', testID: 'wo-menu-template' },
+        { label: tr('Share as text'), value: 'share', icon: 'share' },
+        { label: tr('Delete workout'), value: 'delete', destructive: true, icon: 'trash', testID: 'wo-menu-delete' },
+      ],
+    });
+    if (c === 'edit') router.push({ pathname: '/workout-edit/[id]', params: { id: w.id } });
+    if (c === 'again') beginWorkout({ fromWorkout: w }, f);
+    if (c === 'template') openTemplateEditor({ from: w.id });
+    if (c === 'share' && !(await shareText(workoutAsText(w, s, f), w.name))) toast(tr('Sharing isn’t available here'));
+    if (c === 'delete') {
+      const ok = await ask({
+        title: tr('Delete this workout?'), message: tr('Its sets and records will be removed from your history.'), ok: tr('Delete'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete',
+      });
+      if (!ok) return;
+      const gone = await deleteWorkout(w.id);
+      if (router.canGoBack()) router.back();
+      if (gone) toast(tr('Workout deleted'), { label: tr('Undo'), fn: () => { saveWorkout(gone); } });
+    }
+  };
 
   return (
     <Page>
-      <Stack.Screen options={{ title: w.name }} />
+      <Stack.Screen options={{
+        title: w.name,
+        headerRight: () => <IconButton icon="more" label={tr('Workout options')} onPress={menu} testID="workout-options" />,
+      }} />
       <Txt style={{ fontSize: 28, fontWeight: '800' }}>{w.name}</Txt>
       <Txt tone="ink3" style={{ fontSize: 14, marginTop: 2, marginBottom: 12 }}>
         {`${f.date.full(w.startedAt)} · ${f.date.time(w.startedAt)}–${f.date.time(w.endedAt)}`}

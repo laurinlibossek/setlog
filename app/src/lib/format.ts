@@ -34,6 +34,8 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     return `${v >= 10000 ? compact(v) : num(v, 0)} ${unit}`;
   };
   const dist = (km: number) => `${num(kmTo(km || 0, dUnit), 2)} ${dUnit}`;
+  /** seconds per km -> "5:30 /km" (or per mile) */
+  const pace = (secPerKm: number) => `${fmtClock(dUnit === 'mi' ? secPerKm * 1.609344 : secPerKm)} /${dUnit}`;
 
   /** One set as text: "60 kg × 8", "+10 kg × 6", "12 reps", "5 km · 25:00", "1:00" */
   const setText = (s: Partial<WorkSet> | null | undefined, cat: Category | undefined, short = false) => {
@@ -76,6 +78,8 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     monthYear: dtf({ month: 'long', year: 'numeric' }),
     time: dtf({ hour: '2-digit', minute: '2-digit' }),
     weekdayLong: dtf({ weekday: 'long' }),
+    dayMonth: dtf({ day: 'numeric', month: 'short' }),
+    monthShort: dtf({ month: 'short' }),
   };
   const date = {
     medium: (t: number) => F.medium.format(t),
@@ -84,6 +88,8 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     monthYear: (t: number) => F.monthYear.format(t),
     time: (t: number) => F.time.format(t),
     weekdayLong: (t: number) => F.weekdayLong.format(t),
+    dayMonth: (t: number) => F.dayMonth.format(t),
+    monthShort: (t: number) => F.monthShort.format(t),
   };
 
   /** "Today", "3 days ago", "2 weeks ago" … */
@@ -104,7 +110,7 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     return lang === 'de' ? s.replace(/^(Heute|Gestern)$/, (m) => m.toLowerCase()) : s.toLowerCase();
   };
 
-  return { unit, dUnit, num, compact, w, wu, volume, dist, setText, plural, dur, date, relDay, relDayLower, clock: fmtClock };
+  return { unit, dUnit, num, compact, w, wu, volume, dist, pace, setText, plural, dur, date, relDay, relDayLower, clock: fmtClock };
 }
 
 export type Format = ReturnType<typeof makeFormat>;

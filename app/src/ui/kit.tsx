@@ -2,7 +2,7 @@
 // grouped rows on a tinted background, rounded cards, filled and tinted buttons.
 import type { ReactNode } from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View,
   type StyleProp, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +43,19 @@ export const ICONS = {
   calendar: { ios: 'calendar', android: 'calendar_today', web: 'calendar_today' },
   close: { ios: 'xmark', android: 'close', web: 'close' },
   repeat: { ios: 'arrow.clockwise', android: 'replay', web: 'replay' },
+  trend: { ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' },
+  plate: { ios: 'circle.circle', android: 'adjust', web: 'adjust' },
+  edit: { ios: 'pencil', android: 'edit', web: 'edit' },
+  copy: { ios: 'doc.on.doc', android: 'content_copy', web: 'content_copy' },
+  folder: { ios: 'folder', android: 'folder', web: 'folder' },
+  archive: { ios: 'archivebox', android: 'archive', web: 'archive' },
+  share: { ios: 'square.and.arrow.up', android: 'share', web: 'share' },
+  upload: { ios: 'square.and.arrow.up', android: 'upload', web: 'upload' },
+  eyeOff: { ios: 'eye.slash', android: 'visibility_off', web: 'visibility_off' },
+  eye: { ios: 'eye', android: 'visibility', web: 'visibility' },
+  bell: { ios: 'bell', android: 'notifications', web: 'notifications' },
+  chart: { ios: 'chart.xyaxis.line', android: 'show_chart', web: 'show_chart' },
+  calculator: { ios: 'function', android: 'calculate', web: 'calculate' },
 } as const;
 export type IconName = keyof typeof ICONS;
 
@@ -155,6 +168,22 @@ export function Cell({ title, sub, value, icon, onPress, first, danger, right, c
   );
 }
 
+/** A row with an on/off switch. */
+export function SwitchCell({ title, sub, value, onChange, first, testID }: { title: string; sub?: string; value: boolean; onChange: (v: boolean) => void; first?: boolean; testID?: string }) {
+  const c = useColors();
+  return (
+    <View style={styles.cell}>
+      {!first && <View style={[styles.hairline, { backgroundColor: c.line, left: 16 }]} />}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{title}</Text>
+        {!!sub && <Text style={{ color: c.ink3, fontSize: 13, marginTop: 2 }} numberOfLines={2}>{sub}</Text>}
+      </View>
+      <Switch value={value} onValueChange={onChange} accessibilityLabel={title} testID={testID}
+        trackColor={{ true: c.done, false: c.surface3 }} thumbColor="#ffffff" ios_backgroundColor={c.surface3} />
+    </View>
+  );
+}
+
 /** A row of mutually exclusive choices, like the web app's segmented control. */
 export function Segments<T extends string>({ value, options, onChange, testID }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; testID?: string }) {
   const c = useColors();
@@ -177,7 +206,7 @@ export function Segments<T extends string>({ value, options, onChange, testID }:
 export function Card({ children, onPress, style, testID }: { children: ReactNode; onPress?: () => void; style?: StyleProp<ViewStyle>; testID?: string }) {
   const c = useColors();
   const box = (pressed = false) => [styles.card, { backgroundColor: pressed ? c.surface2 : c.surface }, style];
-  if (!onPress) return <View style={box()}>{children}</View>;
+  if (!onPress) return <View style={box()} testID={testID}>{children}</View>;
   return <Pressable onPress={onPress} style={({ pressed }) => box(pressed)} accessibilityRole="button" testID={testID}>{children}</Pressable>;
 }
 
@@ -207,6 +236,34 @@ export function IconButton({ icon, onPress, label, testID }: { icon: IconName; o
       style={({ pressed }) => [styles.iconBtn, { backgroundColor: pressed ? c.surface3 : 'transparent' }]}>
       <Icon name={icon} size={22} color={c.accentText} />
     </Pressable>
+  );
+}
+
+/** A text button for a navigation bar (Cancel, Save). */
+export function HeaderButton({ title, onPress, strong, testID }: { title: string; onPress: () => void; strong?: boolean; testID?: string }) {
+  const c = useColors();
+  return (
+    <Pressable onPress={onPress} hitSlop={10} accessibilityRole="button" testID={testID} style={{ paddingHorizontal: 6, paddingVertical: 4 }}>
+      <Text style={{ color: c.accentText, fontSize: 17, fontWeight: strong ? '700' : '400' }}>{title}</Text>
+    </Pressable>
+  );
+}
+
+/** A labelled text field in the grouped style. */
+export function Field({
+  label, value, onChange, placeholder, multiline, keyboardType, testID, big,
+}: {
+  label?: string; value: string; onChange: (v: string) => void; placeholder?: string; multiline?: boolean;
+  keyboardType?: 'default' | 'number-pad' | 'decimal-pad'; testID?: string; big?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ gap: 6 }}>
+      {!!label && <Text style={{ color: c.ink2, fontSize: 13, fontWeight: '600', paddingHorizontal: 4 }}>{label}</Text>}
+      <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={c.ink3} multiline={multiline}
+        keyboardType={keyboardType} testID={testID} accessibilityLabel={label || placeholder}
+        style={[styles.field, { color: c.ink, backgroundColor: c.surface }, multiline && { minHeight: 64, textAlignVertical: 'top' }, big && { fontSize: 22, fontWeight: '800' }]} />
+    </View>
   );
 }
 
@@ -249,4 +306,5 @@ export const styles = StyleSheet.create({
   seg: { flexDirection: 'row', borderRadius: 10, padding: 2 },
   segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 32, borderRadius: 8, paddingHorizontal: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, shadowOpacity: 0 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 10 },
+  field: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
 });

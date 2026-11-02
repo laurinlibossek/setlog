@@ -63,7 +63,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.waitForTimeout(400);
   assert.ok(await has(page, 'Deine Daten'), 'German after restore');
   assert.equal(await bg(page), 'rgb(10, 10, 10)', 'Intense Red background');
-  assert.equal(await page.getByTestId('set-name').inputValue(), 'Laurin', 'name field shows the restored name');
+  assert.match(await page.getByTestId('set-name').innerText(), /Laurin/, 'the name row shows the restored name');
   await page.screenshot({ path: `${OUT}/02-settings-after-restore.png` });
   ok('the backup’s language (German) and theme (Intense Red) apply right away');
   assert.deepEqual(errors, []);

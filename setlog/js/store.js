@@ -17,6 +17,7 @@ import { newActiveWorkout, finishWorkout, newEntries } from './core/workout.js';
 import { applyWorkoutToTemplate } from './core/templates.js';
 import {
   copyTemplateRecord, folderNames, findExerciseByName as findByName, newExerciseRecord, exerciseInDraft, patchDraftExercise,
+  mergeExercisePatch,
 } from './core/editing.js';
 import { suggestTemplate as suggestFrom } from './core/suggest.js';
 import { previousSetsFrom, bodyweightFrom } from './core/sessions.js';
@@ -310,10 +311,7 @@ export function mergeExercise(fromId, intoId) {
   if (fromId === intoId) return;
   const from = S.exercises.get(fromId), into = S.exercises.get(intoId);
   if (from && into) {
-    const patch = {};
-    if ((into.restSec === null || into.restSec === undefined) && from.restSec !== null && from.restSec !== undefined) patch.restSec = from.restSec;
-    if (!into.notes && from.notes) patch.notes = from.notes;
-    if (!into.pinnedNote && from.pinnedNote) patch.pinnedNote = from.pinnedNote;
+    const patch = mergeExercisePatch(from, into);
     if (Object.keys(patch).length) { Object.assign(into, patch); save('exercises', { ...into }); }
   }
   const changed = [];

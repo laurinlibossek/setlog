@@ -1,6 +1,7 @@
 // Template actions: the ⋯ menu on a template (card and preview), folders,
 // the Templates ⋯ menu, sharing a template as a link and adding one someone
-// shared. Template links open the Setlog web app, which reads the same code.
+// shared. Template links open the Setlog web app, which reads the same code;
+// a link that opens this app goes through lib/incoming.ts to offerSharedTemplate().
 import { Share } from 'react-native';
 import { router } from 'expo-router';
 import {

@@ -1,28 +1,21 @@
 # Status and backlog
 
-Last updated 2 Nov 2026. Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
+Last updated 2 Nov 2026 (the rest of the web app's features in the app). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
 
 ## Where things are
 
 - **`main`**: the live web app, **1.6.0** (14 Oct 2026).
 - **`expo-app`**: everything since, not merged yet:
   - web **1.6.2** (never deployed; no visible change except exercise search: "bb", "db" and similar shortcuts only count as whole words, so "bench bb" no longer lists dumbbell exercises). The running-workout logic, editing helpers and chart maths moved into the core.
-  - the store app in `app/` (14–19 Oct 2026): nearly everything the web app does, plus rest timer notifications with the phone locked.
+  - the store app in `app/` (14–19 Oct 2026): everything the web app does (the last pieces came on 2 Nov 2026), plus rest timer notifications with the phone locked and template links that open the app.
   - browser tests in `tests/browser/` and these docs (2 Nov 2026).
 - While `expo-app` is unmerged, web changes on it stay at version 1.6.2 (it was never deployed, so phones never saw it). Bump the version when it's merged or when Laurin asks for a release.
 
 ## Next, in order
 
-1. **Laurin tries the 19 Oct app build on his phone** in Expo Go (`git pull`, `cd app && npm install && npx expo start`): especially the rest notification with the phone locked (allow notifications on the first rest timer), Back up now → Save to Files, and editing templates. His feedback comes before new features.
-2. **The rest of the web app's features in the app:**
-   - the History calendar
-   - merging exercises (exercise ⋯ → Merge into another exercise; refuses exercises that log different fields, keeps the source's rest timer and notes, like the web app)
-   - the warm-up scheme editor (Settings; `settings.warmup = { barReps, steps: [[pct, reps]] }`)
-   - Delete all data (the warning mentions that settings, name and folders are reset too)
-   - opening a template link directly in the app (a deep link with the `increment://` scheme or a universal link; for now it's paste-only)
-   - Android: the name field in Settings is a plain text field (no prompt)
-3. **Merge `expo-app` into `main`** after Laurin's go. That deploys web 1.6.2: afterwards check the live site (`sw.js` reports the new version; on the live site modules are under `/setlog/js/…`).
-4. **Increment branding:** icon and splash with the final name. Then a development build and TestFlight once Laurin has the Apple Developer account (EAS).
+1. **Laurin tries the app on his phone** in Expo Go (`git pull`, `cd app && npm install && npx expo start`): especially the rest notification with the phone locked (allow notifications on the first rest timer), Back up now → Save to Files, and editing templates; since 2 Nov also the History calendar, Merge into another exercise, Settings → Warm-up sets and Delete all data, and a template link opening the app (in Expo Go: `exp://<computer>:8081/--/?template=<code>`, the code from a shared link). His feedback comes before new features.
+2. **Merge `expo-app` into `main`** after Laurin's go. That deploys web 1.6.2: afterwards check the live site (`sw.js` reports the new version; on the live site modules are under `/setlog/js/…`).
+3. **Increment branding:** icon and splash with the final name. Then a development build and TestFlight once Laurin has the Apple Developer account (EAS). With the account, the web app's template links can open the app too (universal links and Android App Links): Laurin decides where the `.well-known` files live (a `laurinlibossek.github.io` repository or a custom domain); the steps are in architecture.md under "Template links into the app".
 
 ## Open items, any order
 
@@ -54,3 +47,4 @@ Reference for anyone touching the summary or templates.
 - **1.6.0** (14 Oct 2026): 18 fixes from Laurin's issue list, drag-and-drop reordering (≡ handle or press and hold), the shared core with `npm test`.
 - **App** (branch `expo-app`, 14–19 Oct 2026): storage, backup restore, Strong import, all screens; logging with rest timer, set types, supersets, minimize, reorder, finish and the template question; template editor and menus, Edit workout, focus metric, plate and 1RM calculators, start time, new exercises, exercise pages with charts, Measure, Profile charts and backup reminder, all settings, rest timer notifications.
 - **Browser tests in the repo** (2 Nov 2026): `tests/browser/`, one runner for 11 suites (157 checks).
+- **The rest of the web app in the app** (2 Nov 2026): the History calendar (the button next to the title), exercise ⋯ → Merge into another exercise (refuses exercises that log different fields; the target keeps its own rest timer and notes and takes the source's where it has none), Settings → Warm-up sets (its own screen), Delete all data (typing DELETE; settings, name and folders reset too; a running workout keeps going, like restoring a backup), template links that open the app (`increment://…?template=` and Expo Go's `exp://` link; the https link waits for universal links, see step 3), and the name in Settings as a row with a prompt on iPhone and Android alike (the backlog's "Android: plain text field (no prompt)" item, read as: use the app's own prompt like the web app does). The calendar, merge and warm-up logic moved into the core and the web app uses it too (no visible change). Suite `app-parity`, 11 checks.

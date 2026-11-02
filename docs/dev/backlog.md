@@ -1,0 +1,56 @@
+# Status and backlog
+
+Last updated 2 Nov 2026. Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
+
+## Where things are
+
+- **`main`**: the live web app, **1.6.0** (14 Oct 2026).
+- **`expo-app`**: everything since, not merged yet:
+  - web **1.6.2** (never deployed; no visible change except exercise search: "bb", "db" and similar shortcuts only count as whole words, so "bench bb" no longer lists dumbbell exercises). The running-workout logic, editing helpers and chart maths moved into the core.
+  - the store app in `app/` (14–19 Oct 2026): nearly everything the web app does, plus rest timer notifications with the phone locked.
+  - browser tests in `tests/browser/` and these docs (2 Nov 2026).
+- While `expo-app` is unmerged, web changes on it stay at version 1.6.2 (it was never deployed, so phones never saw it). Bump the version when it's merged or when Laurin asks for a release.
+
+## Next, in order
+
+1. **Laurin tries the 19 Oct app build on his phone** in Expo Go (`git pull`, `cd app && npm install && npx expo start`): especially the rest notification with the phone locked (allow notifications on the first rest timer), Back up now → Save to Files, and editing templates. His feedback comes before new features.
+2. **The rest of the web app's features in the app:**
+   - the History calendar
+   - merging exercises (exercise ⋯ → Merge into another exercise; refuses exercises that log different fields, keeps the source's rest timer and notes, like the web app)
+   - the warm-up scheme editor (Settings; `settings.warmup = { barReps, steps: [[pct, reps]] }`)
+   - Delete all data (the warning mentions that settings, name and folders are reset too)
+   - opening a template link directly in the app (a deep link with the `increment://` scheme or a universal link; for now it's paste-only)
+   - Android: the name field in Settings is a plain text field (no prompt)
+3. **Merge `expo-app` into `main`** after Laurin's go. That deploys web 1.6.2: afterwards check the live site (`sw.js` reports the new version; on the live site modules are under `/setlog/js/…`).
+4. **Increment branding:** icon and splash with the final name. Then a development build and TestFlight once Laurin has the Apple Developer account (EAS).
+
+## Open items, any order
+
+- **Browser tests in CI:** a job in `.github/workflows/test.yml` that runs `node tests/browser/run.mjs` (needs `npx playwright install --with-deps chromium`; upload `tests/browser/.out` as an artifact on failure).
+- **Launch prep (no code):** check "Increment" on App Store and Play search and in the trademark registers (DPMA/EUIPO via TMview; it's a common word, so a weak trademark); store listing text; a privacy policy page (the app stores nothing outside the phone).
+- **A storage adapter** so the web `store.js` data actions and `app/src/data/store.ts` share one implementation. Touches almost everything, so do it on its own, not alongside feature work.
+- **German exercise names:** a display-name map for the ~190 built-ins; stored names must stay English for the Strong import.
+- Search on the start screen (low value with few templates).
+- Unknowns that need Laurin's input: where Strong puts exercise notes in a real export (sticky notes are probably not exported at all), and what Strong's exercise ⋯ → Preferences contains. The lock column in Strong's template editor is cosmetic (Laurin).
+
+## How finishing a workout that differs from its template works (since 1.1.0)
+
+Reference for anyone touching the summary or templates.
+
+- `finishFlow()` (web `sheet.js`; app `src/lib/workout.ts`) shows the summary, then the "Update template" dialog on top of it, like Strong's congratulations screen.
+- `templateChanges(template, workout)` (`core/templates.js`) returns `{ addedExercises, removedExercises, reordered, addedSets, removedSets, typesChanged, supersetsChanged, valueSets, structure }`. Exercises pair by exercise id and occurrence (the 2nd Bench Press with the 2nd); sets pair warm-up to warm-up and working set to working set, each in order, so a skipped warm-up doesn't shift weights. `valueSets` counts template sets whose numbers would change.
+- Structure changed → **Update values only** ("Updates values for N sets.", hidden if 0), **Update template and values** (red; "Removes 2 exercises. Removes 2 sets. Changes set types."), **Keep original template**. Only numbers changed → **Update values** or **Keep original template**. Nothing changed → no dialog.
+- Updating returns the previous exercises, and the toast offers **Undo**. A full update keeps the template's own exercise notes and RPE.
+- No question for example templates, "Do this workout again" or empty workouts (`templateId` is null), or when Settings → Ask to update templates is off. Sets that are unchecked or empty at finish are dropped, so they count as removed.
+
+## Done
+
+- **1.0.0** (22 Sep 2026): logging with the "previous" column, set types, RPE, supersets, rest timer, templates with folders, history with calendar and editing, exercise charts and records, Measure, Strong CSV import and export, JSON backup, offline service worker, dark mode, kg/lb and km/mi.
+- **1.1.0:** the Strong-style "Update template" question and the setting to turn it off.
+- **1.2.0:** ⋯ on every template card (edit, rename, duplicate, move, archive, share, delete), archive, folders and sorting, template links, exercise notes from Strong imports.
+- **1.3.0:** suggested workout on the start screen, focus metric per exercise, seven 1RM formulas and their average, volume options (dumbbells twice, body weight on weighted and assisted exercises), "Start history from", "Previous values" from any workout or the same template, warm-up scheme, separate units for body weight and measurements.
+- **1.4.0:** German, following the phone or set in Settings.
+- **1.5.x:** colour themes Strawberry Matcha and Intense Red; status-bar colour; the suggestion weighs recent workouts more (`SUGGEST_DECAY` 0.6: a new routine takes over after about two rounds, one swapped day doesn't flip it).
+- **1.6.0** (14 Oct 2026): 18 fixes from Laurin's issue list, drag-and-drop reordering (≡ handle or press and hold), the shared core with `npm test`.
+- **App** (branch `expo-app`, 14–19 Oct 2026): storage, backup restore, Strong import, all screens; logging with rest timer, set types, supersets, minimize, reorder, finish and the template question; template editor and menus, Edit workout, focus metric, plate and 1RM calculators, start time, new exercises, exercise pages with charts, Measure, Profile charts and backup reminder, all settings, rest timer notifications.
+- **Browser tests in the repo** (2 Nov 2026): `tests/browser/`, one runner for 11 suites (157 checks).

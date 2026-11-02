@@ -22,12 +22,12 @@ Last updated 2 Nov 2026. Keep this file current: when a pull request finishes an
    - opening a template link directly in the app (a deep link with the `increment://` scheme or a universal link; for now it's paste-only)
    - Android: the name field in Settings is a plain text field (no prompt)
 3. **Merge `expo-app` into `main`** after Laurin's go. That deploys web 1.6.2: afterwards check the live site (`sw.js` reports the new version; on the live site modules are under `/setlog/js/…`).
-4. **Increment branding:** icon and splash with the final name. Then a development build and TestFlight once Laurin has the Apple Developer account (EAS).
+4. **Increment branding:** icon and splash with the final name. Then a development build and TestFlight once Laurin has the Apple Developer account (EAS). Store texts, the privacy policy and answers to the stores' questions are drafted in `docs/launch/`.
 
 ## Open items, any order
 
 - **Browser tests in CI:** a job in `.github/workflows/test.yml` that runs `node tests/browser/run.mjs` (needs `npx playwright install --with-deps chromium`; upload `tests/browser/.out` as an artifact on failure).
-- **Launch prep (no code):** check "Increment" on App Store and Play search and in the trademark registers (DPMA/EUIPO via TMview; it's a common word, so a weak trademark); store listing text; a privacy policy page (the app stores nothing outside the phone).
+- **Before the store release** (drafts and the list in [`docs/launch/README.md`](../launch/README.md)): Laurin decides the store name, where the privacy policy lives, the contact details, the trader status and the bundle ID, and runs the TMview and App Store Connect checks (`docs/launch/name-check.md`). Then: a "Privacy policy" row in Settings (Apple wants the link in the app too), publish the policy, and `usesNonExemptEncryption: false` plus the bundle ID in `app.json`.
 - **A storage adapter** so the web `store.js` data actions and `app/src/data/store.ts` share one implementation. Touches almost everything, so do it on its own, not alongside feature work.
 - **German exercise names:** a display-name map for the ~190 built-ins; stored names must stay English for the Strong import.
 - Search on the start screen (low value with few templates).
@@ -54,3 +54,4 @@ Reference for anyone touching the summary or templates.
 - **1.6.0** (14 Oct 2026): 18 fixes from Laurin's issue list, drag-and-drop reordering (≡ handle or press and hold), the shared core with `npm test`.
 - **App** (branch `expo-app`, 14–19 Oct 2026): storage, backup restore, Strong import, all screens; logging with rest timer, set types, supersets, minimize, reorder, finish and the template question; template editor and menus, Edit workout, focus metric, plate and 1RM calculators, start time, new exercises, exercise pages with charts, Measure, Profile charts and backup reminder, all settings, rest timer notifications.
 - **Browser tests in the repo** (2 Nov 2026): `tests/browser/`, one runner for 11 suites (157 checks).
+- **Launch prep drafts** (2 Nov 2026, `docs/launch/`): the name check (no app and no EU or German mark called exactly "Increment" turned up in web searches; the registers and App Store Connect couldn't be reached from the cloud session, so those checks are left to Laurin), the store listing for both stores in English and German (store name "Increment: Workout Log" / "Increment: Trainingstagebuch"), and the privacy policy in English and German, covering the web app too.

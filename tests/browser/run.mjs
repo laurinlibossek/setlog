@@ -6,11 +6,13 @@
 //   node tests/browser/run.mjs app          the app suites (builds the web export first)
 //   node tests/browser/run.mjs web-fixes app-logging   single suites (file names without .mjs)
 //   --no-build    app: reuse app/dist instead of running `expo export` again
+//   --serve       only start the servers and keep them running (web; add `app` for the
+//                 app too), e.g. for screenshot scripts; Ctrl-C stops them
 //
-// It serves setlog/ on :8765 (unless something already serves it there), downloads
-// the sample Strong export and builds a fresh backup for the app suites.
+// It serves setlog/ at $WEB (default :8765) and app/dist at $APP (default :8790), unless
+// something already answers there, downloads the sample Strong export and builds a
+// fresh backup for the app suites.
 import { spawn, spawnSync } from 'node:child_process';
-// spawn: the suites; spawnSync: npm ci and expo export
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,7 +24,9 @@ const STRONG_URL = 'https://raw.githubusercontent.com/AlexandrosKyriakakis/Stron
 
 const args = process.argv.slice(2);
 const noBuild = args.includes('--no-build');
+const serveOnly = args.includes('--serve');
 const picks = args.filter((a) => !a.startsWith('--'));
+if (serveOnly && !picks.length) picks.push('web');
 let suites = [];
 for (const p of picks.length ? picks : ['all']) {
   if (p === 'all') suites.push(...WEB_SUITES, ...APP_SUITES);
@@ -156,6 +160,11 @@ function runSuite(name) {
 }
 
 const web = await serveWeb();
+if (serveOnly) {
+  if (needsApp) await serveApp();
+  console.log('Serving until Ctrl-C.');
+  await new Promise(() => {});
+}
 let app = null;
 const results = [];
 try {

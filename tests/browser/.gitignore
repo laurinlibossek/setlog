@@ -1,0 +1,5 @@
+# downloaded and generated test data, screenshots, a local Playwright install
+data/
+.out/
+node_modules/
+package-lock.json

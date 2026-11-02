@@ -26,7 +26,6 @@ Last updated 2 Nov 2026. Keep this file current: when a pull request finishes an
 
 ## Open items, any order
 
-- **Browser tests in CI:** a job in `.github/workflows/test.yml` that runs `node tests/browser/run.mjs` (needs `npx playwright install --with-deps chromium`; upload `tests/browser/.out` as an artifact on failure).
 - **Launch prep (no code):** check "Increment" on App Store and Play search and in the trademark registers (DPMA/EUIPO via TMview; it's a common word, so a weak trademark); store listing text; a privacy policy page (the app stores nothing outside the phone).
 - **A storage adapter** so the web `store.js` data actions and `app/src/data/store.ts` share one implementation. Touches almost everything, so do it on its own, not alongside feature work.
 - **German exercise names:** a display-name map for the ~190 built-ins; stored names must stay English for the Strong import.
@@ -54,3 +53,4 @@ Reference for anyone touching the summary or templates.
 - **1.6.0** (14 Oct 2026): 18 fixes from Laurin's issue list, drag-and-drop reordering (≡ handle or press and hold), the shared core with `npm test`.
 - **App** (branch `expo-app`, 14–19 Oct 2026): storage, backup restore, Strong import, all screens; logging with rest timer, set types, supersets, minimize, reorder, finish and the template question; template editor and menus, Edit workout, focus metric, plate and 1RM calculators, start time, new exercises, exercise pages with charts, Measure, Profile charts and backup reminder, all settings, rest timer notifications.
 - **Browser tests in the repo** (2 Nov 2026): `tests/browser/`, one runner for 11 suites (157 checks).
+- **Browser tests in CI** (2 Nov 2026): the `browser` job in `.github/workflows/test.yml` runs every suite on each push and pull request with Playwright 1.63.0 (pinned in `tests/browser/package.json`); on failure the screenshots are attached as the artifact `browser-test-screenshots`.

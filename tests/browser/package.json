@@ -1,0 +1,10 @@
+{
+  "name": "setlog-browser-tests",
+  "private": true,
+  "description": "Playwright for the browser suites (run.mjs). Only needed where no Playwright is installed globally; CI installs it from here.",
+  "type": "module",
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

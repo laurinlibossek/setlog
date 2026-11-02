@@ -34,3 +34,31 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run bundle
+
+  # The browser suites (tests/browser): the web app and the app's web build in
+  # an emulated iPhone 13 with Playwright's Chromium. On failure, the
+  # screenshots the suites took are attached to the run.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        working-directory: app
+      - run: npm install --no-audit --no-fund
+        working-directory: tests/browser
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/browser
+      - run: node tests/browser/run.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-screenshots
+          path: tests/browser/.out
+          include-hidden-files: true
+          retention-days: 14

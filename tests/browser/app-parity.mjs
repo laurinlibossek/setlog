@@ -353,7 +353,30 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   await ctx.close();
 }
 
-// ---------- 7. German exercise names ----------
+// ---------- 7. Privacy policy ----------
+{
+  const { ctx, page, errors } = await newPage();
+  // expo-web-browser calls window.open on web: note the address instead of opening a window
+  await page.evaluate(() => { window.opened = []; window.open = (u) => { window.opened.push(String(u)); return null; }; });
+  const opened = async () => {
+    await id(page, 'privacy').scrollIntoViewIfNeeded();
+    await id(page, 'privacy').click();
+    await page.waitForFunction(() => window.opened.length > 0);
+    return page.evaluate(() => window.opened.pop());
+  };
+  await openSettings(page);
+  assert.equal(await opened(), `${core.WEB_APP_URL}privacy.html`);
+  await id(page, 'language-de').click();
+  await wait(page, 300);
+  // the row's text ends with the chevron icon's glyph, so compare the first line
+  assert.equal((await id(page, 'privacy').innerText()).split('\n')[0], 'Datenschutzerklärung');
+  assert.equal(await opened(), `${core.WEB_APP_URL}datenschutz.html`);
+  ok('Settings → Privacy policy opens the page in the app’s language');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+}
+
+// ---------- 8. German exercise names ----------
 {
   const { ctx, page, errors, dialogs } = await newPage({ locale: 'de-DE' });
   await restore(page, dialogs);

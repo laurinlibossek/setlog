@@ -546,6 +546,30 @@ test('German exercise names: every built-in has one, shown only in German and on
   assert.equal(core.matchExercise({ id: 'c-x', name: 'Bankdrücken eng' }, 'bankdrücken'), true);
 });
 
+// ---------- links and the privacy pages ----------
+test('privacy pages: one per language, and the contact email written in one place only', () => {
+  assert.equal(core.privacyPage('de'), 'datenschutz.html');
+  assert.equal(core.privacyPage('en'), 'privacy.html');
+  assert.equal(core.privacyPage(undefined), 'privacy.html');
+  assert.ok(core.WEB_APP_URL.endsWith('/'));
+  for (const page of ['privacy.html', 'datenschutz.html']) {
+    const html = read(path.join(APP, page));
+    assert.match(html, /from '\.\/js\/core\/links\.js'/, `${page} reads the address from core/links.js`);
+    assert.match(html, /data-contact/);
+  }
+  // the deploy refuses "[EMAIL]" anywhere in setlog/, so it may only be the constant itself
+  const hits = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) walk(f);
+      else if (/\.(js|html)$/.test(e.name) && read(f).includes('[EMAIL]')) hits.push(path.relative(APP, f));
+    }
+  };
+  walk(APP);
+  assert.deepEqual(hits.filter((f) => f !== path.join('js', 'core', 'links.js')), []);
+});
+
 // ---------- offline ----------
 test('the service worker caches every module the app loads', () => {
   const assets = new Set([...read(path.join(APP, 'sw.js')).matchAll(/'\.\/([^']+)'/g)].map((m) => m[1]));

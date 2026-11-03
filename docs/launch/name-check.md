@@ -28,7 +28,7 @@ No EU or German mark for "Increment" showed up, but the search couldn't reach th
 ## What it means
 
 - **App Store:** the store name has to be unique there (Google Play allows duplicates). "Increment" on its own looks available. Only App Store Connect can say for sure, because a name counts as taken as soon as someone creates an app record with it, even one that's never published. Creating the app record is also how you reserve it, so do that soon after the Apple Developer account exists.
-- **Search:** searching "increment" in either store lists mostly counters. The store name should say what the app is, so the drafts use **Increment: Workout Log** (German store: **Increment: Trainingstagebuch**). The name under the icon stays "Increment".
+- **Search:** searching "increment" in either store lists mostly counters, so the store name says what the app is: **Increment: Lifting Tracker**, in both stores and both languages (Laurin, 3 Nov 2026). The name under the icon stays "Increment".
 - **Trademark:** "increment" is a common word, and in weight training it describes the thing itself (the weight you add each time). A mark for fitness software would be weak, and the EUIPO or the DPMA could refuse it as descriptive. The upside: it's just as hard for anyone else to stop you using the word. The two US marks are for other goods (a magazine, business software), so the risk there looks low.
 - **Verdict:** no blocker found. Neither of the nearby fitness names, "Incremental" and "Incrementum", is the same word, but "Incremental: Calisthenics" is close in both name and idea, so the icon and the subtitle should make Increment easy to tell apart.
 
@@ -39,5 +39,5 @@ No EU or German mark for "Increment" showed up, but the search couldn't reach th
    - Offices: EM (EUIPO), DE (DPMA) and WO (WIPO, international marks that cover the EU or Germany).
    - Nice classes 9 (downloadable apps), 41 (fitness training) and 42 (software as a service).
    - Look for live marks (registered or filed) where "increment" is the main word. Expired and refused ones don't matter.
-2. **App Store Connect:** create the app record with the name "Increment: Workout Log". If it's refused, the name is taken, maybe by an unpublished app.
+2. **App Store Connect:** create the app record with the name "Increment: Lifting Tracker". If it's refused, the name is taken, maybe by an unpublished app.
 3. **Google Play:** search "Increment" in the Play Store on a phone, in Germany and with the phone set to English. The web search can miss listings that are only visible in some countries.

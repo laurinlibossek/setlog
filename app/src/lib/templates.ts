@@ -5,7 +5,7 @@
 import { Share } from 'react-native';
 import { router } from 'expo-router';
 import {
-  encodeTemplate, decodeTemplate, usesWeight, CATEGORIES, BODY_PARTS,
+  encodeTemplate, decodeTemplate, usesWeight, CATEGORIES, BODY_PARTS, WEB_APP_URL,
 } from '@setlog/core';
 
 import {
@@ -20,9 +20,6 @@ import { setLabels, type Format } from './format';
 import type { Tr } from './i18n';
 
 type F = Format & { tr: Tr };
-
-/** Where shared template links point: the web app, which anyone can open. */
-export const WEB_APP_URL = 'https://laurinlibossek.github.io/setlog/';
 
 export const openTemplateEditor = (params: { id?: string; from?: string } = {}) => router.push({ pathname: '/template-edit', params });
 

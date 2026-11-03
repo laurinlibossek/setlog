@@ -514,6 +514,7 @@ export default {
   Protect: 'Schützen',
   'Everything stays on this device. Nothing is uploaded anywhere — back up regularly and keep the file in iCloud Drive or another safe place.': 'Alles bleibt auf diesem Gerät. Nichts wird hochgeladen – mach regelmäßig Backups und bewahr die Datei in iCloud Drive oder an einem anderen sicheren Ort auf.',
   'Delete all data': 'Alle Daten löschen',
+  'Privacy policy': 'Datenschutzerklärung',
   '{n} stored': '{n} gespeichert',
 
   // start screen & templates

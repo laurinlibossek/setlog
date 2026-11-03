@@ -1,0 +1,23 @@
+/* Plain text pages next to the app (privacy policy): the app's colours from
+   app.css, but a page that scrolls like a normal website. */
+html, body.page {
+  height: auto; overflow: auto; overscroll-behavior: auto; touch-action: auto;
+}
+body.page { line-height: 1.5; }
+.doc {
+  max-width: 680px; margin: 0 auto;
+  padding: calc(24px + var(--safe-top)) 20px calc(48px + var(--safe-bottom));
+}
+.doc h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 8px 0 6px; }
+.doc h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 32px 0 8px; }
+.doc p, .doc li { color: var(--ink-2); }
+.doc strong { color: var(--ink); font-weight: 650; }
+.doc ul { padding-left: 20px; }
+.doc li + li { margin-top: 6px; }
+.doc a { color: var(--accent-text); }
+.doc .lang { margin: 0; font-size: 15px; text-align: right; }
+.doc .meta { margin: 0 0 20px; font-size: 14px; color: var(--ink-3); }
+.doc .summary {
+  background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin: 0;
+  color: var(--ink); box-shadow: var(--shadow);
+}

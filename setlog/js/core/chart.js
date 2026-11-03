@@ -54,7 +54,14 @@ export function weeklyCounts(workouts, { weeks = 12, weekStart = 1, now = Date.n
 
 /** Weeks in a row (up to this one) with at least `goal` workouts; this week counts once it's reached. */
 export function weekStreak(workouts, { goal = 1, weekStart = 1, now = Date.now() } = {}) {
-  const count = (s) => workouts.filter((w) => w.startedAt >= s && w.startedAt < addDays(s, 7)).length;
+  // One pass over the workouts, then a walk back week by week (filtering every
+  // workout for every week took 80 ms on a 5-year log).
+  const perWeek = new Map();
+  for (const w of workouts) {
+    const k = startOfWeek(w.startedAt, weekStart);
+    perWeek.set(k, (perWeek.get(k) || 0) + 1);
+  }
+  const count = (s) => perWeek.get(s) || 0;
   let week = startOfWeek(now, weekStart);
   let streak = 0;
   if (count(week) >= goal) streak++;

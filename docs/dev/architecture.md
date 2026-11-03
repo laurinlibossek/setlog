@@ -60,6 +60,15 @@ Read `app/AGENTS.md` first (Expo changes a lot between SDKs; check the versioned
 - **Settings → Privacy policy** opens `WEB_APP_URL + privacyPage(lang)` in an in-app browser (`expo-web-browser`). The store IDs are in `app.json`: bundle ID and Android package `io.github.laurinlibossek.increment`, and `usesNonExemptEncryption: false` so App Store Connect doesn't ask about encryption on every upload.
 - Haptics on check-off and when a rest ends (`expo-haptics`); the screen stays on during a workout (`expo-keep-awake`, setting `keepAwake`).
 
+## Design: Tally
+
+The store app is being rebuilt in the Tally design language: ink on paper, one stroke per set, one earned colour (`docs/design/README.md`; the build plan is `docs/design/phases.md`).
+
+- `docs/design/tokens.json` is the source of the app's colours (per theme), spacing, radii, stroke and control sizes and type. `npm run tally` (`scripts/tally-tokens.mjs`) writes `app/src/design/tally.ts`; `npm test` fails when they differ.
+- `app/src/lib/theme.ts`: `useTally()` returns the Tally theme for the setting (light, dark, Strawberry Matcha, Intense Red; "auto" follows the phone). `useColors()` still returns the colour names the screens were built with (`accent`, `surface`, `done`, `gold`…), mapped onto Tally by `legacyColors()`, so screens not rebuilt yet already look right. New code uses `useTally()`. In light themes a record's colour is ink on a signal fill (`goldSoft` behind `gold`), because the yellow isn't readable as text on white.
+- `app/src/ui/tally/Tally.tsx`: `Tally` (groups of strokes), `Stroke` (pending, done, warm-up, live, record, skipped) and `fives()`. In the running workout the set's stroke is the check button (`check-<set id>`), at the start of the row.
+- The web app keeps `setlog/css/app.css` and `core/themes.js` until it adopts Tally.
+
 ## Gotchas
 
 - **App, `useAppSelector`:** a selector that builds a new array or object on every call makes React loop ("Maximum update depth exceeded", minified error #185). Select stored objects and derive with `useMemo`.

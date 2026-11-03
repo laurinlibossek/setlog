@@ -27,7 +27,6 @@ import { Icon } from '@/ui/kit';
 import { actionSheet, prompt, toast } from '@/ui/overlay';
 import { COLS, SetRow, type Field } from './SetRow';
 
-export const SS_COLORS = ['accent', '#eb6834', '#1baf7a', '#d55181', '#8a6fe0'];
 
 export type EditorMode = 'active' | 'edit' | 'template';
 
@@ -59,7 +58,8 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   const fields = loggedFields(cat) as Field[];
   const rest = restFor(entry, ex, settings.defaultRest) as number;
   const labels = setLabels(entry.sets);
-  const ssColor = superset ? (superset.index % SS_COLORS.length === 0 ? c.accent : SS_COLORS[superset.index % SS_COLORS.length]) : null;
+  // Tally: supersets are named by their letter, not coloured (docs/design/README.md, Colour)
+  const ssColor = superset ? c.ink2 : null;
   const done = entry.sets.filter((s) => s.done).length;
   const active = mode === 'active';
   const edit = (fn: (e: EntryDraft) => void) => editDraft(draftKey, (_a, e) => fn(e), entry.id);
@@ -223,7 +223,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   const fieldNames: Record<Field, string> = { w: tr('Weight'), r: tr('Reps'), d: tr('Distance'), t: tr('Time') };
 
   return (
-    <View style={[styles.block, { backgroundColor: c.surface }, ssColor ? { borderLeftWidth: 4, borderLeftColor: ssColor } : null]} accessibilityLabel={f.exName(ex)} testID={`block-${ex.id}`}>
+    <View style={[styles.block, { backgroundColor: c.surface }]} accessibilityLabel={f.exName(ex)} testID={`block-${ex.id}`}>
       <View style={styles.head}>
         <Pressable onPress={menu} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" testID={`ex-title-${ex.id}`}>
           <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '700' }} numberOfLines={2}>{f.exName(ex)}</Text>
@@ -269,10 +269,10 @@ export const ExerciseBlock = memo(function ExerciseBlock({
           style={[styles.note, { color: c.ink, backgroundColor: c.surface2 }]} testID={`ex-note-${ex.id}`} />
       )}
       <View style={[styles.hdr]}>
+        {active && <View style={{ width: COLS.check }} />}
         <Text style={[styles.hdrText, { width: COLS.label, color: c.label }]}>{tr('Set')}</Text>
         <Text style={[styles.hdrText, { flex: 1, textAlign: 'left', paddingLeft: 4, color: c.label }]}>{tr('Previous')}</Text>
         {headers.map((h, i) => <Text key={h} style={[styles.hdrText, { width: widths[i], color: c.label }]}>{h}</Text>)}
-        {active && <View style={{ width: COLS.check }} />}
       </View>
       {entry.sets.map((set, i) => {
         const prev = rows[i]?.prev;

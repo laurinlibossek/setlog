@@ -8,6 +8,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 
+import { CONTROL, RADIUS, TYPE } from '@/design/tally';
 import { useColors, type Colors } from '@/lib/theme';
 
 // ---------- icons ----------
@@ -120,7 +121,7 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
   const c = useColors();
   return (
     <View style={styles.sectionRow}>
-      <Text style={[styles.sectionTitle, { color: c.label }]}>{children}</Text>
+      <Text style={[styles.sectionTitle, { color: c.ink }]}>{children}</Text>
       {right}
     </View>
   );
@@ -181,7 +182,8 @@ export function SwitchCell({ title, sub, value, onChange, first, testID }: { tit
         {!!sub && <Text style={{ color: c.ink3, fontSize: 13, marginTop: 2 }} numberOfLines={2}>{sub}</Text>}
       </View>
       <Switch value={value} onValueChange={onChange} accessibilityLabel={title} testID={testID}
-        trackColor={{ true: c.done, false: c.surface3 }} thumbColor="#ffffff" ios_backgroundColor={c.surface3} />
+        trackColor={{ true: c.ink, false: c.surface3 }} thumbColor={value ? c.bg : '#ffffff'} ios_backgroundColor={c.surface3}
+        {...({ activeThumbColor: c.bg, activeTrackColor: c.ink } as object)} />
     </View>
   );
 }
@@ -195,7 +197,7 @@ export function Segments<T extends string>({ value, options, onChange, testID }:
         const on = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="tab" accessibilityState={{ selected: on }}
-            style={[styles.segBtn, on && { backgroundColor: c.surface, shadowOpacity: 0.12 }]}>
+            style={[styles.segBtn, on && { backgroundColor: c.bg, shadowOpacity: 0.12 }]}>
             <Text style={{ color: c.ink, fontWeight: on ? '600' : '500', fontSize: 14 }} numberOfLines={1}>{o.label}</Text>
           </Pressable>
         );
@@ -294,19 +296,19 @@ export function SearchField({ value, onChange, placeholder, testID }: { value: s
 export const styles = StyleSheet.create({
   page: { paddingHorizontal: 16 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, gap: 8 },
-  largeTitle: { fontSize: 34, fontWeight: '800', letterSpacing: -0.6, flexShrink: 1 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, marginBottom: 8, paddingHorizontal: 4 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
-  group: { borderRadius: 14, overflow: 'hidden' },
+  largeTitle: { fontSize: TYPE.largeTitle.fontSize, lineHeight: TYPE.largeTitle.lineHeight, fontWeight: '700', letterSpacing: TYPE.largeTitle.letterSpacing, flexShrink: 1 },
+  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 28, marginBottom: 8, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: TYPE.title2.fontSize, lineHeight: TYPE.title2.lineHeight, fontWeight: '700' },
+  group: { borderRadius: RADIUS.l, overflow: 'hidden' },
   cell: { flexDirection: 'row', alignItems: 'center', minHeight: 50, paddingHorizontal: 16, paddingVertical: 10, gap: 12 },
   hairline: { position: 'absolute', top: 0, right: 0, height: StyleSheet.hairlineWidth },
   cellIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  card: { borderRadius: 14, padding: 14 },
-  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, borderRadius: 12, paddingHorizontal: 16 },
-  btnLarge: { minHeight: 52, borderRadius: 14 },
-  iconBtn: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  seg: { flexDirection: 'row', borderRadius: 10, padding: 2 },
-  segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 32, borderRadius: 8, paddingHorizontal: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, shadowOpacity: 0 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 10 },
-  field: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  card: { borderRadius: RADIUS.l, padding: 16 },
+  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: CONTROL.hitMin, borderRadius: RADIUS.capsule, paddingHorizontal: 20 },
+  btnLarge: { minHeight: CONTROL.buttonH, borderRadius: RADIUS.capsule },
+  iconBtn: { width: CONTROL.hitMin, height: CONTROL.hitMin, borderRadius: RADIUS.capsule, alignItems: 'center', justifyContent: 'center' },
+  seg: { flexDirection: 'row', borderRadius: RADIUS.capsule, padding: 3 },
+  segBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 32, borderRadius: RADIUS.capsule, paddingHorizontal: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, shadowOpacity: 0 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: RADIUS.capsule, paddingHorizontal: 14 },
+  field: { borderRadius: RADIUS.m, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
 });

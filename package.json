@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "themes": "node scripts/themes-from-css.mjs"
+    "themes": "node scripts/themes-from-css.mjs",
+    "tally": "node scripts/tally-tokens.mjs"
   },
   "engines": {
     "node": ">=20"

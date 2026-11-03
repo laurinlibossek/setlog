@@ -1,8 +1,8 @@
 // The app icon and splash: a white Roman-numeral "I" (a capital I with serif
 // bars) on black, drawn as vector paths. Three designs; one is wired in.
 //
-//   node app/scripts/icons.mjs            # renders the wired design (classic)
-//   node app/scripts/icons.mjs slab       # or another one
+//   node app/scripts/icons.mjs            # renders the wired design (thin)
+//   node app/scripts/icons.mjs classic    # or another one
 //
 // Writes the SVG of every design to app/assets/icon/ and, for the chosen one,
 // the PNGs app.json points to: icon.png (iOS, 1024, no transparency),
@@ -28,7 +28,7 @@ export const DESIGNS = {
   // thin: a light stem with hairline bars
   thin: 'M -160 -320 H 160 V -294 H 34 V 294 H 160 V 320 H -160 V 294 H -34 V -294 H -160 Z',
 };
-export const DEFAULT_DESIGN = 'classic';
+export const DEFAULT_DESIGN = 'thin';
 
 /** Half the diagonal of the letter's box, to fit it inside a circle. */
 function halfDiagonal(d) {

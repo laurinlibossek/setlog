@@ -65,3 +65,36 @@ node tests/browser/run.mjs --serve app &               # yours on :8765 and :879
 ```
 
 Drop `app` to serve only the web apps. The worktree needs its own `npm ci` in `app/` (the runner does it).
+
+## Store screenshots
+
+```sh
+node tests/browser/run.mjs app-store-shots     # builds and serves the app, then writes tests/browser/.out/store/
+node tests/browser/store-frame.mjs <folder>    # frames your own screenshots the same way (add --store play for Google Play)
+```
+
+`app-store-shots.mjs` isn't a test suite (CI doesn't run it). It loads the demo data from `store-demo.mjs`, not the test backup:
+- 16 weeks of a 4-day upper/lower split up to yesterday, with steady progression and one deload week (half the sets at the same weights, so the charts don't dip);
+- no personal name.
+
+It takes six screens in English and German: a running workout with the "previous" column, the rest timer, an exercise's 1RM chart, the History calendar, the templates with the suggested workout, and Profile.
+
+What it writes, into `tests/browser/.out/store/` (git-ignored):
+- the bare screens in `raw/`;
+- the framed ones for the App Store (6.9″, 1320 × 2868) and Google Play (phone, 1080 × 1920): black background, a headline above the screen;
+- the 1024 × 500 Play feature graphic, from `app/assets/images/icon.png`.
+
+The headlines are in `store-captions.mjs`, one per screen and language. `store-frame.mjs` adds them, so screenshots from the iOS Simulator or a phone get the same look: name them `<lang>-<n>….png` (`en-1.png`, `de-3-chart.png`; n is the screen 1–6 and picks the caption), put them in a folder, and run it on that folder. The framed copies land in `<folder>/framed/`.
+
+Store screenshots have to show the real app, and the web build differs from it:
+
+- **Icons:** the app uses SF Symbols on iPhone and Material Symbols on Android and the web. The web screenshots show the Android icons.
+- **Font:** the browser's sans-serif (Inter in the cloud container, whatever is installed elsewhere), not SF Pro (iPhone) or Roboto (Android).
+- **No status bar or home indicator.** Both stores accept that, but a phone screenshot has them.
+- **The running workout** is a full screen in the web build; on iPhone it's a page sheet with the screen behind it showing at the top.
+
+So the Play screenshots from the web build are close to the Android app (icons match; only the font differs), and the App Store screenshots are drafts for layout and text. For the final App Store set:
+
+1. Make the demo data a backup file with `node tests/browser/store-demo.mjs en > store-demo-en.json` (or `de`). Drag it onto an iPhone with a 6.9″ screen in the iOS Simulator to save it to Files, and restore it under Settings → Restore from backup.
+2. Open the same six screens and run `xcrun simctl io booted screenshot en-1.png` for each.
+3. Frame them with `store-frame.mjs`.

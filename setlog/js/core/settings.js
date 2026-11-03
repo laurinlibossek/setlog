@@ -12,7 +12,8 @@ export const DEFAULT_SETTINGS = {
   defaultRest: 120,
   sound: true,
   restAlert: true, // iPhone/Android app: a notification when rest is over and the app isn't open
-  keepAwake: true,
+  keepAwake: true, // web app: iOS pauses web apps, so the screen stays on during a workout
+  appKeepAwake: false, // iPhone/Android app: off, the rest notification says when rest is over (its own key, so backups don't carry one app's choice into the other)
   showExamples: true,
   askTemplateUpdate: true,
   language: 'auto', // 'auto' | 'en' | 'de'

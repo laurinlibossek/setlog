@@ -4,7 +4,7 @@ The store version of Setlog, built with [Expo](https://expo.dev) (React Native).
 
 **Status:** nearly everything the web app does, plus a rest timer that alerts you with the phone locked.
 
-- **Logging:** start a workout empty, from a template or again from History. Last time's numbers show as grey placeholders, and checking a set off saves them. Rest timer, set types and RPE, supersets, warm-up sets, focus metric, plate calculator, drag-and-drop reordering, a start time you can move, and Finish with records and the "update the template?" question. Pull the workout down and it waits above the tab bar (Now Lifting: the exercise and set, the rest and Skip); it survives closing the app.
+- **Logging:** start a workout empty, from a template or again from History. One exercise at a time, last time's numbers in ghost ink; the button at the bottom logs the next set with them (or tap its stroke), then counts down the rest and asks how many reps were left, and after the last set says "Finish workout". Numbers are typed on the app's own keypad, with the exercise's step and plates per side. The other exercises wait under "Up next" (tap to switch, press and hold to drag). Set types, reps in reserve, supersets, warm-up sets, focus metric, plate calculator, reordering, a start time you can move, and Finish with records and the "update the template?" question. Pull the workout down and it waits above the tab bar (Now Lifting: the exercise and set, the rest and Skip); it survives closing the app.
 - **Rest timer alerts:** when rest is over and the app isn't open (phone locked, another app), a notification arrives. The first rest timer asks for permission. Settings → Rest timer alerts turns it off.
 - **Templates:** create and edit them (or make one from a finished workout), with ⋯ to rename, duplicate, move to a folder, archive, share as a link and delete (with undo). Templates ⋯ sorts, makes folders and adds a template someone shared with you.
 - **History:** a list by month or a calendar; edit a finished workout (sets, name, start, duration), save it as a template, share it as text, delete it with undo.
@@ -64,9 +64,10 @@ src/ui/kit.tsx        shared building blocks (large titles, grouped rows, switch
 src/ui/overlay.tsx    action sheets, dialogs, date/time and number entry, toasts
 src/ui/Chart.tsx      line and column charts (react-native-svg)
 src/ui/tally/         Tally components (docs/design/components.md): strokes, rows, section headers,
-                      stat strip, week strip, sets per muscle, routine card, Now Lifting, tab roots
-src/ui/workout/       exercise blocks (running workout, template editor, Edit workout), set rows,
-                      rest timer, the minimized workout above the tabs (MiniBar)
+                      stat strip, week strip, sets per muscle, routine card, Now Lifting, tab roots;
+                      the session's set rows, Action bar, rest bar, keypad and reps left
+src/ui/workout/       the session (Session.tsx), exercise blocks (running workout, template editor,
+                      Edit workout), set fields, the rest watcher, the minimized workout (MiniBar)
 ```
 
 ## Rules

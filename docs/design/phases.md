@@ -28,7 +28,7 @@ Built as planned, with these choices: the web build keeps JS tabs (`(tabs)/_layo
 - The minimized workout moves into `NativeTabs.BottomAccessory` (regular and inline layouts, `usePlacement()`).
 - Tests: `app-first-start`, `app-editing` and `app-parity` navigate by tab; give them the new routes.
 
-## 3. The session
+## 3. The session (done in `claude/tally-session`)
 
 Owns: `src/app/active.tsx`, `src/ui/workout/`, a new `src/ui/tally/Keypad.tsx`.
 

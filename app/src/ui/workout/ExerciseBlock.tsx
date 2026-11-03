@@ -1,32 +1,38 @@
 // One exercise of a draft: the running workout ('active'), a template in the
-// editor ('template') or a finished workout being edited ('edit'). Name and
-// menu, focus metric, superset and rest tags, pinned note, its note, the set
-// table and "Add set". Only this exercise re-renders when one of its sets
-// changes (see editDraft in the store). Check-off, rest timer and live
-// records belong to the running workout only.
-import { memo, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+// editor ('template') or a finished workout being edited ('edit'). Name, last
+// time's sets, focus metric, superset and rest, pinned note, its note, the
+// set rows and "Add set". Only this exercise re-renders when one of its sets
+// changes (see editDraft in the store). Logging, the keypad and live records
+// belong to the running workout only (Session.tsx).
+import { memo, useMemo } from 'react';
+import {
+  Platform, Pressable, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
-  placeholders, restFor, checkOffSet, copyPrevious, addSet, joinSuperset, leaveSuperset, replaceExercise, addWarmups,
-  isLiveRecord, loggedFields, usesWeight, numToInput, parseNum, focusOptions, focusValues, REST_CHOICES, RPE_CHOICES, SET_TYPES,
-  FOCUS_LABEL,
+  placeholders, restFor, addSet, joinSuperset, leaveSuperset, replaceExercise, addWarmups, rateSet, setRir,
+  isLiveRecord, loggedFields, usesWeight, numToInput, parseNum, focusOptions, focusValues,
+  REST_CHOICES, RPE_CHOICES, RIR_CHOICES, SET_TYPES, FOCUS_LABEL, BODY_PART_LABEL,
 } from '@setlog/core';
 
 import {
-  changeExercise, editDraft, getDraft, getState, startRest,
+  changeExercise, editDraft, getDraft, getState,
 } from '@/data/store';
 import type {
-  DraftKey, EntryDraft, Exercise, Settings, SetType, WorkSet,
+  DraftKey, EntryDraft, Exercise, SetDraft, Settings, SetType, WorkSet,
 } from '@/data/types';
+import { SPACE, TYPE, CONTROL } from '@/design/tally';
 import { setLabels, useFormat } from '@/lib/format';
 import { pickExercises } from '@/lib/picker';
-import { useColors } from '@/lib/theme';
+import { useTally } from '@/lib/theme';
 import { Icon } from '@/ui/kit';
 import { actionSheet, prompt, toast } from '@/ui/overlay';
-import { COLS, SetRow, type Field } from './SetRow';
-
+import { SetRow, Times, type Chip } from '@/ui/tally/SetRow';
+import type { StrokeState } from '@/ui/tally/Tally';
+import { SetField, type Field } from './SetRow';
+import { useSession } from './Session';
+import { effortText, lastTimeText, setValueText } from './text';
 
 export type EditorMode = 'active' | 'edit' | 'template';
 
@@ -39,63 +45,74 @@ type Props = {
   bests: Record<string, number> | undefined;
   settings: Settings;
   superset?: { index: number; letter: string };
+  /** running workout: the id of the set being logged */
+  live?: string | null;
 };
 
 const SET_TYPE_NAME: Record<SetType, string> = { normal: 'Normal', warmup: 'Warm-up', drop: 'Drop set', failure: 'Failure' };
+const SET_TYPE_CHIP: Record<SetType, string> = { normal: '', warmup: 'Warm-up', drop: 'Drop', failure: 'Failure' };
 
 type FocusKey = keyof typeof FOCUS_LABEL;
 
 export const ExerciseBlock = memo(function ExerciseBlock({
-  draftKey, mode, entry, ex, prevSets, bests, settings, superset,
+  draftKey, mode, entry, ex, prevSets, bests, settings, superset, live = null,
 }: Props) {
   const f = useFormat();
   const { tr } = f;
-  const c = useColors();
-  const [shake, setShake] = useState<{ id: string; n: number } | null>(null);
+  const { colors: t } = useTally();
+  const session = useSession();
   const rows = useMemo(() => placeholders(entry, prevSets, settings) as { prev: WorkSet | null; ph: Record<string, string> }[], [entry, prevSets, settings]);
   if (!ex) return null;
   const cat = ex.category;
   const fields = loggedFields(cat) as Field[];
   const rest = restFor(entry, ex, settings.defaultRest) as number;
   const labels = setLabels(entry.sets);
-  // Tally: supersets are named by their letter, not coloured (docs/design/README.md, Colour)
-  const ssColor = superset ? c.ink2 : null;
-  const done = entry.sets.filter((s) => s.done).length;
   const active = mode === 'active';
   const edit = (fn: (e: EntryDraft) => void) => editDraft(draftKey, (_a, e) => fn(e), entry.id);
   const now = Date.now();
+  const name = f.exName(ex);
 
   // ---------- sets ----------
   const toggle = (i: number) => {
-    if (entry.sets[i].done) { edit((e) => { e.sets[i].done = false; }); return; }
-    let r: { problem?: string; rest?: number } = {};
-    editDraft(draftKey, (a, e) => { r = checkOffSet(a, e, i, { category: cat, ph: rows[i].ph, rest, settings }); }, entry.id);
-    if (r.problem) {
-      setShake({ id: entry.sets[i].id, n: Date.now() });
-      toast(tr(r.problem));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (r.rest && r.rest > 0) startRest(r.rest, f.exName(ex));
+    const set = entry.sets[i];
+    if (set.done) { edit((e) => { e.sets[i].done = false; }); return; }
+    session?.logSet(entry.id, set.id);
   };
   const removeSet = (i: number) => {
     const set = entry.sets[i];
     edit((e) => { e.sets.splice(i, 1); });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     toast(tr('Set deleted'), { label: tr('Undo'), fn: () => edit((e) => { e.sets.splice(Math.min(i, e.sets.length), 0, set); }) });
   };
   const setMenu = async (i: number) => {
     const set = entry.sets[i];
+    // effort: reps left in reserve on a logged set; a template keeps its RPE target
+    const rir = setRir(set) as number | null;
+    const effort = mode === 'template'
+      ? (usesWeight(cat) || cat === 'reps' ? { label: set.rpe ? `RPE (${set.rpe})` : tr('Add RPE'), value: 'rpe', testID: 'set-rpe' } : null)
+      : { label: rir === null ? tr('Reps left') : `${tr('Reps left')} · ${effortText(rir, tr)}`, value: 'rir', testID: 'set-rir' };
     const choice = await actionSheet<string>({
       title: tr('Set {label}', { label: labels[i] }),
       actions: [
-        ...(SET_TYPES as SetType[]).map((t) => ({ label: tr(SET_TYPE_NAME[t]), value: t, checked: set.type === t, testID: `type-${t}` })),
-        usesWeight(cat) || cat === 'reps' ? { label: set.rpe ? `RPE (${set.rpe})` : tr('Add RPE'), value: 'rpe', testID: 'set-rpe' } : null,
+        ...(SET_TYPES as SetType[]).map((x) => ({ label: tr(SET_TYPE_NAME[x]), value: x, checked: set.type === x, testID: `type-${x}` })),
+        effort,
         { label: tr('Delete set'), value: 'delete', destructive: true, testID: 'set-delete' },
       ],
     });
     if (!choice) return;
     if (choice === 'delete') { removeSet(i); return; }
+    if (choice === 'rir') {
+      const v = await actionSheet<string>({
+        title: tr('Reps left?'), message: tr('How many more reps you could have done.'),
+        actions: [
+          ...(RIR_CHOICES as number[]).map((n) => ({ label: effortText(n, tr), value: String(n), checked: rir === n, testID: `rir-${n}` })),
+          rir !== null ? { label: tr('Clear'), value: 'clear', destructive: true, testID: 'rir-clear' } : null,
+        ],
+      });
+      if (!v) return;
+      edit((e) => { rateSet(e.sets[i], v === 'clear' ? null : Number(v)); });
+      return;
+    }
     if (choice === 'rpe') {
       const v = await actionSheet<string>({
         title: tr('Rate of perceived exertion'), message: tr('10 = nothing left, 8 = two reps left'),
@@ -117,7 +134,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (!a) return;
     const others = a.exercises.filter((e) => e.id !== entry.id);
     const choice = await actionSheet<string>({
-      title: f.exName(ex),
+      title: name,
       actions: [
         { label: entry.showNotes ? tr('Remove note') : tr('Add note'), value: 'note', icon: 'note' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note to this exercise'), value: 'pin', icon: 'pin' },
@@ -157,7 +174,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (choice === 'unsuperset') editDraft(draftKey, (d) => leaveSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id)));
     if (choice === 'rest') {
       const v = await actionSheet<string>({
-        title: `${tr('Rest timer')} · ${f.exName(ex)}`, message: tr('Starts when you check off a set. Saved for this exercise.'),
+        title: `${tr('Rest timer')} · ${name}`, message: tr('Starts when you check off a set. Saved for this exercise.'),
         actions: (REST_CHOICES as number[]).map((sec) => ({ label: sec ? f.clock(sec) : tr('Off'), value: String(sec), checked: rest === sec, testID: `rest-${sec}` })),
       });
       if (v === undefined) return;
@@ -188,13 +205,14 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       const i = a.exercises.findIndex((e) => e.id === entry.id);
       const removed = a.exercises[i];
       editDraft(draftKey, (d) => { d.exercises.splice(i, 1); });
-      toast(tr('{name} removed', { name: f.exName(ex) }), { label: tr('Undo'), fn: () => editDraft(draftKey, (d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      toast(tr('{name} removed', { name }), { label: tr('Undo'), fn: () => editDraft(draftKey, (d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
     }
   };
 
   // ---------- focus metric ----------
   // The number to push for this exercise (Strong's "focus metric"), from the
-  // sets as they stand (typed, else the grey placeholders), against last time.
+  // sets as they stand (typed, else the ghost values), against last time.
   const focusOpts = focusOptions(cat) as FocusKey[];
   const focus = focusOpts.includes(entry.focus as FocusKey) ? (entry.focus as FocusKey) : null;
   const focusVals = focusOpts.length ? focusValues(entry, rows, cat, prevSets, settings) as Record<FocusKey, number | null> : null;
@@ -217,99 +235,104 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     edit((e) => { e.focus = v === focus ? null : v; });
   };
 
-  const wLabel = (cat === 'assisted_bw' ? '−' : cat === 'weighted_bw' ? '+' : '') + f.unit.toUpperCase();
-  const headers = usesWeight(cat) ? [wLabel, tr('Reps')] : cat === 'reps' ? [tr('Reps')] : cat === 'cardio' ? [f.dUnit.toUpperCase(), tr('Time')] : [tr('Time')];
-  const widths = fields.length === 1 ? [COLS.one] : COLS.two;
   const fieldNames: Record<Field, string> = { w: tr('Weight'), r: tr('Reps'), d: tr('Distance'), t: tr('Time') };
+  const last = lastTimeText(prevSets, cat, f, tr);
+  const part = BODY_PART_LABEL[ex.bodyPart as keyof typeof BODY_PART_LABEL];
+  const facts = [part ? tr(part) : '', last ? tr('last time {sets}', { sets: last }) : ''].filter(Boolean).join(' · ');
+  const target = session?.target;
+
+  const row = (set: SetDraft, i: number) => {
+    const ph = rows[i]?.ph || {};
+    const record = active && isLiveRecord(set, cat, bests, settings, now);
+    const warm = set.type === 'warmup';
+    const isLive = active && set.id === live;
+    const state: StrokeState = set.done ? (record ? 'record' : warm ? 'warmup' : 'done') : isLive ? 'live' : warm ? 'warmupPending' : 'pending';
+    const chips: Chip[] = [];
+    if (set.type !== 'normal') chips.push({ text: tr(SET_TYPE_CHIP[set.type]) });
+    const rir = setRir(set) as number | null;
+    if (mode === 'template') { if (set.rpe) chips.push({ text: `RPE ${set.rpe}` }); } else if (rir !== null && (set.done || !active)) chips.push({ text: effortText(rir, tr) });
+    if (record) chips.push({ text: tr('Record'), record: true });
+    const shown = Object.fromEntries(fields.map((k) => [k, set[k] || ph[k] || ''])) as Record<Field, string>;
+    const setName = tr('Set {label}', { label: labels[i] });
+    const value = setValueText(shown, cat, f, tr);
+    const inputs = fields.map((k) => (
+      <SetField key={k} field={k} value={set[k]} ghost={ph[k] || ''} single={fields.length === 1}
+        boxed={!active || isLive} editing={!!target && target.setId === set.id && target.field === k}
+        label={`${fieldNames[k]}, ${setName}`} testID={`in-${k}-${set.id}`}
+        onChange={(v) => edit((e) => { e.sets[i][k] = v; })}
+        onKeypad={session ? () => session.open({ entryId: entry.id, setId: set.id, field: k }) : undefined}
+        register={session ? (r) => session.register(`${set.id}:${k}`, r) : undefined} />
+    ));
+    return (
+      <SetRow key={set.id} testID={`set-${set.id}`} first={i === 0} chips={chips}
+        stroke={active ? {
+          state, checked: set.done, testID: `check-${set.id}`, onPress: () => toggle(i),
+          label: `${setName}${value ? `, ${value}` : ''}, ${set.done ? tr('logged') : tr('not logged')}`,
+        } : undefined}
+        lead={active ? undefined : { text: labels[i], label: tr('Set {label}, change type', { label: labels[i] }), onPress: () => setMenu(i) }}
+        meta={{ label: tr('Set {label}, change type', { label: labels[i] }), testID: `label-${set.id}`, onPress: () => setMenu(i) }}
+        deleteLabel={tr('Delete')} onDelete={() => removeSet(i)}
+        shake={session?.shake && session.shake.id === set.id ? session.shake.n : 0}>
+        <Times>{inputs.length === 2 ? [inputs[0], inputs[1]] : inputs[0]}</Times>
+      </SetRow>
+    );
+  };
 
   return (
-    <View style={[styles.block, { backgroundColor: c.surface }]} accessibilityLabel={f.exName(ex)} testID={`block-${ex.id}`}>
+    <View accessibilityLabel={name} testID={`block-${ex.id}`} style={styles.block}>
       <View style={styles.head}>
-        <Pressable onPress={menu} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" testID={`ex-title-${ex.id}`}>
-          <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '700' }} numberOfLines={2}>{f.exName(ex)}</Text>
-        </Pressable>
-        {active && entry.sets.length > 0 && <Text style={{ color: c.ink3, fontSize: 13, fontVariant: ['tabular-nums'] }}>{`${done}/${entry.sets.length}`}</Text>}
-        {focusOpts.length > 0 && (
-          <Pressable onPress={pickFocus} hitSlop={6} accessibilityRole="button" testID={`focus-${ex.id}`}
-            accessibilityLabel={focus ? `${tr(FOCUS_LABEL[focus])}: ${fmtFocus(focus)}` : tr('Focus metric for {name}', { name: f.exName(ex) })}
-            style={({ pressed }) => [styles.focus, { backgroundColor: focus ? c.accentSoft : pressed ? c.surface3 : c.surface2 }]}>
-            <Icon name="trend" size={15} color={focus ? c.accentText : c.ink3} />
-            {focus && <Text style={{ color: c.accentText, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} numberOfLines={1}>{fmtFocus(focus)}</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.s2 }}>
+          <Pressable onPress={menu} style={{ flex: 1, minWidth: 0, paddingVertical: 2 }} accessibilityRole="button" testID={`ex-title-${ex.id}`}>
+            <Text style={{ ...TYPE.title3, color: t.ink }} numberOfLines={2}>{name}</Text>
           </Pressable>
+          {focusOpts.length > 0 && (
+            <Pressable onPress={pickFocus} hitSlop={6} accessibilityRole="button" testID={`focus-${ex.id}`}
+              accessibilityLabel={focus ? `${tr(FOCUS_LABEL[focus])}: ${fmtFocus(focus)}` : tr('Focus metric for {name}', { name })}
+              style={({ pressed }) => [styles.focus, { backgroundColor: focus || pressed ? t.paper3 : 'transparent' }]}>
+              <Icon name="trend" size={15} color={focus ? t.ink : t.ink3} />
+              {focus && <Text style={{ color: t.ink, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }} numberOfLines={1}>{fmtFocus(focus)}</Text>}
+            </Pressable>
+          )}
+          <Pressable onPress={menu} hitSlop={4} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name })} testID={`ex-menu-${ex.id}`}
+            style={({ pressed }) => [styles.more, { backgroundColor: pressed ? t.paper3 : 'transparent' }]}>
+            <Icon name="more" size={20} color={t.ink} />
+          </Pressable>
+        </View>
+        {!!facts && <Text style={{ ...TYPE.footnote, color: t.ink2 }} numberOfLines={2} testID={`last-${ex.id}`}>{facts}</Text>}
+        {(superset || (active && rest > 0)) && (
+          <Text style={{ ...TYPE.footnote, color: t.ink2 }}>
+            {superset ? <Text>{tr('Superset {letter}', { letter: superset.letter })}</Text> : null}
+            {superset && active && rest > 0 ? ' · ' : ''}
+            {active && rest > 0 ? <Text testID={`rest-tag-${ex.id}`} style={{ fontVariant: ['tabular-nums'] }}>{tr('Rest {time}', { time: f.clock(rest) })}</Text> : null}
+          </Text>
         )}
-        <Pressable onPress={menu} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name: f.exName(ex) })} testID={`ex-menu-${ex.id}`}
-          style={({ pressed }) => [styles.more, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
-          <Icon name="more" size={18} color={c.accentText} />
-        </Pressable>
+        {!!ex.pinnedNote && (
+          <View style={styles.pinned}>
+            <Icon name="pin" size={14} color={t.ink2} />
+            <Text style={{ ...TYPE.subhead, color: t.ink, flex: 1 }}>{ex.pinnedNote}</Text>
+          </View>
+        )}
+        {entry.showNotes && (
+          <TextInput value={entry.notes} onChangeText={(v) => edit((e) => { e.notes = v; })} onFocus={session?.close} multiline placeholder={tr('Note for this exercise')} placeholderTextColor={t.ink3}
+            style={[styles.note, { color: t.ink, backgroundColor: t.paper3 }]} testID={`ex-note-${ex.id}`} />
+        )}
       </View>
-      {(superset || (active && rest > 0)) && (
-        <View style={styles.tags}>
-          {superset && ssColor && (
-            <View style={[styles.tag, { backgroundColor: c.accentSoft }]}>
-              <Icon name="link" size={12} color={ssColor} />
-              <Text style={{ color: ssColor, fontSize: 12, fontWeight: '700' }}>{tr('Superset {letter}', { letter: superset.letter })}</Text>
-            </View>
-          )}
-          {active && rest > 0 && (
-            <View style={[styles.tag, { backgroundColor: c.surface2 }]} testID={`rest-tag-${ex.id}`}>
-              <Icon name="timer" size={12} color={c.ink2} />
-              <Text style={{ color: c.ink2, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{f.clock(rest)}</Text>
-            </View>
-          )}
-        </View>
-      )}
-      {!!ex.pinnedNote && (
-        <View style={[styles.pinned, { backgroundColor: c.note }]}>
-          <Icon name="pin" size={14} color={c.noteInk} />
-          <Text style={{ color: c.noteInk, fontSize: 14, flex: 1 }}>{ex.pinnedNote}</Text>
-        </View>
-      )}
-      {entry.showNotes && (
-        <TextInput value={entry.notes} onChangeText={(v) => edit((e) => { e.notes = v; })} multiline placeholder={tr('Note for this exercise')} placeholderTextColor={c.ink3}
-          style={[styles.note, { color: c.ink, backgroundColor: c.surface2 }]} testID={`ex-note-${ex.id}`} />
-      )}
-      <View style={[styles.hdr]}>
-        {active && <View style={{ width: COLS.check }} />}
-        <Text style={[styles.hdrText, { width: COLS.label, color: c.label }]}>{tr('Set')}</Text>
-        <Text style={[styles.hdrText, { flex: 1, textAlign: 'left', paddingLeft: 4, color: c.label }]}>{tr('Previous')}</Text>
-        {headers.map((h, i) => <Text key={h} style={[styles.hdrText, { width: widths[i], color: c.label }]}>{h}</Text>)}
-      </View>
-      {entry.sets.map((set, i) => {
-        const prev = rows[i]?.prev;
-        const pr = active && isLiveRecord(set, cat, bests, settings, now);
-        return (
-          <SetRow key={set.id} set={set} label={labels[i]} fields={fields} ph={rows[i]?.ph || {}}
-            prevText={prev ? f.setText(prev, cat, true) : '—'} badge={pr ? 'pr' : set.rpe || null}
-            shake={shake && shake.id === set.id ? shake.n : 0} showCheck={active}
-            labels={{
-              set: tr('Set {label}, change type', { label: labels[i] }), prev: tr('Previous: {value}', { value: prev ? f.setText(prev, cat, true) : '—' }),
-              field: fieldNames, check: tr('Mark set as done'), uncheck: tr('Mark set as not done'), delete: tr('Delete'),
-            }}
-            onChange={(k, v) => edit((e) => { e.sets[i][k] = v; })}
-            onToggle={() => toggle(i)} onMenu={() => setMenu(i)}
-            onPrev={() => edit((e) => { copyPrevious(e.sets[i], prev, cat, settings); })}
-            onDelete={() => removeSet(i)} />
-        );
-      })}
+      <View style={{ marginTop: SPACE.s2 }}>{entry.sets.map(row)}</View>
       <Pressable onPress={() => edit((e) => addSet(e))} accessibilityRole="button" testID={`add-set-${ex.id}`}
-        style={({ pressed }) => [styles.addSet, { backgroundColor: pressed ? c.surface3 : c.surface2 }]}>
-        <Icon name="plus" size={15} color={c.ink2} />
-        <Text style={{ color: c.ink2, fontSize: 15, fontWeight: '600' }}>{tr('Add set')}</Text>
+        style={({ pressed }) => [styles.addSet, { opacity: pressed ? 0.6 : 1 }]}>
+        <Icon name="plus" size={17} color={t.ink2} />
+        <Text style={{ ...TYPE.body, color: t.ink2 }}>{tr('Add set')}</Text>
       </Pressable>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  block: { borderRadius: 14, overflow: 'hidden', marginTop: 12, paddingBottom: 6 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 14, paddingRight: 10, paddingTop: 12 },
-  more: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  focus: { height: 28, minWidth: 32, maxWidth: 130, borderRadius: 14, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  tags: { flexDirection: 'row', gap: 6, paddingHorizontal: 14, marginTop: 6 },
-  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  pinned: { flexDirection: 'row', gap: 8, marginHorizontal: 14, marginTop: 8, borderRadius: 10, padding: 9, alignItems: 'flex-start' },
-  note: { marginHorizontal: 14, marginTop: 8, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, minHeight: 40 },
-  hdr: { flexDirection: 'row', alignItems: 'center', height: 26, marginTop: 8, paddingLeft: 8, paddingRight: 10, gap: COLS.gap },
-  hdrText: { fontSize: 11.5, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', textAlign: 'center' },
-  addSet: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 12, marginTop: 6, height: 36, borderRadius: 10 },
+  block: { marginTop: SPACE.s6 },
+  head: { paddingHorizontal: SPACE.s5, gap: 2 },
+  more: { width: CONTROL.hitMin, height: CONTROL.hitMin, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: -12 },
+  focus: { height: 30, minWidth: 30, maxWidth: 140, borderRadius: 15, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  pinned: { flexDirection: 'row', gap: SPACE.s2, marginTop: SPACE.s2, alignItems: 'flex-start' },
+  note: { marginTop: SPACE.s2, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 44 },
+  addSet: { flexDirection: 'row', alignItems: 'center', gap: SPACE.s2, alignSelf: 'flex-start', minHeight: CONTROL.hitMin, paddingHorizontal: SPACE.s5 },
 });

@@ -73,6 +73,96 @@ test('drafts keep stored numbers when the text is untouched (no lb/mi drift)', (
   assert.ok(Math.abs(core.draftToSet(d, st).w - 140 * core.KG_PER_LB) < 1e-9);
 });
 
+// ---------- effort: reps in reserve ----------
+test('reps in reserve: stored on the set, RPE reads as it, survives drafts and the CSV', () => {
+  // RPE 10 → 0, 9 → 1, 8 → 2, 7 and below → 3+; half points count towards failure
+  assert.deepEqual([10, 9.5, 9, 8.5, 8, 7.5, 7, 6, 1].map(core.rirFromRpe), [0, 0, 1, 1, 2, 2, 3, 3, 3]);
+  assert.equal(core.rirFromRpe('8,5'), 1, 'a draft keeps RPE as text');
+  assert.equal(core.rirFromRpe(''), null);
+  assert.equal(core.rirFromRpe(undefined), null);
+  assert.deepEqual([0, 1, 2, 3, 5, '2', -1, null, '', 'x'].map(core.normRir), [0, 1, 2, 3, 3, 2, null, null, null, null]);
+  assert.deepEqual([0, 1, 2, 3].map(core.rpeFromRir), [10, 9, 8, 7]);
+  assert.equal(core.rpeFromRir(null), null);
+  // a set's own rating wins over its RPE
+  assert.equal(core.setRir({ rir: 1, rpe: 8 }), 1);
+  assert.equal(core.setRir({ rpe: 8 }), 2);
+  assert.equal(core.setRir({ type: 'normal', w: 60, r: 8 }), null);
+  assert.equal(core.setRir(null), null);
+  // drafts carry it both ways; rating clears the RPE
+  const st = { unit: 'kg', distUnit: 'km' };
+  const d = core.setToDraft({ id: 's', type: 'normal', w: 80, r: 8, rir: 2 }, st);
+  assert.equal(d.rir, 2);
+  assert.equal(core.draftToSet(d, st).rir, 2);
+  assert.equal('rir' in core.draftToSet(core.setToDraft({ id: 's', type: 'normal', w: 80, r: 8 }, st), st), false);
+  const draft = core.newSetDraft('normal', { w: '80', r: '8', rpe: '8.5' });
+  core.rateSet(draft, 3);
+  assert.equal(draft.rir, 3);
+  assert.equal(draft.rpe, '');
+  assert.deepEqual(core.draftToSet(draft, st), { id: draft.id, type: 'normal', w: 80, r: 8, rir: 3 });
+  core.rateSet(draft, null);
+  assert.equal('rir' in draft, false);
+  // templates don't take a set's rating as a target
+  const tpl = core.applyWorkoutToTemplate([E('a', [S('normal', 60, 8)])], { exercises: [E('a', [S('normal', 62.5, 8, { rir: 1 })])] }, { valuesOnly: true });
+  assert.equal('rir' in tpl[0].sets[0], false);
+  // Strong's CSV only knows RPE
+  const exercises = new Map([['x', { id: 'x', name: 'Bench Press (Barbell)', category: 'barbell' }]]);
+  const csv = core.exportCSV({ workouts: [{ id: 'w', name: 'Push', startedAt: Date.UTC(2026, 10, 3, 9), endedAt: Date.UTC(2026, 10, 3, 10), exercises: [E('x', [S('normal', 80, 8, { rir: 1 }), S('normal', 80, 8, { rpe: 8.5 }), S('normal', 80, 8)])] }], exercises });
+  assert.deepEqual(csv.trim().split('\n').slice(1).map((l) => l.split(',').pop()), ['9', '8.5', '']);
+});
+
+// ---------- the session ----------
+test('session: units keep supersets together, rounds alternate, the next set follows the person', () => {
+  const set = (id, done = false) => ({ id, type: 'normal', w: '', r: '', d: '', t: '', rpe: '', done });
+  const entry = (id, sets, supersetId = null) => ({ id, exerciseId: `x-${id}`, supersetId, sets });
+  const draft = {
+    exercises: [
+      entry('a', [set('a1', true), set('a2', true)]),
+      entry('b', [set('b1', true), set('b2'), set('b3')], 'S'),
+      entry('c', [set('c1', true), set('c2')], 'S'),
+      entry('d', [set('d1')]),
+    ],
+  };
+  const units = core.sessionUnits(draft.exercises);
+  assert.deepEqual(units.map((u) => u.entries.map((e) => e.id)), [['a'], ['b', 'c'], ['d']]);
+  assert.deepEqual(core.unitSets(units[1]).map((x) => x.set.id), ['b1', 'c1', 'b2', 'c2', 'b3']);
+  // the first unit with sets left, one superset round after another
+  let st = core.sessionState(draft);
+  assert.equal(st.unit.id, 'b');
+  assert.equal(st.next.set.id, 'b2');
+  // while resting after the last set of a, a stays on screen with nothing to log
+  st = core.sessionState(draft, { restEntryId: 'a' });
+  assert.equal(st.unit.id, 'a');
+  assert.equal(st.next, null);
+  // the exercise the person switched to wins, also over the rest
+  st = core.sessionState(draft, { current: 'd', restEntryId: 'a' });
+  assert.equal(st.next.set.id, 'd1');
+  assert.equal(core.sessionState(draft, { current: 'c' }).unit.id, 'b', 'any exercise of a superset picks the superset');
+  assert.equal(core.sessionState(draft, { current: 'gone' }).unit.id, 'b');
+  // all done: the last unit, nothing next
+  const done = { exercises: [entry('a', [set('a1', true)]), entry('d', [set('d1', true)])] };
+  assert.equal(core.hasPendingSets(done), false);
+  assert.equal(core.hasPendingSets(draft), true);
+  st = core.sessionState(done);
+  assert.equal(st.unit.id, 'd');
+  assert.equal(st.next, null);
+  assert.equal(core.sessionState({ exercises: [] }).unit, null);
+  // moving a superset moves both of its exercises
+  const list = draft.exercises.slice();
+  assert.equal(core.moveUnit(list, 'd', 'b'), true);
+  assert.deepEqual(list.map((e) => e.id), ['a', 'd', 'b', 'c']);
+  assert.equal(core.moveUnit(list, 'b', 'a'), true);
+  assert.deepEqual(list.map((e) => e.id), ['b', 'c', 'a', 'd']);
+  assert.equal(core.moveUnit(list, 'b', 'b'), false);
+  assert.equal(core.moveUnit(list, 'zz', 'b'), false);
+  // the keypad's −/+ step: a pair of the smallest plates, the dumbbell rack's step
+  assert.equal(core.weightStep('barbell', { unit: 'kg', plates: core.KG_PLATES }), 2.5);
+  assert.equal(core.weightStep('barbell', { unit: 'kg', plates: [20, 10, 0.5] }), 1);
+  assert.equal(core.weightStep('barbell', { unit: 'lb', plates: core.LB_PLATES }), 5);
+  assert.equal(core.weightStep('dumbbell', { unit: 'kg' }), 2);
+  assert.equal(core.weightStep('dumbbell', { unit: 'lb' }), 5);
+  assert.equal(core.weightStep('machine', { unit: 'kg' }), 2.5);
+});
+
 // ---------- templates ----------
 const E = (exerciseId, sets, extra = {}) => ({ exerciseId, sets, ...extra });
 const S = (type, w, r, extra = {}) => ({ type, w, r, ...extra });

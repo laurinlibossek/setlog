@@ -2,7 +2,7 @@
 // short, plain, sentence case, "du" in German, and nothing the app doesn't do.
 export const CAPTIONS = {
   en: [
-    'See what you lifted last time', // 1. running workout, "previous" column
+    'See what you lifted last time', // 1. running workout, last time's numbers as ghost values
     'Rest timer, even with the phone locked', // 2. rest timer (a notification when the phone is locked)
     'Watch your numbers go up', // 3. an exercise's chart
     'Every workout at a glance', // 4. History calendar

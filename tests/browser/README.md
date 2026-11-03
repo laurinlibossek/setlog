@@ -38,7 +38,7 @@ When you update Playwright, change the version in `package.json` here; the suite
 | `web-fixes` | 33 | the 18 fixes of 1.6.0, drag-and-drop reorder (mouse, touch, keys), unit switch round trip |
 | `web-smoke` | 4 | Profile chart, new template from the editor and from a workout, exercise chart |
 | `app-first-start` | 15 | first start, restore a web-app backup (Account), every screen with data, live theme/language/unit switches, Strong import |
-| `app-logging` | 17 | logging a workout end to end, rest timer, set types, supersets, minimize and reload, reorder, finish, template update (German) |
+| `app-logging` | 19 | logging a workout end to end in the Tally session: Log button, keypad, rest bar and "Reps left?", set types, supersets, Up next (switch and drag), minimize and reload, reorder, finish early, screen not kept on, template update (German) |
 | `app-editing` | 22 | template editor and menus on Plan, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Body, Progress and backups, settings |
 | `web-privacy` | 4 | the privacy pages (light and dark, both languages, contact link), the Settings link to them, and that they load as themselves with the service worker running |
 | `app-parity` | 13 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app, Settings → Privacy policy |
@@ -78,7 +78,7 @@ node tests/browser/store-frame.mjs <folder>    # frames your own screenshots the
 - 16 weeks of a 4-day upper/lower split up to yesterday, with steady progression and one deload week (half the sets at the same weights, so the charts don't dip);
 - no personal name.
 
-It takes six screens in English and German: a running workout with the "previous" column, the rest timer, an exercise's 1RM chart, the History calendar, Today with the suggested workout, and Progress.
+It takes six screens in English and German: a running workout with last time's numbers, the rest timer, an exercise's 1RM chart, the History calendar, Today with the suggested workout, and Progress.
 
 What it writes, into `tests/browser/.out/store/` (git-ignored):
 - the bare screens in `raw/`;

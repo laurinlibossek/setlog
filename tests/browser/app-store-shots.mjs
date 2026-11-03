@@ -1,83 +1,78 @@
-// Store screenshots of the app, from its web build and the test backup. Not a test
-// suite (CI doesn't run it): `node tests/browser/run.mjs app-store-shots` builds and
-// serves the app, makes the backup and runs this. Writes to tests/browser/.out/store/:
+// Store screenshots of the app, from its web build and the demo data in
+// store-demo.mjs (16 weeks of an upper/lower split; not the test backup, and no
+// personal name). Not a test suite (CI doesn't run it):
 //
-//   appstore-<lang>-<n>-<screen>.png   1320 × 2868, App Store 6.9" iPhone
-//   play-<lang>-<n>-<screen>.png       1080 × 1920, Google Play phone (9:16)
-//   play-feature-graphic.png           1024 × 500, with app/assets/images/icon.png
+//   node tests/browser/run.mjs app-store-shots
 //
-// The web build is not the native app: see "Store screenshots" in README.md for what
-// differs, and take the final App Store screenshots from the iOS Simulator.
+// builds and serves the app and runs this. Writes to tests/browser/.out/store/:
+//
+//   raw/<store>-<lang>-<n>-<screen>.png   the bare screens, phone-sized
+//   appstore-<lang>-<n>-<screen>.png      1320 × 2868 with the caption, App Store 6.9″
+//   play-<lang>-<n>-<screen>.png          1080 × 1920 with the caption, Google Play phone
+//   play-feature-graphic.png              1024 × 500, with app/assets/images/icon.png
+//
+// Captions are in store-captions.mjs; store-frame.mjs adds them, and frames your own
+// screenshots (iOS Simulator, phone) the same way. The web build is not the native
+// app: see "Store screenshots" in README.md for what differs.
 import fs from 'node:fs';
 import path from 'node:path';
-import { launch, grantWakeLock, APP as BASE, BACKUP, HERE, ROOT } from './env.mjs';
+import { launch, grantWakeLock, APP as BASE, HERE, ROOT } from './env.mjs';
 import * as core from '../../setlog/js/core/index.js';
+import { demoData } from './store-demo.mjs';
+import { CAPTIONS } from './store-captions.mjs';
+import { frame } from './store-frame.mjs';
 
 const OUT = path.join(HERE, '.out', 'store');
-fs.mkdirSync(OUT, { recursive: true });
-const DAY = 86400000;
-const SIZES = {
-  appstore: { width: 440, height: 956, scale: 3, mobile: true }, // 1320 × 2868
-  play: { width: 360, height: 640, scale: 3, mobile: true }, // 1080 × 1920
+const RAW = path.join(OUT, 'raw');
+fs.rmSync(OUT, { recursive: true, force: true });
+fs.mkdirSync(RAW, { recursive: true });
+// the phone each store's screens are taken on (CSS pixels × scale)
+const PHONES = {
+  appstore: { width: 440, height: 956, scale: 3 }, // iPhone 6.9″: 1320 × 2868
+  play: { width: 412, height: 915, scale: 2.625 }, // a 1080 × 2400 Android phone
 };
-
-// the sample history, moved so the newest workout was yesterday evening (whole weeks, so weekdays stay)
-const parsed = core.parseBackup(fs.readFileSync(BACKUP, 'utf8'), core.SEED_EXERCISES);
-const newest = Math.max(...parsed.data.workouts.map((w) => w.startedAt));
-const yesterday = new Date(Date.now() - DAY);
-yesterday.setHours(18, 0, 0, 0);
-const shift = Math.round((yesterday.getTime() - newest) / (7 * DAY)) * 7 * DAY;
-function dataFor(lang) {
-  const d = JSON.parse(JSON.stringify(parsed.data));
-  for (const w of d.workouts) { w.startedAt += shift; if (w.endedAt) w.endedAt += shift; }
-  for (const m of d.measurements) m.at += shift;
-  d.kv.settings = { ...(d.kv.settings || {}), theme: 'system', language: lang };
-  d.kv.profile = { name: 'Laurin' };
-  d.kv.meta = { ...(d.kv.meta || {}), lastBackupAt: Date.now() - DAY, seedVersion: 0 };
-  return d;
-}
-
-// the most-logged exercises in the sample history, so the "previous" column has numbers
-const WORKOUT = [['squat bb', 'x-squat-barbell'], ['overhead press bb', 'x-overhead-press-barbell'], ['good morning', 'x-good-morning-barbell']];
 
 const browser = await launch();
 const written = [];
 
 async function screens(store, lang) {
-  const { width, height, scale } = SIZES[store];
+  const { width, height, scale } = PHONES[store];
   const ctx = await browser.newContext({
     viewport: { width, height }, deviceScaleFactor: scale, isMobile: true, hasTouch: true,
     locale: lang === 'de' ? 'de-DE' : 'en-US', colorScheme: 'light',
   });
   await ctx.addInitScript(grantWakeLock);
-  await ctx.addInitScript((json) => { try { if (!localStorage.getItem('increment.data')) localStorage.setItem('increment.data', json); } catch { /* a frame without storage */ } }, JSON.stringify(dataFor(lang)));
+  await ctx.addInitScript((json) => {
+    try { if (!localStorage.getItem('increment.data')) localStorage.setItem('increment.data', json); } catch { /* a frame without storage */ }
+  }, JSON.stringify(demoData(lang)));
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   const id = (t) => page.getByTestId(t);
   const wait = (ms = 500) => page.waitForTimeout(ms);
+  const tr = core.translator(lang);
   const shot = async (n, name) => {
     await wait();
-    const file = path.join(OUT, `${store}-${lang}-${n}-${name}.png`);
-    await page.screenshot({ path: file });
-    written.push(path.relative(ROOT, file));
+    const raw = path.join(RAW, `${store}-${lang}-${n}-${name}.png`);
+    await page.screenshot({ path: raw });
+    const out = path.join(OUT, `${store}-${lang}-${n}-${name}.png`);
+    await frame(browser, { png: fs.readFileSync(raw), caption: CAPTIONS[lang][n - 1], store, out });
+    written.push(path.relative(ROOT, out));
   };
-  const tr = core.translator(lang);
 
   await page.goto(BASE);
-  await id('start-empty').waitFor();
+  await id('start-suggested').waitFor();
 
-  // 5. templates and the suggested workout (taken first, before a workout is running)
-  await wait(500);
+  // 5. templates and the suggested next workout (before a workout is running)
   await shot(5, 'templates');
 
-  // 6. Profile: workouts per week and recent records
+  // 6. Profile: workouts per week, streak, recent records
   await id('tab-profile').click();
   await id('open-settings').waitFor({ state: 'visible' });
   await wait(600);
   await shot(6, 'profile');
 
-  // 3. an exercise's chart (estimated 1RM over time)
+  // 3. an exercise's chart: estimated 1RM over the 16 weeks
   await id('tab-exercises').click();
   await id('exercise-search').fill('squat bb');
   await id('exercise-x-squat-barbell').click();
@@ -98,22 +93,14 @@ async function screens(store, lang) {
   await id('tab-index').click();
   await wait(300);
 
-  // 1. a running workout with exercises that have history: the "previous" column, two sets checked off
-  await id('start-empty').click();
+  // 1. the suggested workout running: last time's numbers, the warm-up and first set checked off
+  await id('start-suggested').click();
   await id('workout-name').waitFor();
-  await id('add-exercises').click();
-  await id('pick-search').waitFor();
-  for (const [q, ex] of WORKOUT) {
-    await id('pick-search').fill(q);
-    await wait(250);
-    await id(`pick-${ex}`).click();
-  }
-  await id('pick-add').click();
-  await wait(800);
-  const firstChecks = id(`block-${WORKOUT[0][1]}`).locator('[data-testid^="check-"]');
-  await firstChecks.nth(0).click();
+  await wait(600);
+  const checks = page.locator('[data-testid^="block-"]').first().locator('[data-testid^="check-"]');
+  await checks.nth(0).click();
   await wait(300);
-  await firstChecks.nth(1).click();
+  await checks.nth(1).click();
   await wait(300);
   await shot(1, 'workout');
 
@@ -139,7 +126,7 @@ async function featureGraphic() {
   await page.close();
 }
 
-for (const store of Object.keys(SIZES)) for (const lang of ['en', 'de']) await screens(store, lang);
+for (const store of Object.keys(PHONES)) for (const lang of ['en', 'de']) await screens(store, lang);
 await featureGraphic();
 await browser.close();
 console.log(written.join('\n'));

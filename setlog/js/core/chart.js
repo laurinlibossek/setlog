@@ -1,6 +1,8 @@
 // Chart maths shared by the apps' charts: round axis steps and the time
 // ranges the chart screens offer. Drawing is each app's job.
-import { startOfWeek, addDays } from './units.js';
+import {
+  startOfWeek, startOfDay, startOfMonth, addDays, addMonths,
+} from './units.js';
 
 const TIME_STEPS = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
 
@@ -59,4 +61,39 @@ export function weekStreak(workouts, { goal = 1, weekStart = 1, now = Date.now()
   week = addDays(week, -7);
   while (count(week) >= goal && streak < 520) { streak++; week = addDays(week, -7); }
   return streak;
+}
+
+/**
+ * One month of the History calendar. `days` are the grid's day starts (5 or 6
+ * weeks from `weekStart`, including days of the months around it), `byDay`
+ * maps a day start to its workouts (newest first, as given), and the totals
+ * count the month's workouts, the days trained and the time spent.
+ */
+export function calendarMonth(workouts, month, { weekStart = 1 } = {}) {
+  const start = startOfMonth(month);
+  const next = addMonths(start, 1);
+  const gridStart = startOfWeek(start, weekStart);
+  const days = [];
+  for (let i = 0; i < 42; i++) days.push(addDays(gridStart, i));
+  const rows = days[35] >= next ? 5 : 6;
+  const gridEnd = addDays(days[rows * 7 - 1], 1);
+  const byDay = new Map();
+  let count = 0;
+  let time = 0;
+  const trained = new Set();
+  for (const w of workouts) {
+    if (w.startedAt >= gridStart && w.startedAt < gridEnd) {
+      const d = startOfDay(w.startedAt);
+      if (!byDay.has(d)) byDay.set(d, []);
+      byDay.get(d).push(w);
+    }
+    if (w.startedAt >= start && w.startedAt < next) {
+      count++;
+      time += (w.endedAt || w.startedAt) - w.startedAt;
+      trained.add(startOfDay(w.startedAt));
+    }
+  }
+  return {
+    start, next, days: days.slice(0, rows * 7), byDay, workouts: count, daysTrained: trained.size, time,
+  };
 }

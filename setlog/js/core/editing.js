@@ -5,6 +5,7 @@
 import { uid, slug } from './units.js';
 import { entryToDraft, draftEntries, remapSupersets } from './drafts.js';
 import { cleanTemplateExercises } from './templates.js';
+import { loggedFields } from './calc.js';
 
 export const EDIT_MESSAGES = {
   templateName: 'Give the template a name',
@@ -188,4 +189,37 @@ export function exerciseInDraft(exercises, draft, id) {
 export function patchDraftExercise(draft, id, patch) {
   draft.exPatches = draft.exPatches || {};
   draft.exPatches[id] = { ...(draft.exPatches[id] || {}), ...patch };
+}
+
+// ---------- merging exercises ----------
+/** One exercise can be merged into another only if both log the same fields (weight and reps, time…). */
+export const canMergeExercises = (from, into) => !!from && !!into && from.id !== into.id
+  && loggedFields(from.category).join() === loggedFields(into.category).join();
+
+/**
+ * What the target takes over when `from` is merged into it: the rest timer,
+ * notes and pinned note it doesn't have itself. Its own stay.
+ */
+export function mergeExercisePatch(from, into) {
+  const patch = {};
+  if (!from || !into) return patch;
+  const none = (v) => v === null || v === undefined;
+  if (none(into.restSec) && !none(from.restSec)) patch.restSec = from.restSec;
+  if (!into.notes && from.notes) patch.notes = from.notes;
+  if (!into.pinnedNote && from.pinnedNote) patch.pinnedNote = from.pinnedNote;
+  return patch;
+}
+
+/**
+ * Point every entry of `fromId` at `intoId` in a list of workouts or
+ * templates (or one draft). Returns copies of the records that changed, so
+ * the caller can save just those; the records passed in stay untouched.
+ */
+export function moveExerciseEntries(records, fromId, intoId) {
+  const changed = [];
+  for (const r of records) {
+    if (!r?.exercises?.some((e) => e.exerciseId === fromId)) continue;
+    changed.push({ ...r, exercises: r.exercises.map((e) => (e.exerciseId === fromId ? { ...e, exerciseId: intoId } : e)) });
+  }
+  return changed;
 }

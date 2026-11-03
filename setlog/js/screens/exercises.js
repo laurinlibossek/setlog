@@ -6,8 +6,9 @@ import {
   S, useStore, stats, exerciseList, updateExercise, deleteExercise, mergeExercise, exerciseUsage, allSessions,
 } from '../store.js';
 import {
-  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking, formulaLabel, loggedFields,
+  exerciseRecords, exerciseSeries, chartMetricsFor, est1RM, hasLoadRecords, usesWeight, isWorking, formulaLabel,
 } from '../calc.js';
+import { canMergeExercises } from '../core/editing.js';
 import { BODY_PARTS, BODY_PART_LABEL, CATEGORY_LABEL } from '../seed.js';
 import { editExercise, pickExercises, matchExercise } from '../pickers.js';
 import { LineChart } from '../charts.js';
@@ -108,7 +109,7 @@ export function ExerciseDetailScreen({ id }) {
       const into = await pickExercises({ multi: false, title: tr('Merge “{name}” into', { name: ex.name }) });
       if (!into || into === ex.id) return;
       const target = S.exercises.get(into);
-      if (loggedFields(target.category).join() !== loggedFields(ex.category).join()) {
+      if (!canMergeExercises(ex, target)) {
         toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: ex.name, to: target.name }));
         return;
       }

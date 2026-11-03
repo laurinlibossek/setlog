@@ -34,6 +34,7 @@ The runner serves `setlog/` on :8765 and `app/dist` on :8790 itself, runs `npm c
 | `app-first-start` | 15 | first start, restore a web-app backup, every screen with data, live theme/language/unit switches, Strong import |
 | `app-logging` | 17 | logging a workout end to end, rest timer, set types, supersets, minimize and reload, reorder, finish, template update (German) |
 | `app-editing` | 22 | template editor and menus, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Measure, backups, settings |
+| `app-parity` | 11 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app |
 
 `make-backup.mjs` is a helper, not a suite: it imports the sample export into the web app, adds a "Pull" template in an "Upper / Lower" folder, two body weights, Intense Red, German and the name "Laurin", and saves `data/setlog-backup.json` through the app's own backup code. The app suites restore it (`restore(page, dialogs, { english: true })` in `app-editing.mjs` switches to English afterwards).
 

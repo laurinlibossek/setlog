@@ -41,7 +41,7 @@ cd app && npm run bundle                   # iOS + Android export (what CI check
 cd app && npx expo-doctor                  # dependency and config check
 ```
 
-CI (`.github/workflows/test.yml`) runs `npm test`, the app type check and both bundles on every push and PR.
+CI (`.github/workflows/test.yml`) runs `npm test`, the app type check, both bundles and the browser suites on every push and PR. When a browser suite fails, the run has the suites' screenshots attached as an artifact (`browser-test-screenshots`).
 
 ## Done means
 

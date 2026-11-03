@@ -1,10 +1,11 @@
-// History: finished workouts by month, or a month calendar (the button next
-// to the title switches). The calendar's maths is core's calendarMonth().
+// Workouts (Progress → Workouts): finished workouts by month, or a month
+// calendar (the button in the navigation bar switches). The calendar's maths
+// is core's calendarMonth().
 import { useMemo, useState } from 'react';
 import {
   FlatList, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import {
   startOfMonth, startOfDay, addMonths, calendarMonth, workoutVolume, bestSet,
 } from '@setlog/core';
@@ -13,9 +14,8 @@ import { stats, useAppState, type State } from '@/data/store';
 import type { Workout } from '@/data/types';
 import { useFormat, type Format } from '@/lib/format';
 import { useColors } from '@/lib/theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Button, Card, Empty, Icon, IconButton, LargeTitle, Txt,
+  Button, Card, Empty, Icon, IconButton, Txt,
 } from '@/ui/kit';
 
 type Row = { kind: 'month'; m: number; count: number } | { kind: 'workout'; w: Workout };
@@ -25,7 +25,6 @@ export default function HistoryTab() {
   const f = useFormat();
   const { tr } = f;
   const c = useColors();
-  const insets = useSafeAreaInsets();
   const [limit, setLimit] = useState(40);
   const [view, setView] = useState<'list' | 'cal'>('list');
 
@@ -44,10 +43,9 @@ export default function HistoryTab() {
 
   if (!s.workouts.length) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}>
-        <LargeTitle title={tr('History')} />
-        <Empty title={tr('No workouts yet')} text={tr('Bring your workouts over from the Setlog web app: make a backup there, then restore it here in Settings.')}>
-          <Button kind="tinted" icon="download" title={tr('Restore from backup')} onPress={() => router.push('/settings')} testID="history-restore" />
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <Empty title={tr('No workouts yet')} text={tr('Bring your workouts over from the Setlog web app: make a backup there, then restore it here in Account.')}>
+          <Button kind="tinted" icon="download" title={tr('Restore from backup')} onPress={() => router.push('/account')} testID="history-restore" />
         </Empty>
       </View>
     );
@@ -56,10 +54,11 @@ export default function HistoryTab() {
     <IconButton icon={view === 'list' ? 'calendar' : 'list'} label={view === 'list' ? tr('Show calendar') : tr('Show list')}
       onPress={() => setView(view === 'list' ? 'cal' : 'list')} testID="history-view" />
   );
+  const bar = <Stack.Screen options={{ headerRight: () => toggle }} />;
   if (view === 'cal') {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}>
-        <LargeTitle title={tr('History')} right={toggle} />
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: 12, paddingBottom: 32 }} contentInsetAdjustmentBehavior="automatic">
+        {bar}
         <Calendar s={s} f={f} />
       </ScrollView>
     );
@@ -67,10 +66,11 @@ export default function HistoryTab() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      contentInsetAdjustmentBehavior="automatic"
       data={rows}
       keyExtractor={(r) => (r.kind === 'month' ? 'm' + r.m : r.w.id)}
-      ListHeaderComponent={<LargeTitle title={tr('History')} right={toggle} />}
+      ListHeaderComponent={bar}
       renderItem={({ item }) => (item.kind === 'month'
         ? (
           <View style={st.month}>

@@ -1,5 +1,6 @@
 // The Expo app (web build) on an emulated iPhone, everything added on
-// 19 Oct 2026: the template editor and template menus, folders, shared
+// 19 Oct 2026 (in the tabs of 3 Nov 2026: Plan, Progress, Search, Account):
+// the template editor and template menus, folders, shared
 // templates, Edit workout, focus metric, plate calculator, start time, new
 // exercises, Measure logging, charts, backups and the new settings. 22 checks.
 import assert from 'node:assert/strict';
@@ -44,9 +45,13 @@ async function pickExercises(page, names, testid = 'add-exercises') {
   await id(page, 'pick-add').click();
   await wait(page, 600);
 }
+/** Account: the avatar on Today. */
+async function openAccount(page) {
+  await id(page, 'tab-index').click();
+  await id(page, 'open-account').click();
+}
 async function restore(page, dialogs, { english = false } = {}) {
-  await id(page, 'tab-profile').click();
-  await id(page, 'open-settings').click();
+  await openAccount(page);
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), id(page, 'restore').click()]);
   await chooser.setFiles(BACKUP);
   for (let i = 0; i < 50 && dialogs.length < 2; i++) await wait(page, 100);
@@ -59,6 +64,8 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
 // ---------- 1. templates: editor, menus, folders, shared links ----------
 {
   const { ctx, page, errors } = await newPage();
+  await id(page, 'tab-plan').click();
+  await id(page, 'plan-add').click();
   await id(page, 'new-template').click();
   await id(page, 'tpl-name').waitFor();
   await id(page, 'template-save').click();
@@ -301,7 +308,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'drop-pending').click();
   await id(page, 'summary-done').click();
   await wait(page, 500);
-  await id(page, 'tab-exercises').click();
+  await id(page, 'tab-search').click();
   await id(page, 'exercise-search').fill('zercher');
   await id(page, 'exercise-c-zercher-squat').click();
   await id(page, 'exercise-options').waitFor();
@@ -319,7 +326,8 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
 {
   const { ctx, page, errors, dialogs } = await newPage({ locale: 'de-DE' });
   await restore(page, dialogs);
-  await id(page, 'tab-history').click();
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().click();
   await id(page, 'workout-options').waitFor();
   const wid = decodeURIComponent(page.url().split('/workout/')[1]);
@@ -397,13 +405,12 @@ for (const scheme of ['light', 'dark']) {
   await restore(page, dialogs, { english: true });
   if (scheme === 'light') {
     // the backup brings Intense Red; the light run uses the plain light theme
-    await id(page, 'tab-profile').click();
-    await id(page, 'open-settings').click();
+    await openAccount(page);
     await id(page, 'theme-system').click();
     await page.goBack();
   }
   // exercise charts
-  await id(page, 'tab-exercises').click();
+  await id(page, 'tab-search').click();
   await id(page, 'exercise-search').fill('squat bb');
   await id(page, `exercise-${SQUAT}`).click();
   await id(page, 'exercise-chart').waitFor();
@@ -424,7 +431,8 @@ for (const scheme of ['light', 'dark']) {
   // Measure: log body weight, chart, delete with undo
   await page.goBack();
   await wait(page, 300);
-  await id(page, 'tab-measure').click();
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-body').click();
   await id(page, 'log-bodyweight').click();
   await id(page, 'number-dialog').waitFor();
   assert.equal(await id(page, 'number-input').getAttribute('placeholder'), '82.4');
@@ -445,12 +453,14 @@ for (const scheme of ['light', 'dark']) {
   await id(page, 'toast-action').click();
   await wait(page, 300);
   assert.equal((await store(page)).measurements.filter((m) => m.type === 'bodyweight').length, 3);
-  ok(`Measure: log body weight (placeholder = last value), chart, delete with undo (${scheme})`);
+  ok(`Body: log body weight (placeholder = last value), chart, delete with undo (${scheme})`);
+  await page.goBack();
+  await wait(page, 300);
   await page.goBack();
   await wait(page, 300);
 
-  // Profile: weekly chart, records, backup reminder → download
-  await id(page, 'tab-profile').click();
+  // Progress: weekly chart, backup reminder → download
+  await id(page, 'tab-progress').click();
   await id(page, 'weekly-chart').locator('svg').waitFor();
   assert.equal(await id(page, 'backup-banner').count(), 0, 'a restored backup counts as a backup');
   await page.evaluate(() => {
@@ -459,9 +469,9 @@ for (const scheme of ['light', 'dark']) {
     localStorage.setItem('increment.data', JSON.stringify(d));
   });
   await page.reload();
-  await id(page, 'tab-profile').click();
+  await id(page, 'tab-progress').click();
   await id(page, 'backup-banner').waitFor();
-  await page.screenshot({ path: `${OUT}/11-profile-${scheme}.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/11-progress-${scheme}.png`, fullPage: true });
   const [dl] = await Promise.all([page.waitForEvent('download'), id(page, 'backup-banner').getByText('Back up now').click()]);
   assert.match(dl.suggestedFilename(), /^setlog-backup-\d{4}-\d\d-\d\d\.json$/);
   const text = fs.readFileSync(await dl.path(), 'utf8');
@@ -469,11 +479,11 @@ for (const scheme of ['light', 'dark']) {
   assert.equal(parsed.data.workouts.length, 86);
   await wait(page, 300);
   assert.equal(await id(page, 'backup-banner').count(), 0);
-  ok(`Profile: workouts-per-week chart; the backup reminder downloads a backup the web app can read (86 workouts) (${scheme})`);
+  ok(`Progress: workouts-per-week chart; the backup reminder downloads a backup the web app can read (86 workouts) (${scheme})`);
 
   if (scheme === 'light') {
     // settings: CSV export, rest alerts, unit switch converts a running workout
-    await id(page, 'open-settings').click();
+    await openAccount(page);
     const [csv] = await Promise.all([page.waitForEvent('download'), id(page, 'export-csv').click()]);
     assert.match(csv.suggestedFilename(), /^setlog-workouts-.*\.csv$/);
     assert.match(fs.readFileSync(await csv.path(), 'utf8').split('\n')[0], /^Date,Workout Name,Duration,Exercise Name/);
@@ -489,8 +499,7 @@ for (const scheme of ['light', 'dark']) {
     await pickExercises(page, [{ q: 'bench bb', id: BENCH }]);
     await inputs(page, BENCH, 'w').first().fill('100');
     await id(page, 'minimize').click();
-    await id(page, 'tab-profile').click();
-    await id(page, 'open-settings').click();
+    await openAccount(page);
     await id(page, 'set-unit').getByText('lb').click();
     await wait(page, 300);
     const s2 = await store(page);

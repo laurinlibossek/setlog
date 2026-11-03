@@ -11,6 +11,7 @@ export * from './workout.js';
 export * from './editing.js';
 export * from './chart.js';
 export * from './suggest.js';
+export * from './today.js';
 export * from './csv.js';
 export * from './backup.js';
 export * from './share.js';

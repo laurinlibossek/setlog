@@ -33,7 +33,13 @@ export default function RootLayout() {
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerTintColor: palette.colors.accentText, headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false, headerStyle: { backgroundColor: palette.colors.bg } }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />
-            <Stack.Screen name="settings" options={{ title: tr('Settings') }} />
+            {/* Progress → Workouts, Lifts, Records, Body */}
+            <Stack.Screen name="history" options={{ title: tr('Workouts') }} />
+            <Stack.Screen name="exercises" options={{ title: tr('Lifts') }} />
+            <Stack.Screen name="records" options={{ title: tr('Records') }} />
+            <Stack.Screen name="measure" options={{ title: tr('Body') }} />
+            {/* the avatar on Today: name and settings in a sheet (Warm-up sets opens over it) */}
+            <Stack.Screen name="account" options={{ presentation: 'modal', title: tr('Account') }} />
             <Stack.Screen name="warmup" options={{ title: tr('Warm-up sets') }} />
             <Stack.Screen name="workout/[id]" options={{ title: '' }} />
             <Stack.Screen name="template/[id]" options={{ title: '' }} />

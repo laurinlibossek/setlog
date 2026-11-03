@@ -340,6 +340,63 @@ test('History calendar: the grid from the week start, workouts per day, the mont
   assert.equal(empty.days.length % 7, 0);
 });
 
+test('Today: the week strip plans usual days up to the goal, from today on', () => {
+  const at = (m, d, h = 18) => new Date(2026, m, d, h).getTime();
+  // Tuesday 3 November 2026; usually Monday, Thursday and Saturday
+  const now = at(10, 3, 9);
+  const usual = [];
+  for (let wk = 1; wk <= 8; wk++) for (const d of [2, 5, 7]) usual.push({ startedAt: at(10, d - 7 * wk) });
+  const ws = [{ startedAt: at(10, 2) }, ...usual, { startedAt: at(9, 1) }];
+  const strip = core.weekStrip(ws, { weekStart: 1, goal: 4, now });
+  assert.equal(strip.days.length, 7);
+  assert.equal(strip.days[0].start, new Date(2026, 10, 2).getTime(), 'the week starts on Monday');
+  assert.equal(strip.today, 1);
+  assert.deepEqual(strip.days.map((d) => d.done), [1, 0, 0, 0, 0, 0, 0]);
+  assert.equal(strip.done, 1);
+  assert.deepEqual(strip.days.map((d) => d.planned), [false, false, false, true, false, true, false], 'Thursday and Saturday; Monday is past');
+  const two = core.weekStrip(ws, { weekStart: 1, goal: 2, now });
+  assert.deepEqual(two.days.map((d) => d.planned), [false, false, false, true, false, false, false], 'only as many as the goal needs');
+  const sun = core.weekStrip(ws, { weekStart: 0, goal: 4, now });
+  assert.equal(sun.today, 2);
+  assert.equal(sun.days[0].start, new Date(2026, 10, 1).getTime());
+  const fresh = core.weekStrip([], { weekStart: 1, goal: 3, now });
+  assert.ok(fresh.days.every((d) => !d.done && !d.planned), 'no history, nothing planned');
+  const met = core.weekStrip([...ws, { startedAt: at(10, 3, 7) }, { startedAt: at(10, 3, 8) }, { startedAt: at(10, 3, 8) }], { weekStart: 1, goal: 4, now });
+  assert.ok(met.days.every((d) => !d.planned), 'the goal is reached');
+});
+
+test('Today: working sets per muscle in the last 7 days, and a routine’s size', () => {
+  const now = new Date(2026, 10, 3, 12).getTime();
+  const lib = new Map([
+    ['bench', { id: 'bench', bodyPart: 'chest', category: 'barbell' }],
+    ['row', { id: 'row', bodyPart: 'back', category: 'barbell', restSec: 90 }],
+    ['run', { id: 'run', bodyPart: 'cardio', category: 'cardio' }],
+  ]);
+  const sets = (n, warm = 0) => [...Array(warm).fill({ type: 'warmup' }), ...Array(n).fill({ type: 'normal' })];
+  const w = (day, exercises) => ({ startedAt: new Date(2026, 10, day, 8).getTime(), exercises });
+  const ws = [
+    w(3, [{ exerciseId: 'row', sets: sets(3) }, { exerciseId: 'bench', sets: sets(4, 2) }]),
+    w(1, [{ exerciseId: 'run', sets: sets(1) }, { exerciseId: 'gone', sets: sets(5) }, { exerciseId: 'bench', sets: [{ type: 'drop' }] }]),
+    w(-4, [{ exerciseId: 'bench', sets: sets(9) }]), // 27 October: outside the 7 days
+  ];
+  assert.deepEqual(core.setsPerMuscle(ws, lib, { now }), [
+    { muscle: 'chest', label: 'Chest', sets: 5 },
+    { muscle: 'back', label: 'Back', sets: 3 },
+  ], 'chest first; warm-ups, cardio and unknown exercises don’t count');
+  assert.deepEqual(core.setsPerMuscle(ws, Object.fromEntries(lib), { now, days: 14 }).map((m) => m.sets), [14, 3]);
+  assert.deepEqual(core.setsPerMuscle([], lib, { now }), []);
+
+  const t = { exercises: [
+    { exerciseId: 'bench', sets: sets(3, 2) },
+    { exerciseId: 'row', sets: sets(3) },
+    { exerciseId: 'gone', sets: sets(3) },
+  ] };
+  // bench: 2 × (30 + 60) + 3 × (45 + 120); row: 3 × (45 + 90) minus the last rest
+  assert.deepEqual(core.routineSize(t, lib, { defaultRest: 120 }), { exercises: 2, sets: 6, minutes: 15 });
+  assert.equal(core.routineSize({ exercises: [] }, lib).minutes, 0);
+  assert.equal(core.routineSize({ exercises: [{ exerciseId: 'bench', sets: sets(1) }] }, lib).minutes, 5, 'at least 5 minutes');
+});
+
 test('merging exercises: same logged fields only; the target keeps its own rest timer and notes', () => {
   const bench = { id: 'x-bench', category: 'barbell', restSec: null, notes: '', pinnedNote: 'Arch' };
   const db = { id: 'x-db', category: 'dumbbell', restSec: 90, notes: 'Slow', pinnedNote: 'Elbows in' };

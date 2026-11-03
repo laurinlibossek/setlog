@@ -1,3 +1,4 @@
+// Body (Progress → Body): body weight and the other measurements.
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { MEASUREMENTS, DAY } from '@setlog/core';
@@ -9,7 +10,7 @@ import {
   fmtMeasure, logMeasurement, measureDef, toDisplay, unitOf, type MeasureDef,
 } from '@/lib/measure';
 import {
-  Button, Cell, Group, Screen, SectionTitle,
+  Button, Cell, Group, Page, SectionTitle,
 } from '@/ui/kit';
 
 export default function MeasureTab() {
@@ -39,14 +40,13 @@ export default function MeasureTab() {
   };
   const defs = MEASUREMENTS as MeasureDef[];
   return (
-    <Screen title={tr('Measure')}>
+    <Page>
       <View style={{ marginTop: 4 }}>
         <Button large icon="weight" title={tr('Log body weight')} onPress={() => logMeasurement(measureDef('bodyweight'), f)} testID="log-bodyweight" />
       </View>
-      <SectionTitle>{tr('Body')}</SectionTitle>
-      <Group>{defs.filter((d) => d.group === 'core').map(row)}</Group>
+      <Group style={{ marginTop: 20 }}>{defs.filter((d) => d.group === 'core').map(row)}</Group>
       <SectionTitle>{tr('Circumference')}</SectionTitle>
       <Group>{defs.filter((d) => d.group === 'body').map(row)}</Group>
-    </Screen>
+    </Page>
   );
 }

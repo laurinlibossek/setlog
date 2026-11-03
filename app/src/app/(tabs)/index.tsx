@@ -1,55 +1,46 @@
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+// Today: what to do now. The date, the routine that is up next (or the
+// workout that's running) with its one Start button, at most one coach note,
+// this week's sessions and the sets per muscle of the last 7 days. The avatar
+// opens Account. docs/design/navigation.md, phases.md → 2.
+import { useMemo } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { EXAMPLE_TEMPLATES } from '@setlog/core';
+import { routineSize, setsPerMuscle, weekStrip } from '@setlog/core';
 
-import {
-  setSetting, suggestion, templateFolders, useAppState,
-} from '@/data/store';
+import { suggestion, useAppState } from '@/data/store';
 import type { Template } from '@/data/types';
+import { RADIUS, SPACE, TYPE } from '@/design/tally';
 import { useFormat } from '@/lib/format';
-import {
-  folderMenu, newFolder, openTemplateEditor, templateMenu, templatesMenu,
-} from '@/lib/templates';
+import { useLang } from '@/lib/i18n';
+import { useTally } from '@/lib/theme';
 import { beginWorkout, openWorkout } from '@/lib/workout';
-import { useColors } from '@/lib/theme';
-import {
-  Button, Card, Icon, Screen, SectionTitle, Txt,
-} from '@/ui/kit';
-import { toast } from '@/ui/overlay';
+import { SymbolIcon } from '@/ui/tally/ListRow';
+import { MuscleVolume } from '@/ui/tally/MuscleVolume';
+import { RoutineCard } from '@/ui/tally/RoutineCard';
+import { SectionHeader } from '@/ui/tally/SectionHeader';
+import { TabRoot } from '@/ui/tally/TabRoot';
+import type { StrokeState } from '@/ui/tally/Tally';
+import { WeekStrip } from '@/ui/tally/WeekStrip';
+import { useSessionView } from '@/ui/workout/MiniBar';
 
-function lastUsed(t: Template, workouts: { templateId: string | null; startedAt: number }[]) {
-  if (t.lastUsedAt) return t.lastUsedAt;
-  for (const w of workouts) if (w.templateId === t.id) return w.startedAt;
-  return 0;
-}
+type Why = { kind: 'after' | 'weekday' | 'due'; name?: string; day?: number; at?: number };
 
-export default function WorkoutTab() {
+export default function TodayTab() {
   const s = useAppState();
   const f = useFormat();
   const { tr } = f;
-  const c = useColors();
-  const sug = useMemo(() => (s.active ? null : suggestion(s)), [s.templates, s.workouts, !s.active]);
-  const [closed, setClosed] = useState<Record<string, boolean>>({ __archived: true });
-  const toggle = (k: string) => setClosed({ ...closed, [k]: !closed[k] });
+  const { locale } = useLang();
+  const { colors: t } = useTally();
+  const session = useSessionView();
+  const sug = useMemo(() => (s.active ? null : suggestion(s)), [s.templates, s.workouts, !s.active]); // eslint-disable-line react-hooks/exhaustive-deps
+  const goal = s.settings.weeklyGoal || 3;
+  const week = useMemo(() => weekStrip(s.workouts, { weekStart: s.settings.weekStart, goal }) as {
+    days: { start: number; done: number; planned: boolean }[]; today: number; done: number; goal: number;
+  }, [s.workouts, s.settings.weekStart, goal]);
+  const muscles = useMemo(() => setsPerMuscle(s.workouts, s.exercises) as { muscle: string; label: string; sets: number }[], [s.workouts, s.exercises]);
+  const date = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(Date.now());
 
-  const { order, folders, archived } = useMemo(() => {
-    const byName = (a: Template, b: Template) => a.name.localeCompare(b.name);
-    const recent = (s.settings.templateSort || 'name') === 'recent';
-    const sort = (list: Template[]) => list.sort(recent ? (a, b) => (lastUsed(b, s.workouts) - lastUsed(a, s.workouts)) || byName(a, b) : byName);
-    const map = new Map<string, Template[]>();
-    for (const name of templateFolders(s)) map.set(name, []);
-    for (const t of sort(s.templates.filter((x) => !x.archived))) {
-      const key = t.folder || '';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(t);
-    }
-    const keys = [...map.keys()].sort((a, b) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
-    return { order: keys, folders: map, archived: sort(s.templates.filter((x) => x.archived)) };
-  }, [s.templates, s.workouts, s.settings.templateSort, s.meta.folders]);
-  const archivedIn = (name: string) => archived.filter((t) => (t.folder || '') === name).length;
-
-  const why = (w: NonNullable<typeof sug>['why']) => {
+  const why = (w: Why) => {
     if (w.kind === 'weekday') {
       const d = new Date(); d.setDate(d.getDate() + (((w.day ?? 0) - d.getDay() + 7) % 7));
       const day = f.date.weekdayLong(d.getTime());
@@ -59,151 +50,65 @@ export default function WorkoutTab() {
     return tr('Last done {when}', { when: f.relDayLower(w.at ?? 0) });
   };
 
-  const card = (t: Template) => {
-    const lines = t.exercises.filter((e) => s.exercises.has(e.exerciseId));
-    const at = t.example ? 0 : lastUsed(t, s.workouts);
-    return (
-      <Card key={t.id} onPress={() => router.push({ pathname: '/template/[id]', params: { id: t.id } })} style={st.tpl} testID={`template-${t.id}`}>
-        <Txt style={[st.tplName, !t.example && { paddingRight: 26 }]} numberOfLines={1}>{t.name}</Txt>
-        {lines.slice(0, 4).map((e, i) => (
-          <Txt key={i} tone="ink2" style={st.tplLine} numberOfLines={1}>{`${e.sets.length} × ${f.exName(s.exercises.get(e.exerciseId))}`}</Txt>
-        ))}
-        {lines.length > 4 && <Txt tone="ink3" style={st.tplLine}>{tr('+ {n} more', { n: lines.length - 4 })}</Txt>}
-        {!lines.length && <Txt tone="ink3" style={st.tplLine}>{tr('No exercises')}</Txt>}
-        {!t.example && (
-          <View style={st.when}>
-            <Icon name="clock" size={12} color={c.ink3} />
-            <Txt tone="ink3" style={{ fontSize: 13 }}>{at ? f.relDay(at) : tr('Not done yet')}</Txt>
-          </View>
-        )}
-        {!t.example && (
-          <Pressable onPress={() => templateMenu(t, f)} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name: t.name })}
-            testID={`template-menu-${t.id}`} style={({ pressed }) => [st.more, { backgroundColor: pressed ? c.surface3 : 'transparent' }]}>
-            <Icon name="more" size={17} color={c.accentText} />
-          </Pressable>
-        )}
-      </Card>
-    );
-  };
-  const grid = (list: Template[]) => <View style={st.grid}>{list.map(card)}</View>;
-  const examples = (EXAMPLE_TEMPLATES as Template[]).map((t) => ({ ...t, name: tr(t.name), folder: tr(t.folder || '') }));
-  const showExamples = s.settings.showExamples !== false;
-  const hideExamples = () => {
-    setSetting('showExamples', false);
-    toast(tr('Examples hidden — turn them back on in Settings'), { label: tr('Undo'), fn: () => { setSetting('showExamples', true); } });
-  };
-  const live = s.templates.filter((t) => !t.archived);
-  const folderHead = (key: string, count: number, testID: string) => (
-    <View style={st.folderRow}>
-      <Pressable onPress={() => toggle(key)} accessibilityRole="button" accessibilityState={{ expanded: !closed[key] }} testID={testID}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingVertical: 6 }}>
-        <View style={{ transform: [{ rotate: closed[key] ? '-90deg' : '0deg' }] }}><Icon name="chevronDown" size={14} color={c.ink2} /></View>
-        <Txt tone="ink2" style={{ fontSize: 15, fontWeight: '600' }} numberOfLines={1}>
-          {key === '__archived' ? tr('Archived') : key || tr('My templates')}
-          <Txt tone="ink3" style={{ fontSize: 13, fontWeight: '500' }}>{` (${count})`}</Txt>
-        </Txt>
-      </Pressable>
-      {key && key !== '__archived' && (
-        <Pressable onPress={() => folderMenu(key, count + archivedIn(key), f)} hitSlop={8} accessibilityRole="button"
-          accessibilityLabel={tr('Options for folder {name}', { name: key })} testID={`folder-menu-${key}`} style={st.smallBtn}>
-          <Icon name="more" size={17} color={c.accentText} />
-        </Pressable>
-      )}
-    </View>
+  const name = s.profile.name.trim();
+  const avatar = (
+    <Pressable onPress={() => router.push('/account')} accessibilityRole="button" testID="open-account"
+      accessibilityLabel={name ? tr('Account, {name}', { name }) : tr('Account')} hitSlop={4}
+      style={({ pressed }) => ({ width: 36, height: 36, borderRadius: RADIUS.capsule, alignItems: 'center', justifyContent: 'center', backgroundColor: t.paper3, opacity: pressed ? 0.6 : 1 })}>
+      {name
+        ? <Text style={{ fontSize: 15, fontWeight: '600', color: t.ink }}>{name.charAt(0).toUpperCase()}</Text>
+        : <SymbolIcon name="person.crop.circle" size={20} color={t.ink} />}
+    </Pressable>
   );
 
+  let card;
+  if (s.active && session) {
+    const a = s.active;
+    card = (
+      <RoutineCard testID="now-card" context={tr('In progress · since {time}', { time: f.date.time(a.startedAt) })} name={a.name}
+        tally={{ groups: session.groups, label: tr('{done} of {total} sets logged', { done: session.done, total: session.total }) }}
+        facts={tr('{done} of {total} sets', { done: session.done, total: session.total }) + (session.records ? ` · ${f.plural(session.records, 'record')}` : '')}
+        start={{ title: tr('Resume workout'), onPress: openWorkout, testID: 'resume-workout' }} />
+    );
+  } else if (sug) {
+    const tpl = sug.template as Template;
+    const entries = tpl.exercises.filter((e) => s.exercises.has(e.exerciseId));
+    const size = routineSize(tpl, s.exercises, { defaultRest: s.settings.defaultRest }) as { exercises: number; sets: number; minutes: number };
+    const groups: StrokeState[][] = entries.map((e) => e.sets.map((x) => (x.type === 'warmup' ? 'warmupPending' : 'pending')));
+    card = (
+      <RoutineCard testID="up-next" context={`${tr('Up next')} · ${why(sug.why)}`} name={tpl.name}
+        exercises={entries.map((e) => f.exName(s.exercises.get(e.exerciseId)))}
+        tally={{ groups, label: f.plural(size.sets, 'set') }}
+        facts={[f.plural(size.exercises, 'exercise'), f.plural(size.sets, 'set'), size.minutes ? tr('about {n} min', { n: size.minutes }) : ''].filter(Boolean).join(' · ')}
+        onPress={() => router.push({ pathname: '/template/[id]', params: { id: tpl.id } })}
+        start={{ title: tr('Start'), onPress: () => beginWorkout({ template: tpl }, f), testID: 'start-suggested' }} />
+    );
+  } else {
+    card = (
+      <RoutineCard testID="up-next" context={tr('Up next')} name={tr('Empty workout')}
+        facts={tr('Add exercises as you go, or start a template from Plan.')}
+        start={{ title: tr('Start an empty workout'), onPress: () => beginWorkout({}, f), testID: 'start-empty' }} />
+    );
+  }
+
+  const scope = tr('{done} of {goal} sessions', { done: week.done, goal });
   return (
-    <Screen title={tr('Start workout')}>
-      {s.active ? (
-        <Card style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.done }} />
-            <Txt style={{ fontWeight: '700', flex: 1 }} numberOfLines={1}>{s.active.name}</Txt>
-            <Txt tone="ink3" style={{ fontSize: 13 }}>{tr('since {time}', { time: f.date.time(s.active.startedAt) })}</Txt>
-          </View>
-          <Button large icon="play" title={tr('Resume workout')} onPress={openWorkout} testID="resume-workout" />
-        </Card>
+    <TabRoot title={tr('Today')} eyebrow={date} right={avatar}>
+      <View style={{ paddingHorizontal: SPACE.s5 }}>{card}</View>
+
+      {/* The coach note slot: at most one note here once TrueTrain arrives (docs/design/coaching.md, phase 7). */}
+
+      <SectionHeader title={tr('This week')} scope={scope} testID="week-head" />
+      <WeekStrip testID="week-strip" today={week.today} label={`${tr('This week')}: ${scope}`}
+        days={week.days.map((d) => ({ ...d, letter: f.date.weekdayNarrow(d.start) }))} />
+
+      <SectionHeader title={tr('Sets per muscle')} scope={tr('Last 7 days')} />
+      {muscles.length ? (
+        <MuscleVolume rows={muscles.map((m) => ({ ...m, label: tr(m.label) }))}
+          accessibilityLabel={(r) => `${r.label}, ${f.plural(r.sets, 'set')}`} />
       ) : (
-        <Card style={{ gap: 10 }}>
-          {sug && (
-            <View style={{ gap: 8 }}>
-              <Text style={[st.label, { color: c.label }]}>{tr('Suggested')}</Text>
-              <Button large icon="play" title={tr('Start {name}', { name: sug.template.name })} onPress={() => beginWorkout({ template: sug.template }, f)} testID="start-suggested" />
-              <Txt tone="ink3" style={{ fontSize: 13, textAlign: 'center' }}>{why(sug.why)}</Txt>
-            </View>
-          )}
-          <Button large icon="plus" kind={sug ? 'tinted' : 'primary'} title={tr('Start an empty workout')} onPress={() => beginWorkout({}, f)} testID="start-empty" />
-        </Card>
+        <Text style={[TYPE.subhead, { color: t.ink2, paddingHorizontal: SPACE.s5 }]}>{tr('No sets in the last 7 days.')}</Text>
       )}
-
-      <SectionTitle right={(
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Pressable onPress={() => openTemplateEditor()} accessibilityRole="button" testID="new-template"
-            style={({ pressed }) => [st.pill, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
-            <Icon name="plus" size={15} color={c.accentText} />
-            <Text style={{ color: c.accentText, fontSize: 14, fontWeight: '600' }}>{tr('Template')}</Text>
-          </Pressable>
-          <Pressable onPress={() => newFolder(f)} accessibilityRole="button" accessibilityLabel={tr('New folder')} testID="new-folder"
-            style={({ pressed }) => [st.pill, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
-            <Icon name="folder" size={16} color={c.accentText} />
-          </Pressable>
-          <Pressable onPress={() => templatesMenu(f)} accessibilityRole="button" accessibilityLabel={tr('Template options')} testID="templates-menu"
-            style={({ pressed }) => [st.pill, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
-            <Icon name="more" size={16} color={c.accentText} />
-          </Pressable>
-        </View>
-      )}>{tr('Templates')}</SectionTitle>
-      {!live.length && !folders.size && (
-        <Txt tone="ink3" style={{ fontSize: 14, paddingHorizontal: 4 }}>
-          {showExamples ? tr('Save the workouts you repeat as templates. Start from an example, tap + Template, or finish a workout and tap “Save as template” in History.')
-            : tr('Save the workouts you repeat as templates. Tap + Template, or finish a workout and tap “Save as template” in History.')}
-        </Txt>
-      )}
-      {order.map((key) => {
-        const list = folders.get(key)!;
-        const inArchive = archivedIn(key);
-        return (
-          <View key={'f' + key}>
-            {(key || order.length > 1 || archived.length > 0) && folderHead(key, list.length, `folder-${key || 'mine'}`)}
-            {!closed[key] && (list.length ? grid(list) : (
-              <Txt tone="ink3" style={{ fontSize: 14, paddingHorizontal: 4, marginBottom: 6 }}>
-                {inArchive ? (inArchive === 1 ? tr('Its template is archived. Find it under Archived below.') : tr('Its {n} templates are archived. Find them under Archived below.', { n: inArchive }))
-                  : tr('Empty. Use ⋯ → Move to folder on a template to put it here.')}
-              </Txt>
-            ))}
-          </View>
-        );
-      })}
-      {archived.length > 0 && (
-        <View>
-          {folderHead('__archived', archived.length, 'archived-head')}
-          {!closed.__archived && grid(archived)}
-        </View>
-      )}
-
-      {showExamples && (
-        <>
-          <SectionTitle right={(
-            <Pressable onPress={hideExamples} hitSlop={8} accessibilityRole="button" testID="hide-examples">
-              <Text style={{ color: c.ink3, fontSize: 14, fontWeight: '600' }}>{tr('Hide')}</Text>
-            </Pressable>
-          )}>{tr('Examples')}</SectionTitle>
-          {grid(examples)}
-        </>
-      )}
-    </Screen>
+    </TabRoot>
   );
 }
-
-const st = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 6 },
-  tpl: { width: '48.5%', flexGrow: 1, flexBasis: '45%', minHeight: 118, gap: 2 },
-  tplName: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  tplLine: { fontSize: 13 },
-  when: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 'auto', paddingTop: 6 },
-  more: { position: 'absolute', top: 8, right: 6, width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  folderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginBottom: 6, paddingHorizontal: 4 },
-  smallBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 30, borderRadius: 15, paddingHorizontal: 10 },
-});

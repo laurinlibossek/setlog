@@ -190,12 +190,12 @@ async function pick(page, names) {
   await id(page, 'summary-done').click();
   await wait(page, 500);
   assert.equal(await id(page, 'mini-bar').count(), 0, 'no mini bar once finished');
-  await id(page, 'tab-history').click();
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().waitFor();
   const first = await page.locator('[data-testid^="workout-"]').first().innerText();
   assert.match(first, /Workout/);
   await page.reload();
-  await id(page, 'tab-history').click();
   await page.locator('[data-testid^="workout-"]').first().waitFor();
   assert.equal(await page.locator('[data-testid^="workout-"]').count(), 1);
   ok('the workout is in History, also after a reload');
@@ -206,13 +206,12 @@ async function pick(page, names) {
 // ---------- 2. a template workout in German with the history ----------
 {
   const { ctx, page, errors, dialogs } = await newPage({ locale: 'de-DE' });
-  await id(page, 'tab-profile').click();
-  await id(page, 'open-settings').click();
+  await id(page, 'open-account').click();
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), id(page, 'restore').click()]);
   await chooser.setFiles(BACKUP);
   for (let i = 0; i < 50 && dialogs.length < 2; i++) await wait(page, 100);
   await page.goBack();
-  await id(page, 'tab-index').click();
+  await id(page, 'tab-plan').click();
   await wait(page, 400);
   await page.locator('[data-testid^="template-"]', { hasText: 'Pull' }).first().click();
   await id(page, 'start-template').click();
@@ -278,6 +277,7 @@ async function pick(page, names) {
   await wait(page, 500);
 
   // a running workout is in the way of a new one
+  await id(page, 'tab-index').click();
   await id(page, 'start-empty').click();
   await id(page, 'workout-name').waitFor();
   await id(page, 'minimize').click();
@@ -285,6 +285,7 @@ async function pick(page, names) {
   // the start card now says "Resume workout"; a template still asks
   assert.equal(await id(page, 'start-empty').count(), 0);
   assert.equal(await id(page, 'resume-workout').count(), 1);
+  await id(page, 'tab-plan').click();
   await page.locator('[data-testid^="template-"]', { hasText: 'Pull' }).first().click();
   await id(page, 'start-template').click();
   await id(page, 'resume-running').waitFor();
@@ -303,8 +304,9 @@ async function pick(page, names) {
   ok('Finish with nothing logged discards the workout');
 
   // do it again from History, then discard with a confirmation
-  if (!(await id(page, 'tab-history').isVisible())) { await page.goBack(); await wait(page, 400); } // back from the template preview
-  await id(page, 'tab-history').click();
+  if (!(await id(page, 'tab-progress').isVisible())) { await page.goBack(); await wait(page, 400); } // back from the template preview
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().click();
   await id(page, 'do-again').click();
   await id(page, 'workout-name').waitFor();

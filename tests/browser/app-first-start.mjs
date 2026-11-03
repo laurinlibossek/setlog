@@ -1,5 +1,6 @@
 // The Expo app (web build) on an emulated iPhone: first start, restoring a
-// backup from the Setlog web app, every screen with real data, theme and
+// backup from the Setlog web app (in Account, from the avatar on Today), every
+// screen with real data (Progress → Workouts, Body; Plan; Search), theme and
 // language from the backup, Strong import, and data surviving a reload. 15 checks.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -32,6 +33,8 @@ const bg = (page) => page.evaluate(() => {
   return null;
 });
 const tab = (page, name) => page.getByTestId(`tab-${name}`).click();
+// the avatar on Today opens Account (the name and every setting)
+const openAccount = async (page) => { await tab(page, 'index'); await page.getByTestId('open-account').click(); };
 const text = async (page) => (await page.locator('body').innerText());
 const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : re).test(await text(page));
 
@@ -39,18 +42,21 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
 {
   const { ctx, page, errors, dialogs } = await newPage();
   await page.getByTestId('start-empty').waitFor();
-  assert.ok((await text(page)).includes('Start workout'));
-  assert.ok(await has(page, 'Examples'), 'examples on a fresh start');
+  assert.match(await page.getByTestId('up-next').innerText(), /Up next[\s\S]*Empty workout[\s\S]*Start an empty workout/);
   await page.screenshot({ path: `${OUT}/01-first-start.png` });
-  ok('first start: Workout tab with the examples, built-in library loaded');
+  await tab(page, 'plan');
+  await page.getByTestId('hide-examples').waitFor();
+  assert.ok(await has(page, 'Examples'), 'examples on a fresh start');
+  ok('first start: Today offers an empty workout, Plan has the examples, built-in library loaded');
 
-  await tab(page, 'history');
+  await tab(page, 'progress');
+  await page.getByTestId('progress-workouts').click();
   await page.getByTestId('history-restore').waitFor();
   assert.ok((await text(page)).includes('No workouts yet'));
-  ok('History is empty and offers to restore a backup');
+  ok('Progress → Workouts is empty and offers to restore a backup');
 
-  await tab(page, 'profile');
-  await page.getByTestId('open-settings').click();
+  await page.goBack();
+  await openAccount(page);
   await page.getByTestId('restore').waitFor();
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('restore').click()]);
   await chooser.setFiles(BACKUP);
@@ -71,13 +77,14 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   // ---------- 2. every screen with real data ----------
   await page.goBack();
   await page.waitForTimeout(300);
-  const prof = await text(page);
-  assert.ok(prof.includes('Laurin'), 'name from the backup');
-  assert.ok(prof.includes('86'), 'workout count');
-  await page.screenshot({ path: `${OUT}/03-profile.png` });
-  ok('Profile shows the name and 86 workouts');
+  assert.match(await page.getByTestId('open-account').getAttribute('aria-label'), /Laurin/, 'name from the backup');
+  assert.equal((await page.getByTestId('open-account').innerText()).trim(), 'L');
+  await tab(page, 'progress');
+  assert.match(await page.getByTestId('progress-workouts').innerText(), /86/, 'workout count');
+  await page.screenshot({ path: `${OUT}/03-progress.png` });
+  ok('Today’s avatar has the name; Progress counts 86 workouts');
 
-  await tab(page, 'history');
+  await page.getByTestId('progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().waitFor();
   const hist = await text(page);
   assert.ok(/(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember) 20\d\d/.test(hist), 'German month headings');
@@ -103,8 +110,8 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.screenshot({ path: `${OUT}/06-exercise-records.png` });
   ok('an exercise page shows its history and records');
 
-  await page.goBack(); await page.goBack();
-  await tab(page, 'exercises');
+  await page.goBack(); await page.goBack(); await page.goBack();
+  await tab(page, 'search');
   await page.getByTestId('exercise-search').fill('bench bb');
   await page.waitForTimeout(300);
   const rows = await page.locator('[data-testid^="exercise-"]:not([data-testid="exercise-search"])').allInnerTexts();
@@ -114,11 +121,11 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.screenshot({ path: `${OUT}/07-exercises.png` });
   ok('Exercises search finds "bench bb" and shows how often it was done');
 
-  await tab(page, 'index');
+  await tab(page, 'plan');
   await page.waitForTimeout(300);
   const wo = await text(page);
   assert.ok(wo.includes('Upper / Lower') && wo.includes('Pull'), 'template in its folder');
-  await page.screenshot({ path: `${OUT}/08-workout-tab.png` });
+  await page.screenshot({ path: `${OUT}/08-plan.png` });
   await page.locator('[data-testid^="template-"]', { hasText: 'Pull' }).first().click();
   await page.waitForTimeout(400);
   const tpl = await text(page);
@@ -130,27 +137,31 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('discard-workout').click();
   await page.getByTestId('confirm-discard').click();
   await page.waitForTimeout(600);
-  ok('the Workout tab shows the template in its folder; the preview lists targets; Start opens the workout');
+  ok('Plan shows the template in its folder; the preview lists targets; Start opens the workout');
 
   await page.goBack();
-  await tab(page, 'measure');
+  await tab(page, 'progress');
+  assert.match(await page.getByTestId('progress-body').innerText(), /82,4 kg/);
+  await page.getByTestId('progress-body').click();
   await page.waitForTimeout(300);
   const ms = await text(page);
   assert.match(ms, /Körpergewicht[\s\S]*82,4 kg/);
-  await page.screenshot({ path: `${OUT}/10-measure.png` });
-  ok('Measure shows the latest body weight (82,4 kg)');
+  await page.screenshot({ path: `${OUT}/10-body.png` });
+  ok('Progress → Body shows the latest body weight (82,4 kg)');
 
   // ---------- 3. survives a reload ----------
+  await page.goBack();
   await page.reload();
-  await page.getByTestId('tab-history').waitFor();
-  await tab(page, 'history');
+  await page.getByTestId('tab-progress').waitFor();
+  await tab(page, 'progress');
+  await page.getByTestId('progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().waitFor();
   assert.equal(await bg(page), 'rgb(0, 0, 0)');
   ok('data, theme and language survive a reload');
 
   // ---------- 4. settings change live ----------
-  await tab(page, 'profile');
-  await page.getByTestId('open-settings').click();
+  await page.goBack();
+  await openAccount(page);
   await page.getByTestId('theme-strawberry-matcha').click();
   await page.waitForTimeout(200);
   assert.equal(await bg(page), 'rgb(251, 248, 242)', 'Strawberry Matcha cream');
@@ -160,7 +171,8 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('set-unit').getByText('lb').click();
   await page.screenshot({ path: `${OUT}/11-settings-matcha.png` });
   await page.goBack();
-  await tab(page, 'measure');
+  await tab(page, 'progress');
+  await page.getByTestId('progress-body').click();
   await page.waitForTimeout(200);
   assert.match(await text(page), /Body weight[\s\S]*181,7 lb|Body weight[\s\S]*181\.7 lb/);
   ok('theme, language and units switch live (Strawberry Matcha, English, lb)');
@@ -175,20 +187,20 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   assert.equal(await bg(page), 'rgb(0, 0, 0)', 'Auto follows a dark phone (true black)');
   assert.ok((await text(page)).includes('Training starten'), 'German phone → German app');
   ok('a German phone in dark mode gets the German app in Dark');
-  await tab(page, 'profile');
-  await page.getByTestId('open-settings').click();
+  await openAccount(page);
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('strong-import').click()]);
   await chooser.setFiles(STRONG);
   for (let i = 0; i < 50 && dialogs.length < 2; i++) await page.waitForTimeout(100);
   assert.match(dialogs[0], /86 Trainings importieren\?/);
   assert.match(dialogs[1], /86 Trainings importiert/);
   await page.goBack();
-  await tab(page, 'history');
+  await tab(page, 'progress');
+  await page.getByTestId('progress-workouts').click();
   await page.locator('[data-testid^="workout-"]').first().waitFor();
   await page.screenshot({ path: `${OUT}/12-history-dark-de.png` });
   // the same file again: nothing new
-  await tab(page, 'profile');
-  await page.getByTestId('open-settings').click();
+  await page.goBack();
+  await openAccount(page);
   const [again] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('strong-import').click()]);
   await again.setFiles(STRONG);
   for (let i = 0; i < 30 && dialogs.length < 3; i++) await page.waitForTimeout(100);
@@ -204,8 +216,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('start-empty').waitFor();
   const broken = path.join(DATA, 'broken.json');
   fs.writeFileSync(broken, '{"app":"other"}');
-  await tab(page, 'profile');
-  await page.getByTestId('open-settings').click();
+  await openAccount(page);
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('restore').click()]);
   await chooser.setFiles(broken);
   for (let i = 0; i < 30 && !dialogs.length; i++) await page.waitForTimeout(100);

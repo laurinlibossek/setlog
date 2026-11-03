@@ -6,8 +6,8 @@ export const CAPTIONS = {
     'Rest timer, even with the phone locked', // 2. rest timer (a notification when the phone is locked)
     'Watch your numbers go up', // 3. an exercise's chart
     'Every workout at a glance', // 4. History calendar
-    'Your next workout, ready to start', // 5. templates and the suggested workout
-    'Records, streaks and weekly goals', // 6. Profile
+    'Your next workout, ready to start', // 5. Today: the suggested workout
+    'Records, streaks and weekly goals', // 6. Progress
   ],
   de: [
     'Sieh, was du letztes Mal geschafft hast',

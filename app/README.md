@@ -13,7 +13,7 @@ The store version of Setlog, built with [Expo](https://expo.dev) (React Native).
 - **Profile:** workouts per week, streak, recent records, a reminder to back up, plate and 1RM calculators.
 - **Your data:** Back up now (Save to Files, iCloud Drive, AirDrop…), restore, Strong import, CSV export, Delete all data. Backups are the same file as the web app's, in both directions.
 
-Everything the web app does is in the app now. What's left before the store release: the Increment name and icon, and template links that open the app straight from the web address (a universal link; until then the app opens `increment://` links, and web app links are pasted under Templates ⋯ → Add shared template).
+Everything the web app does is in the app now. What's left before the store release: picking one of the three icon designs (`node app/scripts/icons.mjs classic|slab|thin`), and template links that open the app straight from the web address (a universal link; until then the app opens `increment://` links, and web app links are pasted under Templates ⋯ → Add shared template).
 
 ## Try it on your iPhone (free, no Apple Developer account)
 

@@ -1,6 +1,8 @@
+// Account: a sheet from the avatar on Today with the name and every setting
+// (units, workouts, stats, plates, theme, language, your data, privacy).
 import { useState } from 'react';
-import { Platform, View } from 'react-native';
-import { router } from 'expo-router';
+import { Platform, Pressable, Text, View } from 'react-native';
+import { router, Stack } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { File } from 'expo-file-system';
@@ -17,9 +19,12 @@ import { dateStamp, saveTextFile } from '@/lib/files';
 import { useFormat } from '@/lib/format';
 import { bodyUnit, lengthUnit } from '@/lib/measure';
 import { confirm, notice } from '@/lib/notice';
+import { RADIUS, SPACE, TYPE } from '@/design/tally';
+import { useTally } from '@/lib/theme';
 import {
-  Cell, Group, Page, Segments, SectionTitle, SwitchCell, Txt,
+  Cell, Group, HeaderButton, Page, Segments, SectionTitle, SwitchCell, Txt,
 } from '@/ui/kit';
+import { SymbolIcon } from '@/ui/tally/ListRow';
 import {
   actionSheet, ask, pickDateTime, prompt, toast,
 } from '@/ui/overlay';
@@ -33,8 +38,9 @@ async function pickText(types: string[]): Promise<{ name: string; text: string }
   return { name: a.name, text: await new File(a.uri).text() };
 }
 
-export default function SettingsScreen() {
+export default function AccountSheet() {
   const s = useAppState();
+  const { colors: t } = useTally();
   const f = useFormat();
   const { tr } = f;
   const st = s.settings;
@@ -160,9 +166,20 @@ export default function SettingsScreen() {
 
   return (
     <Page>
-      <Group>
-        <Cell first icon="profile" title={tr('Your name')} value={s.profile.name || tr('Not set')} onPress={editName} testID="set-name" />
-      </Group>
+      <Stack.Screen options={{ headerRight: () => <HeaderButton title={tr('Done')} strong onPress={() => router.back()} testID="account-done" /> }} />
+      <Pressable onPress={editName} accessibilityRole="button" testID="set-name"
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: SPACE.s4, paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}>
+        <View style={{ width: 56, height: 56, borderRadius: RADIUS.capsule, alignItems: 'center', justifyContent: 'center', backgroundColor: t.paper3 }}>
+          {s.profile.name.trim()
+            ? <Text style={[TYPE.title2, { color: t.ink }]}>{s.profile.name.trim().charAt(0).toUpperCase()}</Text>
+            : <SymbolIcon name="person.crop.circle" size={30} color={t.ink} />}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[TYPE.title2, { color: s.profile.name.trim() ? t.ink : t.ink2 }]} numberOfLines={1}>{s.profile.name.trim() || tr('Not set')}</Text>
+          <Text style={[TYPE.footnote, { color: t.ink2 }]}>{tr('Your name')}</Text>
+        </View>
+        <SymbolIcon name="chevron.right" size={13} color={t.ink3} />
+      </Pressable>
 
       <SectionTitle>{tr('Units')}</SectionTitle>
       <View style={{ gap: 6 }}>

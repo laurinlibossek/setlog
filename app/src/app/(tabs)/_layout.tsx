@@ -1,43 +1,59 @@
-import { Tabs } from 'expo-router';
-import { BottomTabBar } from 'expo-router/tabs';
-import { View } from 'react-native';
+// The tabs on iPhone and Android: the system's own tab bar (NativeTabs, SDK 57;
+// works in Expo Go). Today, Plan, Progress, then Search, which iOS 26 sets
+// apart at the trailing end. The bar minimizes when the content scrolls down.
+// While a workout runs, iOS 26 shows it in the bottom accessory above the bar
+// (regular, or inline when the bar is minimized); Android and older iPhones
+// get NowLiftingDock in each tab instead (src/ui/workout/MiniBar.tsx).
+// The web build uses _layout.web.tsx.
+import { Platform } from 'react-native';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { useAppSelector } from '@/data/store';
 import { useLang } from '@/lib/i18n';
-import { useColors } from '@/lib/theme';
-import { Icon, type IconName } from '@/ui/kit';
-import { MiniBar } from '@/ui/workout/MiniBar';
+import { useTally } from '@/lib/theme';
+import { MiniBar, SYSTEM_ACCESSORY } from '@/ui/workout/MiniBar';
 
-// Same tabs, in the same order, as the web app. Workout is in the middle and
-// opens first.
-const TABS: { name: string; title: string; icon: IconName }[] = [
-  { name: 'profile', title: 'Profile', icon: 'profile' },
-  { name: 'history', title: 'History', icon: 'history' },
-  { name: 'index', title: 'Workout', icon: 'workout' },
-  { name: 'exercises', title: 'Exercises', icon: 'exercises' },
-  { name: 'measure', title: 'Measure', icon: 'measure' },
-];
+function Accessory() {
+  const placement = NativeTabs.BottomAccessory.usePlacement();
+  return <MiniBar placement={placement} surface="none" />;
+}
 
 export default function TabLayout() {
   const { tr } = useLang();
-  const c = useColors();
+  const { colors: t } = useTally();
+  const running = useAppSelector((s) => !!s.active);
+  const android = Platform.OS === 'android';
   return (
-    <Tabs
-      initialRouteName="index"
-      tabBar={(props) => <View><MiniBar /><BottomTabBar {...props} /></View>}
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: c.accent,
-        tabBarInactiveTintColor: c.ink3,
-        tabBarStyle: { backgroundColor: c.barBg, borderTopColor: c.line },
-        sceneStyle: { backgroundColor: c.bg },
-      }}>
-      {TABS.map((t) => (
-        <Tabs.Screen key={t.name} name={t.name} options={{
-          title: tr(t.title),
-          tabBarButtonTestID: `tab-${t.name}`,
-          tabBarIcon: ({ color }) => <Icon name={t.icon} size={24} color={String(color)} />,
-        }} />
-      ))}
-    </Tabs>
+    <NativeTabs
+      minimizeBehavior="onScrollDown"
+      tintColor={t.ink}
+      iconColor={{ default: t.ink2, selected: t.ink }}
+      labelStyle={{ default: { color: t.ink2 }, selected: { color: t.ink } }}
+      backgroundColor={android ? t.paper : undefined}
+      indicatorColor={android ? t.paper3 : undefined}
+      rippleColor={android ? t.paper3 : undefined}
+      labelVisibilityMode={android ? 'labeled' : undefined}>
+      <NativeTabs.Trigger name="index" testID="tab-index" contentStyle={{ backgroundColor: t.paper }}>
+        <NativeTabs.Trigger.Icon sf={{ default: 'sun.max', selected: 'sun.max.fill' }} md="light_mode" />
+        <NativeTabs.Trigger.Label>{tr('Today')}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="plan" testID="tab-plan" contentStyle={{ backgroundColor: t.paper }}>
+        <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet.rectangle.portrait', selected: 'list.bullet.rectangle.portrait.fill' }} md="list_alt" />
+        <NativeTabs.Trigger.Label>{tr('Plan')}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="progress" testID="tab-progress" contentStyle={{ backgroundColor: t.paper }}>
+        <NativeTabs.Trigger.Icon sf="chart.line.uptrend.xyaxis" md="trending_up" />
+        <NativeTabs.Trigger.Label>{tr('Progress')}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="search" role="search" testID="tab-search" contentStyle={{ backgroundColor: t.paper }}>
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+        <NativeTabs.Trigger.Label>{tr('Search')}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      {SYSTEM_ACCESSORY && running && (
+        <NativeTabs.BottomAccessory>
+          <Accessory />
+        </NativeTabs.BottomAccessory>
+      )}
+    </NativeTabs>
   );
 }

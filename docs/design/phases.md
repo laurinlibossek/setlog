@@ -13,9 +13,11 @@ Every phase follows `CLAUDE.md`: German for every new text, browser suites green
 - Kit: capsule buttons and controls, Title 2 section headers in sentence case, radii from the tokens, a Tally switch.
 - Core: `weekStreak` counts in one pass (80 ms to 1.4 ms on a 5-year log), same results.
 
-## 2. Tabs and Today
+## 2. Tabs and Today (done in `claude/tally-tabs`)
 
 Owns: `src/app/(tabs)/`, `src/app/_layout.tsx`, a new Account sheet.
+
+Built as planned, with these choices: the web build keeps JS tabs (`(tabs)/_layout.web.tsx`), drawn like the native bar, because native tabs on the web are a pill at the top without test ids or an accessory. The bottom accessory exists only on iOS 26 and later, so Android and older iPhones get the same Now Lifting bar floating above the tab bar inside each tab. Lifts lists the exercises you've done; the whole library is under Search. The week strip's planned days come from the weekdays usually trained until there are blocks (phase 5).
 
 - Native tabs (`NativeTabs` from `expo-router/unstable-native-tabs`, SDK 57; works in Expo Go): Today, Plan, Progress, and Search with `role="search"`. SF Symbols as in `README.md` → Iconography. `minimizeBehavior="onScrollDown"`. Check the SDK 57 docs before writing it (`app/AGENTS.md`). If the web build can't give the tests stable tab ids, keep JS tabs for web only and say so.
 - Today (`index`): eyebrow date, large title, avatar (opens Account), the Up next card (`suggestTemplate`; Start), at most one coach note slot (empty until phase 7), This week (week strip from the weekly goal and workouts), Sets per muscle for the last 7 days by body part (counts only; no targets without Pro).

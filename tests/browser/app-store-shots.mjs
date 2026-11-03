@@ -63,17 +63,17 @@ async function screens(store, lang) {
   await page.goto(BASE);
   await id('start-suggested').waitFor();
 
-  // 5. templates and the suggested next workout (before a workout is running)
-  await shot(5, 'templates');
+  // 5. Today: the suggested next workout (before a workout is running), this week, sets per muscle
+  await shot(5, 'today');
 
-  // 6. Profile: workouts per week, streak, recent records
-  await id('tab-profile').click();
-  await id('open-settings').waitFor({ state: 'visible' });
+  // 6. Progress: the last 30 days, records, workouts per week
+  await id('tab-progress').click();
+  await id('weekly-chart').waitFor({ state: 'visible' });
   await wait(600);
-  await shot(6, 'profile');
+  await shot(6, 'progress');
 
   // 3. an exercise's chart: estimated 1RM over the 16 weeks
-  await id('tab-exercises').click();
+  await id('tab-search').click();
   await id('exercise-search').fill('squat bb');
   await id('exercise-x-squat-barbell').click();
   await id('exercise-tabs').getByText(tr('Charts'), { exact: true }).click();
@@ -83,13 +83,16 @@ async function screens(store, lang) {
   await wait(300);
   await id('exercise-search').fill('');
 
-  // 4. the History calendar, last month
-  await id('tab-history').click();
+  // 4. the History calendar (Progress → Workouts), last month
+  await id('tab-progress').click();
+  await id('progress-workouts').click();
   await id('history-view').click();
   await id('cal-prev').click();
   await id('cal-stats').waitFor();
   await shot(4, 'calendar');
   await id('history-view').click();
+  await page.goBack();
+  await wait(300);
   await id('tab-index').click();
   await wait(300);
 

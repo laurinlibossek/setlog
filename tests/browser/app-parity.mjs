@@ -32,8 +32,8 @@ const toastText = async (page) => { await id(page, 'toast').waitFor(); return id
 const visibleText = (page) => page.locator('body').innerText();
 const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')));
 async function restore(page, dialogs) {
-  await id(page, 'tab-profile').click();
-  await id(page, 'open-settings').click();
+  await id(page, 'tab-index').click();
+  await id(page, 'open-account').click();
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), id(page, 'restore').click()]);
   await chooser.setFiles(BACKUP);
   for (let i = 0; i < 50 && dialogs.length < 2; i++) await wait(page, 100);
@@ -41,13 +41,18 @@ async function restore(page, dialogs) {
   await page.goBack();
   await wait(page, 300);
 }
+/** Account (the avatar on Today) has the settings. */
 async function openSettings(page) {
-  await id(page, 'tab-profile').click();
-  await id(page, 'open-settings').click();
+  await id(page, 'tab-index').click();
+  await id(page, 'open-account').click();
   await id(page, 'set-name').waitFor();
 }
+async function openWorkouts(page) {
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-workouts').click();
+}
 async function openExercise(page, exId, q) {
-  await id(page, 'tab-exercises').click();
+  await id(page, 'tab-search').click();
   await id(page, 'exercise-search').fill(q);
   await id(page, `exercise-${exId}`).click();
   await id(page, 'exercise-options').waitFor();
@@ -59,7 +64,7 @@ const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${d.ge
 for (const scheme of ['light', 'dark']) {
   const { ctx, page, errors, dialogs } = await newPage({ scheme });
   await restore(page, dialogs);
-  await id(page, 'tab-history').click();
+  await openWorkouts(page);
   await id(page, 'history-view').click();
   await id(page, 'cal-month').waitFor();
   const now = new Date();
@@ -229,8 +234,9 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   assert.equal((await store(page)).kv.profile.name, 'Laurin L.');
   await page.goBack();
   await wait(page, 300);
-  assert.ok((await visibleText(page)).includes('Laurin L.'), 'the Profile title shows it');
-  ok('Your name: a row with a prompt, trimmed, shown on Profile');
+  assert.equal(await id(page, 'open-account').getAttribute('aria-label'), 'Account, Laurin L.', 'Today’s avatar has it');
+  assert.equal((await id(page, 'open-account').innerText()).trim(), 'L');
+  ok('Your name: the top of Account opens a prompt, trimmed, shown on Today’s avatar');
   assert.deepEqual(errors, []);
   await ctx.close();
 }
@@ -343,7 +349,7 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   await wait(page, 300);
   await page.goBack();
   await wait(page, 300);
-  await id(page, 'tab-history').click();
+  await openWorkouts(page);
   await id(page, 'history-view').click();
   await id(page, 'cal-stats').waitFor();
   assert.match(await id(page, 'cal-stats').innerText(), /Trainingstage/);
@@ -385,7 +391,7 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   await wait(page, 300);
   await page.goBack();
   await wait(page, 300);
-  await id(page, 'tab-exercises').click();
+  await id(page, 'tab-search').click();
   const rowName = async (exId) => (await id(page, `exercise-${exId}`).innerText()).split('\n')[0];
   const search = async (q) => { await id(page, 'exercise-search').fill(q); await wait(page, 250); };
   await search('latzug');

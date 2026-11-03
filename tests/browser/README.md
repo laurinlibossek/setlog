@@ -37,11 +37,12 @@ When you update Playwright, change the version in `package.json` here; the suite
 | `web-suggest` | 7 | the suggested workout follows a changed routine after about two rounds |
 | `web-fixes` | 33 | the 18 fixes of 1.6.0, drag-and-drop reorder (mouse, touch, keys), unit switch round trip |
 | `web-smoke` | 4 | Profile chart, new template from the editor and from a workout, exercise chart |
-| `app-first-start` | 15 | first start, restore a web-app backup, every screen with data, live theme/language/unit switches, Strong import |
+| `app-first-start` | 15 | first start, restore a web-app backup (Account), every screen with data, live theme/language/unit switches, Strong import |
 | `app-logging` | 17 | logging a workout end to end, rest timer, set types, supersets, minimize and reload, reorder, finish, template update (German) |
-| `app-editing` | 22 | template editor and menus, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Measure, backups, settings |
+| `app-editing` | 22 | template editor and menus on Plan, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Body, Progress and backups, settings |
 | `web-privacy` | 4 | the privacy pages (light and dark, both languages, contact link), the Settings link to them, and that they load as themselves with the service worker running |
-| `app-parity` | 12 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app, Settings → Privacy policy |
+| `app-parity` | 13 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app, Settings → Privacy policy |
+| `app-tabs` | 7 | the tabs with the store demo data: Today (Up next, week strip and sets per muscle against the core), Now Lifting (rest, Skip, every tab), Plan's + menu, the Progress hub and its pages, Search focused on open, the Account sheet, German and dark |
 
 `make-backup.mjs` is a helper, not a suite: it imports the sample export into the web app, adds a "Pull" template in an "Upper / Lower" folder, two body weights, Intense Red, German and the name "Laurin", and saves `data/setlog-backup.json` through the app's own backup code. The app suites restore it (`restore(page, dialogs, { english: true })` in `app-editing.mjs` switches to English afterwards).
 
@@ -50,7 +51,7 @@ When you update Playwright, change the version in `package.json` here; the suite
 - Every suite imports from `env.mjs` (`launch`, `devices`, `WEB`, `APP`, `shots`, `waitReady`, `grantWakeLock`, data paths), counts its checks with `ok(...)` and ends with `console.log(\`\n${passed} checks passed\`)`, which the runner reads. Add a new suite to `WEB_SUITES` or `APP_SUITES` in `run.mjs`.
 - Each scenario collects `pageerror` and console errors and ends with `assert.deepEqual(errors, [])`.
 - **Web app:** new contexts use `devices['iPhone 13']`, `serviceWorkers: 'block'` and usually `locale: 'de-DE'` (decimal commas). English suites pin the language with `localStorage['setlog.lang'] = 'en'` in an init script. Drive the store directly where clicking adds nothing: `page.evaluate(async () => (await import('/js/store.js')) …)`; screens via `(await import('/js/ui.js')).setTab(...)` / `.push(...)`. Wait for `waitReady(page)` after every `goto`.
-- **App:** contexts call `await ctx.addInitScript(grantWakeLock)` (headless Chromium denies the Screen Wake Lock, and expo-keep-awake then logs an error a phone never shows). testIDs become `data-testid`, so use `page.getByTestId(...)`. Hidden tabs stay mounted on web: check rows by testID, not the whole page text. Section titles are uppercase in the page text. Pushed screens hide the tab bar, so `page.goBack()` before switching tabs. App data is in `localStorage['increment.data']`.
+- **App:** contexts call `await ctx.addInitScript(grantWakeLock)` (headless Chromium denies the Screen Wake Lock, and expo-keep-awake then logs an error a phone never shows). testIDs become `data-testid`, so use `page.getByTestId(...)`. Hidden tabs stay mounted on web: check rows by testID, not the whole page text, and keep testIDs unique across tabs (Search has `exercise-*`, Lifts `lift-*`). The tabs are `tab-index` (Today), `tab-plan`, `tab-progress` and `tab-search`; the web build has JS tabs for them (`app/src/app/(tabs)/_layout.web.tsx`), the phone native ones. Settings are in Account: `open-account` (the avatar on Today), closed with `page.goBack()` or `account-done`. Progress opens Workouts (`progress-workouts`), Lifts, Records and Body. An empty workout starts from Today (`start-empty`, when nothing is suggested) or from Plan's + (`plan-add`, then `start-empty`). Pushed screens hide the tab bar, so `page.goBack()` before switching tabs. App data is in `localStorage['increment.data']`.
 - Timing: web screens slide in, so wait about 500 ms before measuring positions; app overlays fade in for 180 ms, so wait before screenshots.
 - Touch drags: dispatch `new Touch()` / `new TouchEvent()` from `page.evaluate` (see the reorder section of `web-fixes.mjs`).
 
@@ -77,7 +78,7 @@ node tests/browser/store-frame.mjs <folder>    # frames your own screenshots the
 - 16 weeks of a 4-day upper/lower split up to yesterday, with steady progression and one deload week (half the sets at the same weights, so the charts don't dip);
 - no personal name.
 
-It takes six screens in English and German: a running workout with the "previous" column, the rest timer, an exercise's 1RM chart, the History calendar, the templates with the suggested workout, and Profile.
+It takes six screens in English and German: a running workout with the "previous" column, the rest timer, an exercise's 1RM chart, the History calendar, Today with the suggested workout, and Progress.
 
 What it writes, into `tests/browser/.out/store/` (git-ignored):
 - the bare screens in `raw/`;

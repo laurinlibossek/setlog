@@ -517,6 +517,59 @@ test('core/themes.js matches the colours in app.css (run `npm run themes` after 
   assert.equal(core.THEMES['intense-red'].colors.accent, '#e5202e');
 });
 
+// ---------- German exercise names ----------
+test('German exercise names: every built-in has one, shown only in German and only while not renamed', () => {
+  const de = core.EXERCISE_NAMES_DE;
+  assert.deepEqual(core.SEED_EXERCISES.filter((e) => !de[e.name]).map((e) => e.name), []);
+  assert.deepEqual(Object.keys(de).filter((n) => !core.SEED_EXERCISES.some((e) => e.name === n)), []);
+  const names = Object.values(de);
+  assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), [], 'German names are unique');
+  // every equipment variant of one exercise uses the same German base term (Reverse Fly → Reverse Flys, …)
+  const base = (n) => n.replace(/\s*\(.*\)$/, '');
+  const groups = new Map();
+  for (const e of core.SEED_EXERCISES) groups.set(base(e.name), [...(groups.get(base(e.name)) || []), base(de[e.name])]);
+  const mixed = [...groups].filter(([, g]) => new Set(g).size > 1).map(([en, g]) => `${en}: ${[...new Set(g)].join(' / ')}`);
+  assert.deepEqual(mixed, []);
+  const bench = core.SEED_EXERCISES.find((e) => e.id === 'x-bench-press-barbell');
+  assert.equal(core.exerciseDisplayName(bench, 'de'), 'Bankdrücken (Langhantel)');
+  assert.equal(core.exerciseDisplayName(bench, 'en'), 'Bench Press (Barbell)');
+  assert.equal(core.exerciseDisplayName({ ...bench, name: 'Flat Bench' }, 'de'), 'Flat Bench', 'a renamed built-in keeps its name');
+  assert.equal(core.exerciseDisplayName({ id: 'c-bench-press-barbell', name: 'Bench Press (Barbell)' }, 'de'), 'Bench Press (Barbell)', 'custom ones keep theirs');
+  assert.equal(core.exerciseDisplayName(undefined, 'de'), '');
+  // search finds built-ins by either name, in either language
+  const find = (q) => core.SEED_EXERCISES.filter((e) => core.matchExercise(e, q)).map((e) => e.id);
+  assert.deepEqual(find('latzug'), find('lat pulldown'));
+  assert.ok(find('bankdrücken kh').includes('x-bench-press-dumbbell'));
+  assert.ok(find('kreuzheben').includes('x-deadlift-barbell'));
+  assert.ok(find('rumanisch').includes('x-romanian-deadlift-barbell'), 'accents are ignored');
+  assert.deepEqual(find('bench bb'), find('bankdrücken lh'));
+  assert.equal(core.matchExercise({ id: 'c-x', name: 'Bankdrücken eng' }, 'bankdrücken'), true);
+});
+
+// ---------- links and the privacy pages ----------
+test('privacy pages: one per language, and the contact email written in one place only', () => {
+  assert.equal(core.privacyPage('de'), 'datenschutz.html');
+  assert.equal(core.privacyPage('en'), 'privacy.html');
+  assert.equal(core.privacyPage(undefined), 'privacy.html');
+  assert.ok(core.WEB_APP_URL.endsWith('/'));
+  for (const page of ['privacy.html', 'datenschutz.html']) {
+    const html = read(path.join(APP, page));
+    assert.match(html, /from '\.\/js\/core\/links\.js'/, `${page} reads the address from core/links.js`);
+    assert.match(html, /data-contact/);
+  }
+  // the deploy refuses "[EMAIL]" anywhere in setlog/, so it may only be the constant itself
+  const hits = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) walk(f);
+      else if (/\.(js|html)$/.test(e.name) && read(f).includes('[EMAIL]')) hits.push(path.relative(APP, f));
+    }
+  };
+  walk(APP);
+  assert.deepEqual(hits.filter((f) => f !== path.join('js', 'core', 'links.js')), []);
+});
+
 // ---------- offline ----------
 test('the service worker caches every module the app loads', () => {
   const assets = new Set([...read(path.join(APP, 'sw.js')).matchAll(/'\.\/([^']+)'/g)].map((m) => m[1]));

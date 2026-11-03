@@ -1,5 +1,5 @@
 // Exercises tab and the exercise detail screen (about, history, charts, records).
-import { tr } from '../i18n.js';
+import { tr, exLabel } from '../i18n.js';
 import { html, useState, useMemo } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
@@ -31,10 +31,10 @@ export function ExercisesTab() {
   const all = allSessions();
   let list = exerciseList().filter((e) => (showHidden ? true : !e.hidden) && (part === 'all' || e.bodyPart === part) && matchExercise(e, q));
   const count = (id) => all.get(id)?.length || 0;
-  if (sort === 'freq') list = [...list].sort((a, b) => count(b.id) - count(a.id) || a.name.localeCompare(b.name));
+  if (sort === 'freq') list = [...list].sort((a, b) => count(b.id) - count(a.id) || exLabel(a).localeCompare(exLabel(b)));
   if (sort === 'recent') {
     const last = (id) => all.get(id)?.[0]?.startedAt || 0;
-    list = [...list].sort((a, b) => last(b.id) - last(a.id) || a.name.localeCompare(b.name));
+    list = [...list].sort((a, b) => last(b.id) - last(a.id) || exLabel(a).localeCompare(exLabel(b)));
   }
   const create = async () => { const ex = await editExercise(null, { name: q.trim() }); if (ex) push('exercise', { id: ex.id }); };
   const menu = async () => {
@@ -61,14 +61,14 @@ export function ExercisesTab() {
     </div>
     <div class="group">
       ${list.map((ex) => {
-        const L = sort === 'name' ? (/[a-z]/i.test(ex.name[0]) ? ex.name[0].toUpperCase() : '#') : null;
+        const L = sort === 'name' ? (/[a-z]/i.test(exLabel(ex)[0]) ? exLabel(ex)[0].toUpperCase() : '#') : null;
         const head = L && L !== lastL;
         lastL = L;
         const n = count(ex.id);
         const last = all.get(ex.id)?.[0]?.startedAt;
         return html`${head && html`<div class="letter-head" style="padding-left:14px;background:var(--surface)">${L}</div>`}
           <button class="cell" key=${ex.id} onClick=${() => push('exercise', { id: ex.id })}>
-            <div class="cell-main"><div class="cell-title">${ex.name}${ex.hidden ? html` <span class="tag">${tr('Hidden')}</span>` : ''}</div>
+            <div class="cell-main"><div class="cell-title">${exLabel(ex)}${ex.hidden ? html` <span class="tag">${tr('Hidden')}</span>` : ''}</div>
               <div class="cell-sub">${BODY_PART_LABEL[ex.bodyPart] || tr('Other')}${n ? ` · ${plural(n, 'time')} · ${relDayLower(last)}` : ''}</div></div>
             <span class="chev"><${Icon} name="chevronRight" /></span>
           </button>`;
@@ -90,7 +90,7 @@ export function ExerciseDetailScreen({ id }) {
 
   const menu = async () => {
     const c = await actionSheet({
-      title: ex.name,
+      title: exLabel(ex),
       actions: [
         { label: tr('Edit exercise'), value: 'edit', icon: 'edit' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note'), value: 'pin', icon: 'pin' },
@@ -106,16 +106,16 @@ export function ExerciseDetailScreen({ id }) {
     }
     if (c === 'hide') { updateExercise(ex.id, { hidden: !ex.hidden }); toast(ex.hidden ? tr('Hidden from lists') : tr('Visible again')); }
     if (c === 'merge') {
-      const into = await pickExercises({ multi: false, title: tr('Merge “{name}” into', { name: ex.name }) });
+      const into = await pickExercises({ multi: false, title: tr('Merge “{name}” into', { name: exLabel(ex) }) });
       if (!into || into === ex.id) return;
       const target = S.exercises.get(into);
       if (!canMergeExercises(ex, target)) {
-        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: ex.name, to: target.name }));
+        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: exLabel(ex), to: exLabel(target) }));
         return;
       }
       const ok = await confirmDialog({
         title: tr('Merge exercises?'),
-        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: plural(every.length, 'session'), from: ex.name, to: target.name }),
+        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: plural(every.length, 'session'), from: exLabel(ex), to: exLabel(target) }),
         ok: tr('Merge'), destructive: true,
       });
       if (!ok) return;
@@ -136,7 +136,7 @@ export function ExerciseDetailScreen({ id }) {
         return;
       }
       const ok = await confirmDialog({
-        title: tr('Delete “{name}”?', { name: ex.name }),
+        title: tr('Delete “{name}”?', { name: exLabel(ex) }),
         message: u.templates ? tr('It will also be removed from {n}.', { n: plural(u.templates, 'template') }) : tr('It has never been used.'),
         ok: tr('Delete'), destructive: true,
       });
@@ -144,8 +144,8 @@ export function ExerciseDetailScreen({ id }) {
     }
   };
 
-  return html`<${Screen} nav=${{ back: '', title: ex.name, right: html`<button class="nav-btn" onClick=${menu} aria-label=${tr('Exercise options')}><${Icon} name="more" /></button>` }}>
-    <h1 class="large-title" style="font-size:26px;margin-bottom:4px">${ex.name}</h1>
+  return html`<${Screen} nav=${{ back: '', title: exLabel(ex), right: html`<button class="nav-btn" onClick=${menu} aria-label=${tr('Exercise options')}><${Icon} name="more" /></button>` }}>
+    <h1 class="large-title" style="font-size:26px;margin-bottom:4px">${exLabel(ex)}</h1>
     <p class="subtitle" style="margin:0 0 14px">${BODY_PART_LABEL[ex.bodyPart] || tr('Other')} · ${CATEGORY_LABEL[ex.category]}</p>
     <${Seg} value=${tab} onChange=${setTab} id="exercise-tabs" options=${[
       { value: 'about', label: tr('About') }, { value: 'history', label: tr('History') },
@@ -231,7 +231,7 @@ function ExCharts({ ex, sessions }) {
         <div><div class="card-title">${m.label}</div>
           <div class="card-sub">${last ? tr('{value} last time', { value: fmtVal(last.y) }) : tr('No data in this range')}${change !== null ? html` · <span style=${`color:${(change > 0) !== lowerBetter ? 'var(--up)' : change === 0 ? 'var(--ink-3)' : 'var(--danger)'}`}>${change > 0 ? '+' : change < 0 ? '−' : '±'}${fmtVal(Math.abs(change))}</span> ${tr('in range')}` : ''}</div></div>
       </div>
-      <${LineChart} points=${disp} fmtVal=${fmtVal} fmtAxis=${fmtAxis} time=${m.kind === 'time' || m.kind === 'pace'} label=${tr('{metric} for {name}', { metric: m.label, name: ex.name })}
+      <${LineChart} points=${disp} fmtVal=${fmtVal} fmtAxis=${fmtAxis} time=${m.kind === 'time' || m.kind === 'pace'} label=${tr('{metric} for {name}', { metric: m.label, name: exLabel(ex) })}
         emptyText=${sessions.length ? tr('No sessions in this range') : tr('Log this exercise to see your progress')} />
       <div style="margin-top:10px"><${Seg} value=${range} onChange=${setRange} options=${RANGES} /></div>
     </div>

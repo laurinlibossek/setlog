@@ -42,8 +42,10 @@ const ASSETS = [
   './js/core/csv.js',
   './js/core/drafts.js',
   './js/core/editing.js',
+  './js/core/exercise-names-de.js',
   './js/core/i18n.js',
   './js/core/i18n-de.js',
+  './js/core/links.js',
   './js/core/seed.js',
   './js/core/sessions.js',
   './js/core/settings.js',
@@ -79,6 +81,15 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // The app itself (its folder, index.html, any ?query or #hash) opens from the
+  // cache. Other pages, like the privacy policy, come from the network, so the
+  // app shell doesn't stand in for them.
+  const scope = new URL(self.registration.scope).pathname;
+  if (req.mode === 'navigate' && url.pathname !== scope && url.pathname !== `${scope}index.html`) {
+    event.respondWith(fetch(req).catch(async () => (await caches.match(req)) || new Response('Offline', { status: 503 })));
+    return;
+  }
 
   if (req.mode === 'navigate') {
     event.respondWith((async () => {

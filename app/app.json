@@ -8,9 +8,14 @@
     "scheme": "increment",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false
+      "bundleIdentifier": "io.github.laurinlibossek.increment",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "io.github.laurinlibossek.increment",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

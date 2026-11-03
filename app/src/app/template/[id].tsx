@@ -59,7 +59,7 @@ export default function TemplatePreview() {
           const sub = f.plural(e.sets.length, 'set')
             + (targets.length ? ' · ' + [...new Set(targets)].join(', ') : '')
             + (e.restSec ? ` · ${tr('rest {time}', { time: f.clock(e.restSec) })}` : '');
-          return <Cell key={i} first={i === 0} title={exr.name} sub={sub} />;
+          return <Cell key={i} first={i === 0} title={f.exName(exr)} sub={sub} />;
         })}
       </Group>
       <View style={{ marginTop: 18, gap: 8 }}>

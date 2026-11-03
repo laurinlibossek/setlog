@@ -95,7 +95,7 @@ export default function ProfileTab() {
           <SectionTitle>{tr('Records in the last 30 days')}</SectionTitle>
           <Group>
             {recentPrs.slice(0, 8).map((p, i) => (
-              <Cell key={i} first={i === 0} title={s.exercises.get(p.exerciseId)?.name || tr('Exercise')}
+              <Cell key={i} first={i === 0} title={f.exName(s.exercises.get(p.exerciseId)) || tr('Exercise')}
                 sub={`${tr((PR_LABEL as Record<string, string>)[p.metric] || p.metric)} · ${f.relDay(p.at)}`} value={prValue(p)}
                 icon="trophy" onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: p.exerciseId } })} />
             ))}

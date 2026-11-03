@@ -108,8 +108,9 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('exercise-search').fill('bench bb');
   await page.waitForTimeout(300);
   const rows = await page.locator('[data-testid^="exercise-"]:not([data-testid="exercise-search"])').allInnerTexts();
-  assert.ok(rows.length >= 1 && rows.every((r) => /bench/i.test(r) && /barbell/i.test(r)), rows.join(' | '));
-  assert.match(rows.find((r) => r.startsWith('Bench Press (Barbell)')) || '', /Brust · \d+ ?Mal/);
+  // the app is German here, so built-ins show their German names (search still takes the English ones)
+  assert.ok(rows.length >= 1 && rows.every((r) => /bankdrücken/i.test(r) && /langhantel/i.test(r)), rows.join(' | '));
+  assert.match(rows.find((r) => r.startsWith('Bankdrücken (Langhantel)')) || '', /Brust · \d+ ?Mal/);
   await page.screenshot({ path: `${OUT}/07-exercises.png` });
   ok('Exercises search finds "bench bb" and shows how often it was done');
 
@@ -121,7 +122,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.locator('[data-testid^="template-"]', { hasText: 'Pull' }).first().click();
   await page.waitForTimeout(400);
   const tpl = await text(page);
-  assert.ok(tpl.includes('Lat Pulldown (Cable)') && tpl.includes('Last set to failure') && tpl.includes('8 Wdh.'), tpl);
+  assert.ok(tpl.includes('Latzug (Kabelzug)') && tpl.includes('Last set to failure') && tpl.includes('8 Wdh.'), tpl);
   await page.screenshot({ path: `${OUT}/09-template.png` });
   await page.getByTestId('start-template').click();
   await page.getByTestId('workout-name').waitFor();

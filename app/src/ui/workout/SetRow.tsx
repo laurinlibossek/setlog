@@ -1,6 +1,6 @@
-// One set in the running workout: type label, last time's numbers, the
-// inputs (grey placeholders = what will be saved if left empty) and the check
-// button. Swipe left to delete.
+// One set in the running workout: its stroke (tap to log it), type label,
+// last time's numbers and the inputs (grey placeholders = what will be saved if
+// left empty). Swipe left to delete.
 import { memo, useEffect, useMemo, useRef } from 'react';
 import {
   Animated, PanResponder, Platform, Pressable, StyleSheet, Text, TextInput, View,
@@ -9,7 +9,7 @@ import { fmtDigits } from '@setlog/core';
 
 import type { SetDraft } from '@/data/types';
 import { useColors } from '@/lib/theme';
-import { Icon } from '@/ui/kit';
+import { Stroke } from '@/ui/tally/Tally';
 
 export const KEYBOARD_BAR = 'set-keys';
 
@@ -80,6 +80,12 @@ export const SetRow = memo(function SetRow({
         style={[styles.row, { backgroundColor: c.surface, transform: [{ translateX: Animated.add(dx, shakeX) }] }]}>
         {/* the done tint can be see-through, so it sits on the row's solid background */}
         {set.done && <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.doneSoft }]} />}
+        {showCheck && (
+          <Pressable onPress={onToggle} accessibilityRole="checkbox" aria-checked={set.done} accessibilityLabel={set.done ? labels.uncheck : labels.check}
+            testID={`check-${set.id}`} hitSlop={6} style={styles.check}>
+            <Stroke state={set.done ? (badge === 'pr' ? 'record' : set.type === 'warmup' ? 'warmup' : 'done') : set.type === 'warmup' ? 'warmupPending' : 'pending'} />
+          </Pressable>
+        )}
         <Pressable onPress={onMenu} accessibilityRole="button" accessibilityLabel={labels.set} testID={`label-${set.id}`}
           style={[styles.label, { backgroundColor: set.done ? 'transparent' : typeColor[1] }]}>
           <Text style={{ color: typeColor[0], fontWeight: '800', fontSize: 15 }}>{label}</Text>
@@ -89,12 +95,6 @@ export const SetRow = memo(function SetRow({
           <Text style={{ color: c.ink3, fontSize: 14, fontVariant: ['tabular-nums'] }} numberOfLines={1}>{prevText}</Text>
         </Pressable>
         {fields.map(input)}
-        {showCheck && (
-          <Pressable onPress={onToggle} accessibilityRole="checkbox" aria-checked={set.done} accessibilityLabel={set.done ? labels.uncheck : labels.check}
-            testID={`check-${set.id}`} hitSlop={4} style={[styles.check, { backgroundColor: set.done ? c.done : c.surface3 }]}>
-            <Icon name="check" size={18} color={set.done ? c.doneInk : c.ink3} />
-          </Pressable>
-        )}
       </Animated.View>
     </View>
   );
@@ -108,5 +108,5 @@ const styles = StyleSheet.create({
   label: { width: COLS.label, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   prev: { flex: 1, minWidth: 0, height: 36, justifyContent: 'center', paddingHorizontal: 4, borderRadius: 8 },
   input: { height: 34, borderRadius: 8, textAlign: 'center', fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'], paddingHorizontal: 4, paddingVertical: 0 },
-  check: { width: COLS.check, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  check: { width: COLS.check, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

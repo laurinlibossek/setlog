@@ -1,0 +1,357 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Increment screens</title><style>:root, [data-theme="light"] {--paper: #ffffff; --paper-2: #f4f4f1; --paper-3: #e9e9e5; --line: #e2e2dd; --ink: #0d0d0c; --ink-2: #5d5d58; --ink-3: #8a8a84; --stroke-done: var(--ink); --signal: #ffd60a; --on-signal: #0d0d0c; --signal-edge: #0d0d0c; --danger: #c9271c; --glass: rgba(250,250,247,0.78); --focus: #0d0d0c; }
+[data-theme="dark"] {--paper: #000000; --paper-2: #141413; --paper-3: #232321; --line: #2b2b28; --ink: #f4f4f0; --ink-2: #a6a6a0; --ink-3: #72726c; --stroke-done: var(--ink); --signal: #ffd60a; --on-signal: #0d0d0c; --signal-edge: #ffd60a; --danger: #ff6257; --glass: rgba(28,28,26,0.72); --focus: #f4f4f0; color-scheme: dark; }
+[data-theme="strawberry-matcha"] {--paper: #fbf8f2; --paper-2: #f2ebde; --paper-3: #e6dccb; --line: #e2d8c6; --ink: #2b261f; --ink-2: #5c5346; --ink-3: #857a69; --stroke-done: #55803a; --signal: #c94159; --on-signal: #ffffff; --signal-edge: #9e2f43; --danger: #b3261e; --glass: rgba(251,248,242,0.8); --focus: #2b261f; }
+[data-theme="intense-red"] {--paper: #000000; --paper-2: #141414; --paper-3: #242424; --line: #2a2a2a; --ink: #f5f5f5; --ink-2: #bdbdbd; --ink-3: #8c8c8c; --stroke-done: #e5202e; --signal: #f2b233; --on-signal: #0d0d0c; --signal-edge: #f2b233; --danger: #ff6b6b; --glass: rgba(28,28,28,0.72); --focus: #f5f5f5; color-scheme: dark; }
+:root { --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-12: 48px; --radius-s: 6px; --radius-m: 14px; --radius-l: 24px; --radius-capsule: 999px; --stroke-h: 20px; --stroke-h-hero: 32px; --stroke-slot: 5px; --stroke-hair: 1.5px; --stroke-gap: 4px; --stroke-group: 10px; --hit-min: 44px; --row-h: 52px; --button-h: 52px; --accessory-h: 48px; --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; --font-mono: ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace; }
+.t-number-xl { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 600; letter-spacing: -0.02em; }
+.t-number-l { font-family: var(--font-display); font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -0.015em; }
+.t-number-m { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.t-large-title { font-family: var(--font-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.01em; }
+.t-title-1 { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.01em; }
+.t-title-2 { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; }
+.t-title-3 { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; }
+.t-headline { font-family: var(--font-sans); font-size: 17px; line-height: 22px; font-weight: 600; }
+.t-body { font-family: var(--font-sans); font-size: 17px; line-height: 22px; font-weight: 400; }
+.t-subhead { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 400; }
+.t-footnote { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.t-caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; }
+.t-eyebrow { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.06em; }
+
+/* Increment — component styles. Values come from tokens.css; layout only here. */
+.ic { font-family: var(--font-sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.ic *, .ic *::before, .ic *::after { box-sizing: border-box; }
+.ic-tnum { font-variant-numeric: tabular-nums; }
+.ic-upper { text-transform: uppercase; }
+.ic-ink2 { color: var(--ink-2); }
+.ic-ink3 { color: var(--ink-3); }
+.ic-unit { font-family: var(--font-sans); font-size: 0.5em; font-weight: 600; letter-spacing: 0; color: var(--ink-2); margin-left: 0.18em; }
+.ic-x { color: var(--ink-3); font-weight: 400; margin: 0 0.12em; }
+.ic :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:where(.ic) a { color: inherit; text-decoration: none; }
+:where(.ic) button { font: inherit; color: inherit; }
+input.ic-field { font: inherit; color: inherit; border: 0; text-align: center; width: 96px; }
+
+/* ---------- Tally: one stroke per set ---------- */
+.ic-tally { display: inline-flex; align-items: flex-end; gap: var(--stroke-group); height: var(--stroke-h); --h: var(--stroke-h); }
+.ic-tally.hero { height: var(--stroke-h-hero); --h: var(--stroke-h-hero); }
+.ic-tally.small { height: 14px; --h: 14px; }
+.ic-grp { display: inline-flex; align-items: flex-end; gap: var(--stroke-gap); height: 100%; }
+.ic-s { position: relative; display: block; flex: none; width: var(--stroke-slot); height: var(--h, var(--stroke-h)); }
+.ic-s::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--stroke-hair); transform: translateX(-50%); background: var(--ink-3); }
+.ic-s.done::before { width: 100%; background: var(--stroke-done); }
+.ic-s.warm { height: calc(var(--h, var(--stroke-h)) * 0.55); }
+.ic-s.pr::before { width: 100%; background: var(--signal); box-shadow: 0 0 0 1px var(--signal-edge); }
+.ic-s.skip::before { background: repeating-linear-gradient(to bottom, var(--ink-3) 0 3px, transparent 3px 6px); }
+.ic-s.live::before { width: 100%; background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); }
+@media (prefers-reduced-motion: no-preference) { .ic-s::before { transition: width 160ms ease-out, background-color 160ms ease-out; } }
+
+/* ---------- Highlight: the signal behind a number that went up ---------- */
+.ic-hl { background: var(--signal); color: var(--on-signal); border-radius: var(--radius-s); padding: 0 0.22em; margin: 0 -0.06em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* ---------- Buttons ---------- */
+.ic-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--button-h); padding: 0 var(--space-6); border: 0; border-radius: var(--radius-capsule); font: 600 17px/22px var(--font-sans); cursor: pointer; text-decoration: none; white-space: nowrap; }
+.ic-btn.primary { background: var(--ink); color: var(--paper); }
+.ic-btn.secondary { background: var(--paper-3); color: var(--ink); }
+.ic-btn.plain { background: transparent; color: var(--ink); padding: 0 var(--space-3); min-height: var(--hit-min); }
+.ic-btn.danger { background: transparent; color: var(--danger); padding: 0 var(--space-3); min-height: var(--hit-min); }
+.ic-btn.block { display: flex; width: 100%; }
+.ic-btn.small { min-height: 36px; padding: 0 var(--space-4); font-size: 15px; }
+.ic-btn:disabled { color: var(--ink-3); background: var(--paper-3); }
+.ic-iconbtn { display: inline-grid; place-items: center; width: var(--hit-min); height: var(--hit-min); border: 0; border-radius: var(--radius-capsule); background: transparent; color: var(--ink); cursor: pointer; }
+.ic-iconbtn.filled { background: var(--paper-3); }
+.ic-iconbtn svg { width: 22px; height: 22px; }
+
+/* ---------- Set row ---------- */
+.ic-setrow { display: grid; grid-template-columns: var(--hit-min) 1fr auto; align-items: center; column-gap: var(--space-2); min-height: var(--row-h); padding: 0 var(--space-5) 0 calc(var(--space-5) - 14px); }
+.ic-setrow .mark { display: grid; place-items: center; width: var(--hit-min); height: var(--hit-min); }
+.ic-setrow .vals { display: flex; align-items: baseline; gap: 2px; min-width: 0; }
+.ic-setrow .vals.ghost { color: var(--ink-3); }
+.ic-setrow .meta { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-2); }
+.ic-setrow + .ic-setrow { border-top: 0.5px solid var(--line); }
+.ic-field { display: inline-flex; align-items: baseline; justify-content: center; min-width: 76px; padding: 6px 12px; border-radius: var(--radius-m); background: var(--paper-3); }
+.ic-field.wide { min-width: 96px; }
+.ic-field.ghost { color: var(--ink-3); }
+.ic-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: var(--radius-capsule); background: var(--paper-3); color: var(--ink-2); font: 600 12px/16px var(--font-sans); font-variant-numeric: tabular-nums; }
+.ic-chip.on { background: var(--ink); color: var(--paper); }
+.ic-chip.pr { background: var(--signal); color: var(--on-signal); }
+
+/* ---------- Effort picker (reps in reserve) ---------- */
+.ic-effort { display: flex; align-items: center; gap: var(--space-2); }
+.ic-effort .opt { display: grid; place-items: center; min-width: var(--hit-min); height: 36px; padding: 0 12px; border: 0; border-radius: var(--radius-capsule); background: var(--paper-3); color: var(--ink); font: 600 15px/1 var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer; }
+.ic-effort .opt.on { background: var(--ink); color: var(--paper); }
+
+/* ---------- Rest ---------- */
+.ic-drain { position: relative; height: 4px; border-radius: 2px; background: var(--paper-3); overflow: hidden; }
+.ic-drain > i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--ink); }
+.ic-rest { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-3); }
+
+/* ---------- Action bar: the one primary action, in thumb reach ---------- */
+.ic-actionbar { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-5) var(--space-5); background: var(--paper); border-top: 0.5px solid var(--line); }
+
+/* ---------- Stat strip ---------- */
+.ic-stats { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.ic-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 var(--space-3); }
+.ic-stats > div:first-child { padding-left: 0; }
+.ic-stats > div + div { border-left: 0.5px solid var(--line); }
+.ic-stats .k { color: var(--ink-2); }
+.ic-stats .v { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- Lists ---------- */
+.ic-list { display: flex; flex-direction: column; }
+.ic-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--row-h); padding: 6px var(--space-5); position: relative; }
+.ic-row + .ic-row::before { content: ""; position: absolute; top: 0; right: 0; left: var(--inset, var(--space-5)); border-top: 0.5px solid var(--line); }
+.ic-row.lead { --inset: calc(var(--space-5) + 30px + var(--space-3)); }
+.ic-row .lead-icon { flex: none; width: 30px; display: grid; place-items: center; color: var(--ink-2); }
+.ic-row .lead-icon svg { width: 22px; height: 22px; }
+.ic-row .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ic-row .txt > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ic-row .trail { flex: none; display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ic-chev { width: 8px; height: 13px; color: var(--ink-3); }
+
+/* ---------- Section header ---------- */
+.ic-section { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-5); margin-bottom: var(--space-2); }
+.ic-section .more { color: var(--ink-2); font: 400 15px/20px var(--font-sans); display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- Routine card ---------- */
+.ic-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border-radius: var(--radius-l); background: var(--paper-2); }
+.ic-card .head { display: flex; flex-direction: column; gap: 2px; }
+.ic-card .list { color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ic-card .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+
+/* ---------- Coach note (TrueTrain) ---------- */
+.ic-note { display: grid; grid-template-columns: 22px 1fr; column-gap: var(--space-3); padding: var(--space-3) var(--space-5); position: relative; }
+.ic-note + .ic-note::before { content: ""; position: absolute; top: 0; right: 0; left: calc(var(--space-5) + 22px + var(--space-3)); border-top: 0.5px solid var(--line); }
+.ic-note .why { color: var(--ink-2); white-space: nowrap; }
+.ic-note.inline { padding: 0; grid-template-columns: 20px 1fr; column-gap: var(--space-2); }
+.ic-grade { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: var(--radius-s); font: 700 11px/1 var(--font-mono); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.ic-grade.a { background: var(--ink); color: var(--paper); box-shadow: none; }
+.ic-grade.c { box-shadow: inset 0 0 0 1px var(--ink-2); color: var(--ink-2); }
+
+/* ---------- Week strip ---------- */
+.ic-week { display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; }
+.ic-week .day { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.ic-week .d { display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--radius-capsule); color: var(--ink-2); font: 600 13px/1 var(--font-sans); }
+.ic-week .today .d { color: var(--paper); background: var(--ink); }
+
+/* ---------- Muscle volume ---------- */
+.ic-volume { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; column-gap: var(--space-3); row-gap: var(--space-3); padding: 0 var(--space-5); }
+.ic-volume .n { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Now Lifting accessory ---------- */
+.ic-accessory { display: flex; align-items: center; gap: var(--space-3); height: var(--accessory-h); padding: 0 6px 0 var(--space-4); border-radius: var(--radius-capsule); background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 0 0 0.5px var(--line), 0 8px 24px rgba(0,0,0,0.12); }
+.ic-accessory .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ic-accessory .txt > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Tab bar (web stand-in for the native bar) ---------- */
+.ic-tabbar { display: flex; align-items: center; gap: var(--space-3); }
+.ic-tabs { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; height: 62px; padding: 4px; border-radius: var(--radius-capsule); background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 0 0 0.5px var(--line), 0 8px 24px rgba(0,0,0,0.12); }
+.ic-tab { border: 0; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius-capsule); color: var(--ink-2); font: 500 11px/13px var(--font-sans); }
+.ic-tab svg { width: 24px; height: 24px; }
+.ic-tab.on { color: var(--ink); background: var(--paper-3); font-weight: 600; }
+.ic-search { border: 0; cursor: pointer; display: grid; place-items: center; flex: none; width: 62px; height: 62px; border-radius: var(--radius-capsule); background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 0 0 0.5px var(--line), 0 8px 24px rgba(0,0,0,0.12); color: var(--ink); }
+.ic-search svg { width: 24px; height: 24px; }
+
+/* ---------- Keypad ---------- */
+.ic-keypad { display: grid; grid-template-columns: repeat(3, 1fr) 1.15fr; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-l); background: var(--paper-2); }
+.ic-key { display: grid; place-items: center; height: 52px; border: 0; border-radius: var(--radius-m); background: var(--paper); color: var(--ink); font: 500 24px/1 var(--font-display); font-variant-numeric: tabular-nums; cursor: pointer; }
+.ic-key.fn { background: var(--paper-3); font: 600 15px/1 var(--font-sans); }
+.ic-key.go { background: var(--ink); color: var(--paper); font: 600 17px/1 var(--font-sans); grid-row: span 2; height: auto; }
+
+/* ---------- Segmented control ---------- */
+.ic-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; border-radius: var(--radius-capsule); background: var(--paper-3); }
+.ic-seg > span { display: grid; place-items: center; height: 30px; border-radius: var(--radius-capsule); color: var(--ink-2); font: 600 13px/1 var(--font-sans); }
+.ic-seg > span.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+/* ---------- Block weeks (Roman numerals) ---------- */
+.ic-block { display: grid; grid-template-columns: repeat(var(--weeks, 6), 1fr); gap: var(--space-1); }
+.ic-block .wk { display: flex; flex-direction: column; gap: 6px; }
+.ic-block .bar { height: 4px; border-radius: 2px; background: var(--paper-3); }
+.ic-block .done .bar { background: var(--ink); }
+.ic-block .now .bar { background: linear-gradient(to right, var(--ink) var(--p, 40%), var(--paper-3) var(--p, 40%)); }
+.ic-block .num { font: 600 15px/1 var(--font-display); letter-spacing: 0.04em; color: var(--ink-3); }
+.ic-block .done .num, .ic-block .now .num { color: var(--ink); }
+.ic-block .deload .bar { background: repeating-linear-gradient(to right, var(--ink-3) 0 4px, transparent 4px 7px); }
+
+/* ---------- Sparkline (lists) ---------- */
+.ic-spark { width: 64px; height: 24px; flex: none; }
+.ic-spark path { fill: none; stroke: var(--ink); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ic-spark circle { fill: var(--signal); stroke: var(--signal-edge); stroke-width: 1.25; }
+
+/* ---------- Chart ---------- */
+.ic-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.ic-chart .base { stroke: var(--line); stroke-width: 1; }
+.ic-chart .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.ic-chart .ln { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ic-chart .dot { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+.ic-chart .pr { fill: var(--signal); stroke: var(--signal-edge); stroke-width: 1.5; }
+.ic-chart text { fill: var(--ink-2); font: 500 11px var(--font-sans); font-variant-numeric: tabular-nums; }
+.ic-chart .end { fill: var(--ink); font-weight: 600; }
+
+
+.phone { position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--paper); color: var(--ink); border-radius: 0; }
+.sb { position: absolute; top: 0; left: 0; right: 0; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 44px; font: 600 17px/1 var(--font-sans); z-index: 5; color: var(--ink); }
+.sb .sbr { display: flex; gap: 6px; align-items: center; }
+.tnum { font-variant-numeric: tabular-nums; }
+.home { position: absolute; bottom: 8px; left: 50%; width: 136px; height: 5px; margin-left: -68px; border-radius: 3px; background: var(--ink); z-index: 6; }
+.scroll { position: absolute; inset: 50px 0 0 0; overflow: hidden; }
+.pad { padding: 0 20px; }
+.dock { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 16px 30px; z-index: 4; display: flex; flex-direction: column; gap: 10px; }
+.fade-b { position: absolute; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to bottom, transparent, var(--paper) 70%); z-index: 3; pointer-events: none; }
+.toprow { display: flex; align-items: center; justify-content: space-between; }
+.avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--paper-3); font: 600 15px/1 var(--font-sans); color: var(--ink); }
+.stack { display: flex; flex-direction: column; }
+.sp4 { height: 4px; } .sp8 { height: 8px; } .sp12 { height: 12px; } .sp16 { height: 16px; } .sp20 { height: 20px; } .sp24 { height: 24px; } .sp32 { height: 32px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.grab { width: 36px; height: 5px; border-radius: 3px; background: var(--paper-3); margin: 6px auto 0; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper-2); border-radius: 24px 24px 0 0; padding: 10px 16px 34px; z-index: 4; box-shadow: 0 -0.5px 0 var(--line); }
+.switch { width: 51px; height: 31px; border-radius: 16px; background: var(--ink); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; right: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--paper); box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+.lock-time { font: 300 84px/1 var(--font-display); letter-spacing: -0.02em; text-align: center; color: var(--ink); }
+.island { margin: 11px auto 0; width: 126px; height: 37px; border-radius: 20px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #f4f4f0; font: 600 14px/1 var(--font-sans); }
+.ic-block .deload .bar { background: repeating-linear-gradient(to right, var(--ink-3) 0 4px, transparent 4px 7px); }
+.ic-block .deload .num::after { content: none; }
+.lockwall { position: absolute; inset: 0; background: #262624; }
+.la { margin: 0 12px; padding: 16px; border-radius: 24px; background: var(--paper-2); }
+
+body { margin: 0; background: #d8d8d4; font-family: var(--font-sans); }
+.wall { display: flex; flex-wrap: wrap; gap: 40px; padding: 40px; }
+.art .cap { font: 500 13px/1.4 var(--font-sans); color: #333; margin: 10px 0 0; }
+.phone { border-radius: 44px; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+</style></head><body><div class="wall"><section class="art" data-label="Today · light"><div class="phone ic " data-theme="light"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll"><div class="stack">
+<div class="pad" style="padding-top:14px"><span class="t-eyebrow ic-upper ic-ink2">Tuesday, 3 November</span>
+<div class="toprow"><h1 class="t-large-title" style="margin:0">Today</h1><span class="avatar">L</span></div></div>
+<div class="sp16"></div>
+<div class="pad"><div class="ic-card">
+ <div class="head"><span class="t-footnote ic-ink2">Up next · Week III, day 2</span><span class="t-title-1">Push A</span></div>
+ <span class="list t-subhead">Bench Press, Overhead Press, Incline Dumbbell Press, Lateral Raise, Triceps Pushdown, Cable Fly</span>
+ <div class="stack" style="gap:6px"><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span><span class="t-footnote ic-ink2 ic-tnum">6 exercises · 20 sets · about 55 min</span></div>
+ <button type="button" class="ic-btn primary block">Start</button>
+</div></div>
+<div class="sp12"></div>
+<div class="ic-list">
+<div class="ic-note"><span class="ic-grade a">A</span><span class="t-subhead">Legs are at 5 of 10 sets for the week. Thursday’s Legs A brings them to 15. <span class="why">Why</span></span></div>
+</div>
+<div class="sp24"></div>
+<div class="ic-section"><span class="t-title-2">This week</span><span class="t-subhead ic-ink2">1 of 4 sessions</span></div>
+<div class="pad"><div class="ic-week"><div class="day"><span class="d">M</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span></span></span></div><div class="day today"><span class="d">T</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s live"></span></span></span></div><div class="day"><span class="d">W</span><span style="height:20px"></span></div><div class="day"><span class="d">T</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s "></span></span></span></div><div class="day"><span class="d">F</span><span style="height:20px"></span></div><div class="day"><span class="d">S</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s "></span></span></span></div><div class="day"><span class="d">S</span><span style="height:20px"></span></div></div></div>
+<div class="sp32"></div>
+<div class="ic-section"><span class="t-title-2">Sets per muscle</span><span class="t-footnote ic-ink2">Last 7 days</span></div>
+<div class="ic-volume"><span class="t-subhead">Chest</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span></span></span><span class="n t-headline">12</span><span class="t-subhead">Back</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span></span><span class="n t-headline">14</span><span class="t-subhead">Shoulders</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s "></span></span></span><span class="n t-headline">9</span><span class="t-subhead">Arms</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span></span><span class="n t-headline">10</span><span class="t-subhead">Legs</span><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span><span class="n t-headline">5</span></div>
+</div></div><div class="fade-b"></div><div class="dock"><div class="ic-tabbar"><div class="ic-tabs"><button type="button" class="ic-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg><span>Today</span></button><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg><span>Plan</span></button><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 19.5h17"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/></svg><span>Progress</span></button></div><button type="button" class="ic-search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button></div></div><div class="home"></div></div><p class="cap">Today · light</p></section><section class="art" data-label="Session, resting · dark"><div class="phone ic " data-theme="dark"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll"><div class="grab"></div>
+<div class="toprow" style="padding:2px 8px 0"><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg></span><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="pad"><div class="row" style="align-items:baseline"><span class="t-title-1">Push A</span><span class="t-number-m ic-tnum ic-ink2" style="font-weight:500">38:12</span></div>
+<div class="sp12"></div><span class="ic-tally hero" role="img"><span class="ic-grp"><span class="ic-s done warm"></span><span class="ic-s done warm"></span><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s live"></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span><div class="sp8"></div><span class="t-footnote ic-ink2">4 of 22 sets · 1 record</span></div>
+<div class="sp24"></div>
+<div class="pad"><div class="row"><div class="stack"><span class="t-title-3">Bench Press</span><span class="t-footnote ic-ink2">Barbell · last time 80 × 8, 8, 7</span></div><span class="ic-iconbtn" style="margin-right:-12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="sp8"></div><div class="ic-note inline"><span class="ic-grade">B</span><span class="t-subhead">Stay at 82.5 kg and get 8 again. Add weight when every set hits 8. <span class="why">Why</span></span></div></div>
+<div class="sp8"></div><div class="ic-list"><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done warm"></span></span></span></span><span class="vals t-number-m ic-tnum">40<span class="ic-x">×</span>10</span><span class="meta"><span class="ic-chip">Warm-up</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done warm"></span></span></span></span><span class="vals t-number-m ic-tnum">60<span class="ic-x">×</span>5</span><span class="meta"><span class="ic-chip">Warm-up</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span></span></span></span><span class="vals t-number-m ic-tnum">80<span class="ic-x">×</span>8</span><span class="meta"><span class="ic-chip">2 left</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s pr"></span></span></span></span><span class="vals t-number-m ic-tnum">82.5<span class="ic-x">×</span>8</span><span class="meta"><span class="ic-chip pr">Record</span><span class="ic-chip">1 left</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s live"></span></span></span></span><span class="vals t-number-m ic-tnum"><span class="ic-field ghost">82.5</span><span class="ic-x">×</span><span class="ic-field ghost" style="min-width:56px">8</span></span><span class="meta"></span></div></div>
+<div class="pad"><button type="button" class="ic-btn plain" style="padding-left:0;color:var(--ink-2)"><svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add set</button></div>
+<div class="sp8"></div><div class="ic-section"><span class="t-headline">Up next</span></div>
+<div class="ic-list"><div class="ic-row"><div class="txt"><span class="t-body">Overhead Press</span><span class="t-footnote ic-ink2">Barbell · last 50 × 8</span></div><span class="trail"><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span></span></div><div class="ic-row"><div class="txt"><span class="t-body">Incline Dumbbell Press</span><span class="t-footnote ic-ink2">Dumbbell · last 30 × 10</span></div><span class="trail"><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span></span></div><div class="ic-row"><div class="txt"><span class="t-body">Lateral Raise</span><span class="t-footnote ic-ink2">Dumbbell · last 12 × 15</span></div><span class="trail"><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span></span></div></div>
+</div>
+<div class="dock" style="padding:0;bottom:0;gap:0"><div class="ic-actionbar" style="padding-bottom:34px">
+<div class="row"><div class="stack"><span class="t-footnote ic-ink2">Rest</span><span class="t-number-l ic-tnum">1:42</span></div>
+<div class="row" style="gap:8px"><button type="button" class="ic-btn secondary small">−15</button><button type="button" class="ic-btn secondary small">+15</button><button type="button" class="ic-btn primary small">Skip</button></div></div>
+<div class="ic-drain"><i style="width:57%"></i></div>
+<div class="row"><span class="t-subhead ic-ink2">Reps left?</span><div class="ic-effort"><button type="button" class="opt" aria-pressed="false">0</button><button type="button" class="opt on" aria-pressed="true">1</button><button type="button" class="opt" aria-pressed="false">2</button><button type="button" class="opt" aria-pressed="false">3+</button></div></div>
+</div></div><div class="home"></div></div><p class="cap">Session, resting · dark</p></section><section class="art" data-label="Logging a set · light"><div class="phone ic " data-theme="light"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll"><div class="grab"></div>
+<div class="toprow" style="padding:2px 8px 0"><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg></span><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="pad"><div class="row" style="align-items:baseline"><span class="t-title-1">Push A</span><span class="t-number-m ic-tnum ic-ink2" style="font-weight:500">31:05</span></div>
+<div class="sp12"></div><span class="ic-tally hero" role="img"><span class="ic-grp"><span class="ic-s done warm"></span><span class="ic-s done warm"></span><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s live"></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span></div>
+<div class="sp24"></div>
+<div class="pad"><span class="t-title-3">Bench Press</span><br><span class="t-footnote ic-ink2">Barbell · last time 80 × 8, 8, 7</span></div>
+<div class="sp8"></div><div class="ic-list"><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s done"></span></span></span></span><span class="vals t-number-m ic-tnum">80<span class="ic-x">×</span>8</span><span class="meta"><span class="ic-chip">2 left</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s pr"></span></span></span></span><span class="vals t-number-m ic-tnum">82.5<span class="ic-x">×</span>8</span><span class="meta"><span class="ic-chip pr">Record</span></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s live"></span></span></span></span><span class="vals t-number-m ic-tnum"><span class="ic-field" style="box-shadow:inset 0 0 0 2px var(--ink);background:var(--paper)">82.5</span><span class="ic-x">×</span><span class="ic-field ghost" style="min-width:56px">8</span></span><span class="meta"></span></div><div class="ic-setrow"><span class="mark"><span class="ic-tally " role="img"><span class="ic-grp"><span class="ic-s "></span></span></span></span><span class="vals t-number-m ic-tnum ghost">82.5<span class="ic-x">×</span>8</span><span class="meta"></span></div></div></div>
+<div class="sheet"><div class="grab" style="margin:0 auto 12px"></div>
+<div class="row" style="padding:0 6px 12px"><div class="stack"><span class="t-footnote ic-ink2">Weight · set 3</span><span class="t-number-l ic-tnum">82.5<span class="ic-unit">kg</span></span></div>
+<div class="stack" style="align-items:flex-end"><span class="t-footnote ic-ink2">Plates per side</span><span class="t-headline ic-tnum">20 · 10 · 1.25</span></div></div>
+<div class="ic-keypad" style="padding:0;background:transparent"><button type="button" class="ic-key">1</button><button type="button" class="ic-key">2</button><button type="button" class="ic-key">3</button><button type="button" class="ic-key fn">−2.5</button>
+<button type="button" class="ic-key">4</button><button type="button" class="ic-key">5</button><button type="button" class="ic-key">6</button><button type="button" class="ic-key fn">+2.5</button>
+<button type="button" class="ic-key">7</button><button type="button" class="ic-key">8</button><button type="button" class="ic-key">9</button><button type="button" class="ic-key go">Next</button>
+<button type="button" class="ic-key">.</button><button type="button" class="ic-key">0</button><button type="button" class="ic-key fn">⌫</button></div></div><div class="home"></div></div><p class="cap">Logging a set · light</p></section><section class="art" data-label="Workout summary · light"><div class="phone ic " data-theme="light"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll">
+<div class="toprow" style="padding:6px 8px 0 20px"><span></span><button type="button" class="ic-btn plain t-headline">Done</button></div>
+<div class="pad"><span class="t-eyebrow ic-upper ic-ink2">Tuesday, 3 November · 18:04</span>
+<h1 class="t-large-title" style="margin:2px 0 0">Push A</h1>
+<div class="sp20"></div>
+<div class="ic-stats"><div><span class="k t-footnote">Time</span><span class="v t-number-m">1:04</span></div><div><span class="k t-footnote">Volume</span><span class="v t-number-m">9,840<span class="ic-unit">kg</span></span></div><div><span class="k t-footnote">Sets</span><span class="v t-number-m">20</span></div></div>
+<div class="sp24"></div><span class="ic-tally hero" role="img"><span class="ic-grp"><span class="ic-s done warm"></span><span class="ic-s done warm"></span><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s done"></span><span class="ic-s done"></span></span></span><div class="sp8"></div><span class="t-footnote ic-ink2">20 sets · 2 records</span></div>
+<div class="sp32"></div>
+<div class="ic-section"><span class="t-title-2">Records</span></div>
+<div class="ic-list">
+<div class="ic-row"><div class="txt"><span class="t-body">Bench Press</span><span class="t-footnote ic-ink2">82.5 kg × 8 · estimated 1RM</span></div><span class="trail t-headline" style="color:var(--ink)"><span class="ic-hl">104.5 kg</span></span></div>
+<div class="ic-row"><div class="txt"><span class="t-body">Lateral Raise</span><span class="t-footnote ic-ink2">Most reps at 14 kg</span></div><span class="trail t-headline" style="color:var(--ink)"><span class="ic-hl">15 reps</span></span></div>
+</div>
+<div class="sp24"></div>
+<div class="ic-section"><span class="t-title-2">Notes</span></div>
+<div class="ic-note"><span class="ic-grade">B</span><span class="t-subhead">Your rests on barbell lifts were 58 s. Two to three minutes keeps more reps in the later sets. <span class="why">Why</span></span></div>
+<div class="sp24"></div>
+<div class="ic-section"><span class="t-title-2">Routine</span></div>
+<div class="ic-row" style="align-items:flex-start;padding-top:10px"><div class="txt"><span class="t-body">Save changes to Push A</span><span class="t-footnote ic-ink2" style="white-space:normal">Adds a set to Lateral Raise. Updates the weights of 6 sets.</span></div><span class="switch"></span></div>
+</div><div class="home"></div></div><p class="cap">Workout summary · light</p></section><section class="art" data-label="Exercise · light"><div class="phone ic " data-theme="light"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll">
+<div class="toprow" style="padding:2px 8px 0"><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></span><span class="ic-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="pad"><h1 class="t-title-1" style="margin:0">Bench Press</h1><span class="t-footnote ic-ink2">Barbell · Chest</span>
+<div class="sp20"></div>
+<div class="row" style="align-items:flex-end"><div class="stack"><span class="t-number-xl ic-tnum">101.3<span class="ic-unit" style="font-size:20px">kg</span></span><span class="t-footnote ic-ink2">Estimated 1RM, best of last session</span></div>
+<span class="t-headline ic-tnum" style="margin-bottom:22px"><span class="ic-hl">+13.3 kg</span></span></div>
+<div class="sp16"></div><div class="ic-seg"><span>3M</span><span class="on">6M</span><span>1Y</span><span>All</span></div>
+<div class="sp12"></div><svg class="ic-chart" viewBox="0 0 350 170" role="img" aria-label="Estimated 1RM over 6 months"><line class="grid" x1="0" x2="320" y1="115.1" y2="115.1"/><text x="324" y="119.1">90</text><line class="grid" x1="0" x2="320" y1="79.0" y2="79.0"/><text x="324" y="83.0">95</text><line class="grid" x1="0" x2="320" y1="42.9" y2="42.9"/><text x="324" y="46.9">100</text><line class="base" x1="0" x2="320" y1="144" y2="144"/><path class="ln" d="M0.0 129.6 L21.1 121.6 L42.1 121.6 L63.2 110.8 L84.3 102.1 L105.3 106.4 L126.4 94.2 L147.5 86.2 L168.5 90.6 L189.6 74.7 L210.7 71.1 L231.7 60.9 L252.8 60.9 L273.9 50.1 L294.9 54.4 L316.0 33.5"/><circle class="pr" cx="84.3" cy="102.1" r="4"/><circle class="pr" cx="189.6" cy="74.7" r="4"/><circle class="pr" cx="231.7" cy="60.9" r="4"/><circle class="pr" cx="273.9" cy="50.1" r="4"/><circle class="pr" cx="316.0" cy="33.5" r="4"/><text x="0.0" y="164" text-anchor="start">May</text><text x="105.3" y="164" text-anchor="middle">Jul</text><text x="210.7" y="164" text-anchor="middle">Sep</text><text x="316.0" y="164" text-anchor="end">Nov</text></svg>
+<div class="sp16"></div>
+<div class="ic-stats"><div><span class="k t-footnote">Best set</span><span class="v t-number-m">85<span class="ic-x">×</span>6</span></div><div><span class="k t-footnote">Sessions</span><span class="v t-number-m">64</span></div><div><span class="k t-footnote">Last</span><span class="v t-number-m">Today</span></div></div></div>
+<div class="sp32"></div><div class="ic-section"><span class="t-title-2">Rep maxes</span></div>
+<div class="ic-list"><div class="ic-row"><span class="t-headline ic-tnum" style="width:44px">1 RM</span><div class="txt"><span class="t-body ic-tnum">100 kg</span></div><span class="trail t-subhead">March</span></div><div class="ic-row"><span class="t-headline ic-tnum" style="width:44px">3 RM</span><div class="txt"><span class="t-body ic-tnum">92.5 kg</span></div><span class="trail t-subhead">September</span></div><div class="ic-row"><span class="t-headline ic-tnum" style="width:44px">5 RM</span><div class="txt"><span class="t-body ic-tnum">87.5 kg</span></div><span class="trail t-subhead">October</span></div><div class="ic-row"><span class="t-headline ic-tnum" style="width:44px">8 RM</span><div class="txt"><span class="t-body ic-tnum"><span class=ic-hl>82.5 kg</span></span></div><span class="trail t-subhead">Today</span></div><div class="ic-row"><span class="t-headline ic-tnum" style="width:44px">10 RM</span><div class="txt"><span class="t-body ic-tnum">77.5 kg</span></div><span class="trail t-subhead">August</span></div></div></div><div class="home"></div></div><p class="cap">Exercise · light</p></section><section class="art" data-label="Plan · dark"><div class="phone ic " data-theme="dark"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll">
+<div class="pad" style="padding-top:30px"><div class="toprow"><h1 class="t-large-title" style="margin:0">Plan</h1><span class="ic-iconbtn filled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></div></div>
+<div class="sp16"></div>
+<div class="pad"><div class="ic-card">
+<div class="head"><span class="t-footnote ic-ink2">Current block · Push, Pull, Legs</span><span class="t-title-1">Hypertrophy</span></div>
+<div class="ic-block"><div class="wk done" style="--p:0"><span class="bar"></span><span class="num">I</span></div><div class="wk done" style="--p:0"><span class="bar"></span><span class="num">II</span></div><div class="wk now" style="--p:25%"><span class="bar"></span><span class="num">III</span></div><div class="wk " style="--p:0"><span class="bar"></span><span class="num">IV</span></div><div class="wk " style="--p:0"><span class="bar"></span><span class="num">V</span></div><div class="wk deload" style="--p:0"><span class="bar"></span><span class="num">VI</span></div></div>
+<div class="row"><span class="t-footnote ic-ink2">Week III of VI · deload from 30 November</span></div>
+</div></div>
+<div class="sp32"></div>
+<div class="ic-section"><span class="t-title-2">Routines</span><span class="more">Edit</span></div>
+<div class="ic-list"><div class="ic-row"><div class="txt"><span class="t-body">Push A</span><span class="t-footnote ic-ink2">6 exercises · today</span></div><span class="trail"><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row"><div class="txt"><span class="t-body">Pull A</span><span class="t-footnote ic-ink2">6 exercises · yesterday</span></div><span class="trail"><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row"><div class="txt"><span class="t-body">Legs A</span><span class="t-footnote ic-ink2">6 exercises · Saturday</span></div><span class="trail"><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row"><div class="txt"><span class="t-body">Full Body</span><span class="t-footnote ic-ink2">5 exercises · in Travel</span></div><span class="trail"><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div></div>
+<div class="sp32"></div>
+<div class="ic-section"><span class="t-title-2">Build</span></div>
+<div class="ic-list">
+<div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="7" height="7" rx="2"/><rect x="13.5" y="4" width="7" height="7" rx="2"/><rect x="3.5" y="14" width="7" height="6" rx="2"/><path d="M17 14v6M14 17h6"/></svg></span><div class="txt"><span class="t-body">Build a split</span><span class="t-footnote ic-ink2">From your days, time and goals</span></div><span class="trail"><span class="ic-chip">Pro</span><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div>
+<div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5a2 2 0 012-2h4l2 2.5h7a2 2 0 012 2v8a2 2 0 01-2 2h-13a2 2 0 01-2-2z"/></svg></span><div class="txt"><span class="t-body">Examples</span><span class="t-footnote ic-ink2">Push, Pull, Legs and 3 more</span></div><span class="trail"><svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div>
+</div>
+</div><div class="fade-b"></div><div class="dock"><div class="ic-tabbar"><div class="ic-tabs"><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg><span>Today</span></button><button type="button" class="ic-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg><span>Plan</span></button><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 19.5h17"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/></svg><span>Progress</span></button></div><button type="button" class="ic-search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button></div></div><div class="home"></div></div><p class="cap">Plan · dark</p></section><section class="art" data-label="Progress, workout running · dark"><div class="phone ic " data-theme="dark"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="scroll">
+<div class="pad" style="padding-top:30px"><h1 class="t-large-title" style="margin:0">Progress</h1>
+<div class="sp20"></div>
+<div class="ic-stats"><div><span class="k t-footnote">Workouts</span><span class="v t-number-m">14</span></div><div><span class="k t-footnote">Volume</span><span class="v t-number-m">132<span class="ic-unit">t</span></span></div><div><span class="k t-footnote">Records</span><span class="v t-number-m">9</span></div></div>
+<span class="t-footnote ic-ink2">Last 30 days</span></div>
+<div class="sp24"></div>
+<div class="ic-list"><div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span><div class="txt"><span class="t-body">Workouts</span></div><span class="trail t-subhead">214<svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h19"/><rect x="5" y="7.5" width="3" height="9" rx="1"/><rect x="16" y="7.5" width="3" height="9" rx="1"/></svg></span><div class="txt"><span class="t-body">Lifts</span></div><span class="trail t-subhead">38<svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9.5" r="5.5"/><path d="M8.6 14l-1.6 7 5-2.6 5 2.6-1.6-7"/></svg></span><div class="txt"><span class="t-body">Records</span></div><span class="trail t-subhead">126<svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div><div class="ic-row lead"><span class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.8" r="2"/><path d="M5 8.5h14M12 8.5v6M12 14.5l-3.5 6.5M12 14.5l3.5 6.5"/></svg></span><div class="txt"><span class="t-body">Body</span></div><span class="trail t-subhead">81.4 kg<svg class="ic-chev" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg></span></div></div>
+<div class="sp32"></div>
+<div class="ic-section"><span class="t-title-2">Moving up</span><span class="t-footnote ic-ink2">Last 90 days</span></div>
+<div class="ic-list"><div class="ic-row"><div class="txt"><span class="t-body">Romanian Deadlift</span><span class="t-footnote ic-ink2 ic-tnum">Estimated 1RM 144 kg</span></div><span class="trail"><svg class="ic-spark" viewBox="0 0 64 24"><path d="M2.0 21.0 L10.6 19.7 L19.1 17.1 L27.7 17.1 L36.3 13.3 L44.9 9.4 L53.4 8.1 L62.0 3.0"/><circle cx="62.0" cy="3.0" r="3"/></svg><span class="t-headline ic-tnum" style="color:var(--signal);min-width:40px;text-align:right">+6%</span></span></div><div class="ic-row"><div class="txt"><span class="t-body">Lat Pulldown</span><span class="t-footnote ic-ink2 ic-tnum">Estimated 1RM 88 kg</span></div><span class="trail"><svg class="ic-spark" viewBox="0 0 64 24"><path d="M2.0 21.0 L12.0 17.4 L22.0 17.4 L32.0 13.8 L42.0 10.2 L52.0 10.2 L62.0 3.0"/><circle cx="62.0" cy="3.0" r="3"/></svg><span class="t-headline ic-tnum" style="color:var(--signal);min-width:40px;text-align:right">+4%</span></span></div><div class="ic-row"><div class="txt"><span class="t-body">Incline Dumbbell Press</span><span class="t-footnote ic-ink2 ic-tnum">Estimated 1RM 41 kg</span></div><span class="trail"><svg class="ic-spark" viewBox="0 0 64 24"><path d="M2.0 21.0 L14.0 21.0 L26.0 15.0 L38.0 15.0 L50.0 9.0 L62.0 3.0"/><circle cx="62.0" cy="3.0" r="3"/></svg><span class="t-headline ic-tnum" style="color:var(--signal);min-width:40px;text-align:right">+3%</span></span></div></div>
+</div><div class="fade-b" style="height:210px"></div><div class="dock"><div class="ic-accessory"><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s live"></span><span class="ic-s "></span></span></span><div class="txt"><span class="t-headline">Bench Press · set 4 of 4</span><span class="t-footnote ic-ink2 ic-tnum">Rest 1:42</span></div><button type="button" class="ic-iconbtn" aria-label="Skip rest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l8 6-8 6V6zM17 6v12"/></svg></button></div><div class="ic-tabbar"><div class="ic-tabs"><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg><span>Today</span></button><button type="button" class="ic-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg><span>Plan</span></button><button type="button" class="ic-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 19.5h17"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/></svg><span>Progress</span></button></div><button type="button" class="ic-search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button></div></div><div class="home"></div></div><p class="cap">Progress, workout running · dark</p></section><section class="art" data-label="Lock Screen and Dynamic Island · dark"><div class="phone ic " data-theme="dark"><div class="sb"><span class="tnum">9:41</span><span class="sbr">
+<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+<svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 008 1 9.6 9.6 0 001.2 3.7l1.1 1.1A8 8 0 018 2.5zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.3 6.3 0 008 4.1c-1.8 0-3.4.7-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zM8 9a1.6 1.6 0 110 3.2A1.6 1.6 0 018 9z" fill="currentColor"/></svg>
+<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="currentColor" opacity=".4" fill="none"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg></span></div><div class="lockwall"></div><div class="island" style="position:relative"><span><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s live"></span></span></span></span><span class="ic-tnum">1:42</span></div>
+<div style="position:absolute;top:96px;left:0;right:0;text-align:center;color:#f4f4f0"><span class="t-headline ic-ink2">Tuesday 3 November</span><div class="lock-time ic-tnum">9:41</div></div>
+<div style="position:absolute;left:0;right:0;bottom:70px"><div class="la"><div class="row"><span class="t-headline">Push A</span><span class="t-subhead ic-ink2 ic-tnum">38:12</span></div>
+<div class="sp12"></div><div class="row" style="align-items:flex-end"><div class="stack"><span class="t-footnote ic-ink2">Rest</span><span class="t-number-l ic-tnum">1:42</span></div>
+<div class="stack" style="align-items:flex-end"><span class="t-footnote ic-ink2">Next · set 4 of 4</span><span class="t-headline ic-tnum">Bench Press 82.5 × 8</span></div></div>
+<div class="sp12"></div><div class="ic-drain"><i style="width:57%"></i></div>
+<div class="sp12"></div><span class="ic-tally small" role="img"><span class="ic-grp"><span class="ic-s done warm"></span><span class="ic-s done warm"></span><span class="ic-s done"></span><span class="ic-s pr"></span><span class="ic-s live"></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span><span class="ic-grp"><span class="ic-s "></span><span class="ic-s "></span><span class="ic-s "></span></span></span></div></div><div class="home"></div></div><p class="cap">Lock Screen and Dynamic Island · dark</p></section></div></body></html>

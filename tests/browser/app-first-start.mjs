@@ -62,7 +62,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   // the backup brought German and Intense Red along
   await page.waitForTimeout(400);
   assert.ok(await has(page, 'Deine Daten'), 'German after restore');
-  assert.equal(await bg(page), 'rgb(10, 10, 10)', 'Intense Red background');
+  assert.equal(await bg(page), 'rgb(0, 0, 0)', 'Intense Red background (true black)');
   assert.match(await page.getByTestId('set-name').innerText(), /Laurin/, 'the name row shows the restored name');
   await page.screenshot({ path: `${OUT}/02-settings-after-restore.png` });
   ok('the backup’s language (German) and theme (Intense Red) apply right away');
@@ -145,7 +145,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('tab-history').waitFor();
   await tab(page, 'history');
   await page.locator('[data-testid^="workout-"]').first().waitFor();
-  assert.equal(await bg(page), 'rgb(10, 10, 10)');
+  assert.equal(await bg(page), 'rgb(0, 0, 0)');
   ok('data, theme and language survive a reload');
 
   // ---------- 4. settings change live ----------
@@ -153,7 +153,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('open-settings').click();
   await page.getByTestId('theme-strawberry-matcha').click();
   await page.waitForTimeout(200);
-  assert.equal(await bg(page), 'rgb(242, 235, 222)', 'Strawberry Matcha beige');
+  assert.equal(await bg(page), 'rgb(251, 248, 242)', 'Strawberry Matcha cream');
   await page.getByTestId('language-en').click();
   await page.waitForTimeout(200);
   assert.ok(await has(page, 'Your data'));
@@ -172,7 +172,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
 {
   const { ctx, page, errors, dialogs } = await newPage({ scheme: 'dark', locale: 'de-DE' });
   await page.getByTestId('start-empty').waitFor();
-  assert.equal(await bg(page), 'rgb(11, 13, 17)', 'Auto follows a dark phone');
+  assert.equal(await bg(page), 'rgb(0, 0, 0)', 'Auto follows a dark phone (true black)');
   assert.ok((await text(page)).includes('Training starten'), 'German phone → German app');
   ok('a German phone in dark mode gets the German app in Dark');
   await tab(page, 'profile');

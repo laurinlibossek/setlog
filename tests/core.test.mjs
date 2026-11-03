@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as core from '../setlog/js/core/index.js';
 import { themesFromCss, render } from '../scripts/themes-from-css.mjs';
+import { tallyFromTokens, render as renderTally } from '../scripts/tally-tokens.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const APP = path.join(ROOT, 'setlog');
@@ -515,6 +516,34 @@ test('core/themes.js matches the colours in app.css (run `npm run themes` after 
   assert.equal(read(path.join(CORE, 'themes.js')), render(themesFromCss(read(path.join(APP, 'css/app.css')))));
   assert.equal(core.paletteFor('system', true), core.THEMES.dark);
   assert.equal(core.THEMES['intense-red'].colors.accent, '#e5202e');
+});
+
+test('weekStreak counts each week in one pass, the same as filtering per week', () => {
+  const now = Date.UTC(2026, 10, 3, 12);
+  const slow = (ws, { goal, weekStart }) => {
+    const count = (st) => ws.filter((w) => w.startedAt >= st && w.startedAt < core.addDays(st, 7)).length;
+    let week = core.startOfWeek(now, weekStart), streak = 0;
+    if (count(week) >= goal) streak++;
+    week = core.addDays(week, -7);
+    while (count(week) >= goal && streak < 520) { streak++; week = core.addDays(week, -7); }
+    return streak;
+  };
+  let seed = 7; const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const ws = [];
+  for (let t = now - 400 * DAY; t < now; t += (0.6 + rand() * 2.4) * DAY) ws.push({ id: 'w' + ws.length, startedAt: Math.round(t) });
+  for (const goal of [1, 2, 3, 4]) for (const weekStart of [0, 1]) {
+    assert.equal(core.weekStreak(ws, { goal, weekStart, now }), slow(ws, { goal, weekStart }), `goal ${goal}, week starts ${weekStart}`);
+  }
+});
+
+// ---------- Tally design tokens ----------
+test('app/src/design/tally.ts matches docs/design/tokens.json (run `npm run tally` after changing it)', () => {
+  const tally = tallyFromTokens(JSON.parse(read(path.join(ROOT, 'docs/design/tokens.json'))));
+  assert.equal(read(path.join(ROOT, 'app/src/design/tally.ts')), renderTally(tally));
+  assert.deepEqual(Object.keys(tally.themes), ['light', 'dark', 'strawberry-matcha', 'intense-red']);
+  assert.equal(tally.themes.dark.colors.paper, '#000000', 'dark themes are true black');
+  assert.equal(tally.themes.light.colors.strokeDone, tally.themes.light.colors.ink, 'aliases resolve');
+  assert.equal(tally.themes['intense-red'].scheme, 'dark');
 });
 
 // ---------- German exercise names ----------

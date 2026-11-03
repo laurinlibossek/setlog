@@ -1,6 +1,6 @@
 # Status and backlog
 
-Last updated 3 Nov 2026 (privacy pages, German exercise names, app icon and store screenshots merged). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
+Last updated 3 Nov 2026 (Tally design foundation). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
 
 ## Where things are
 
@@ -10,13 +10,15 @@ Last updated 3 Nov 2026 (privacy pages, German exercise names, app icon and stor
   - the store app in `app/` (14–19 Oct 2026): everything the web app does (the last pieces came on 2 Nov 2026), plus rest timer notifications with the phone locked and template links that open the app.
   - browser tests in `tests/browser/` and these docs (2 Nov 2026).
   - the browser suites in CI and the launch prep (`docs/launch/`); the privacy pages and store config, German exercise names, the app icon and splash ("thin") and the store screenshot script (all merged 3 Nov 2026).
+- **The redesign (Tally)** started on 3 Nov 2026: the design language, tokens and build plan are in [`docs/design/`](../design/README.md). The foundation (palette, tally strokes, capsule controls) is the pull request from `claude/tally-foundation`; phases 2 to 5 in [`docs/design/phases.md`](../design/phases.md) can then run in parallel sessions.
 - While `expo-app` is unmerged, web changes on it stay at version 1.6.2 (it was never deployed, so phones never saw it). Bump the version when it's merged or when Laurin asks for a release.
 
 ## Next, in order
 
 1. **Laurin tries the app on his phone** in Expo Go (`git pull`, `cd app && npm install && npx expo start`): especially the rest notification with the phone locked (allow notifications on the first rest timer), Back up now → Save to Files, and editing templates; since 2 Nov also the History calendar, Merge into another exercise, Settings → Warm-up sets and Delete all data, and a template link opening the app (in Expo Go: `exp://<computer>:8081/--/?template=<code>`, the code from a shared link). His feedback comes before new features. Since 3 Nov also Settings → Privacy policy (opens the live page only after the merge into `main`) and the German exercise names (with the app set to German). The new icon and splash only show in a development build; Expo Go shows its own.
 2. **Merge `expo-app` into `main`** after Laurin's go. **Blocker first: fill in the contact email** (`CONTACT_EMAIL` in `setlog/js/core/links.js`, the app's own address); the Pages deploy refuses to run while it's the `[EMAIL]` placeholder, because a placeholder must never go live. That deploys web 1.6.2: afterwards check the live site (`sw.js` reports the new version; on the live site modules are under `/setlog/js/…`).
-3. **Increment branding:** the icon and splash are done (3 Nov 2026, design "thin", picked by Laurin). Then a development build and TestFlight once Laurin has the Apple Developer account (EAS). With the account, the web app's template links can open the app too (universal links and Android App Links): Laurin decides where the `.well-known` files live (a `laurinlibossek.github.io` repository or a custom domain); the steps are in architecture.md under "Template links into the app". Store texts, the privacy policy and answers to the stores' questions are drafted in `docs/launch/`.
+3. **Tally, phases 2 to 5** ([`docs/design/phases.md`](../design/phases.md)), after the foundation PR is merged: tabs and Today, the session, summary and exercise page, blocks. One pull request each; they own different screens, so they can run in parallel.
+4. **Increment branding:** the icon and splash are done (3 Nov 2026, design "thin", picked by Laurin). Then a development build and TestFlight once Laurin has the Apple Developer account (EAS). With the account, the web app's template links can open the app too (universal links and Android App Links): Laurin decides where the `.well-known` files live (a `laurinlibossek.github.io` repository or a custom domain); the steps are in architecture.md under "Template links into the app". Store texts, the privacy policy and answers to the stores' questions are drafted in `docs/launch/`.
 
 ## Open items, any order
 
@@ -36,6 +38,8 @@ Reference for anyone touching the summary or templates.
 - No question for example templates, "Do this workout again" or empty workouts (`templateId` is null), or when Settings → Ask to update templates is off. Sets that are unchecked or empty at finish are dropped, so they count as removed.
 
 ## Done
+
+- **Tally foundation** (3 Nov 2026, `claude/tally-foundation`): the design language in `docs/design/` (Laurin: "I want that on the app"); `npm run tally` generates `app/src/design/tally.ts` from `docs/design/tokens.json` and `npm test` checks it; the app's colours come from Tally (`useTally()`, with `useColors()` mapping the old names), so every screen is ink on paper, true black in dark mode, records in the signal colour; the set's stroke replaces the check button; capsule buttons and controls, Title 2 section headers; the one-pass `weekStreak` in the core (80 → 1.4 ms on a 5-year log; a unit test compares it with the old count). Suites: the background colours in `app-first-start` follow the new palettes.
 
 - **1.0.0** (22 Sep 2026): logging with the "previous" column, set types, RPE, supersets, rest timer, templates with folders, history with calendar and editing, exercise charts and records, Measure, Strong CSV import and export, JSON backup, offline service worker, dark mode, kg/lb and km/mi.
 - **1.1.0:** the Strong-style "Update template" question and the setting to turn it off.

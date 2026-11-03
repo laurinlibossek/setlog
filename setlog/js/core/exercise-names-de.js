@@ -1,7 +1,14 @@
 // German display names for the built-in exercises, keyed by their English name.
 // Only for showing: stored names stay English (Strong import and export,
 // backups), and an exercise the user created or renamed keeps its own name.
-// Where German gyms use the English word (Face Pull, Hip Thrust), so does this.
+//
+// The rule (Laurin, 3 Nov 2026):
+// - German where German is the standard term (Bankdrücken, Kreuzheben,
+//   Kniebeugen, Latzug), English where German gym-goers and coaches commonly
+//   say it and it sounds more professional (Hip Thrust, Face Pull, Power Clean).
+// - Every equipment variant of one exercise uses the same base term
+//   (Reverse Flys with dumbbells, machine or cable; all Olympic lifts in English).
+// - The equipment goes in brackets, as in the English names.
 export const EXERCISE_NAMES_DE = {
   'Bench Press (Barbell)': 'Bankdrücken (Langhantel)',
   'Bench Press (Dumbbell)': 'Bankdrücken (Kurzhantel)',
@@ -16,7 +23,7 @@ export const EXERCISE_NAMES_DE = {
   'Incline Chest Press (Machine)': 'Schräge Brustpresse (Maschine)',
   'Chest Fly (Dumbbell)': 'Fliegende (Kurzhantel)',
   'Incline Chest Fly (Dumbbell)': 'Schrägbank-Fliegende (Kurzhantel)',
-  'Chest Fly (Machine)': 'Butterfly (Maschine)',
+  'Chest Fly (Machine)': 'Fliegende (Maschine)',
   'Cable Crossover (Cable)': 'Cable Crossover (Kabelzug)',
   'Low Cable Fly (Cable)': 'Fliegende von unten (Kabelzug)',
   'Pullover (Dumbbell)': 'Überzüge (Kurzhantel)',
@@ -33,7 +40,7 @@ export const EXERCISE_NAMES_DE = {
   'Deadlift (Dumbbell)': 'Kreuzheben (Kurzhantel)',
   'Rack Pull (Barbell)': 'Rack Pull (Langhantel)',
   'Bent Over Row (Barbell)': 'Rudern vorgebeugt (Langhantel)',
-  'Pendlay Row (Barbell)': 'Pendlay Row (Langhantel)',
+  'Pendlay Row (Barbell)': 'Pendlay-Rudern (Langhantel)',
   'Bent Over One Arm Row (Dumbbell)': 'Einarmiges Rudern (Kurzhantel)',
   'Chest Supported Row (Dumbbell)': 'Rudern auf der Schrägbank (Kurzhantel)',
   'T Bar Row': 'T-Bar-Rudern',
@@ -52,14 +59,14 @@ export const EXERCISE_NAMES_DE = {
   'Inverted Row': 'Umgekehrtes Rudern',
   'Back Extension': 'Rückenstrecken',
   'Back Extension (Weighted)': 'Rückenstrecken (mit Gewicht)',
-  'Back Extension (Machine)': 'Rückenstrecker (Maschine)',
+  'Back Extension (Machine)': 'Rückenstrecken (Maschine)',
   'Shrug (Barbell)': 'Shrugs (Langhantel)',
   'Shrug (Dumbbell)': 'Shrugs (Kurzhantel)',
   'Overhead Press (Barbell)': 'Schulterdrücken stehend (Langhantel)',
   'Overhead Press (Dumbbell)': 'Schulterdrücken stehend (Kurzhantel)',
   'Seated Overhead Press (Dumbbell)': 'Schulterdrücken sitzend (Kurzhantel)',
   'Seated Overhead Press (Barbell)': 'Schulterdrücken sitzend (Langhantel)',
-  'Shoulder Press (Machine)': 'Schulterpresse (Maschine)',
+  'Shoulder Press (Machine)': 'Schulterdrücken (Maschine)',
   'Shoulder Press (Smith Machine)': 'Schulterdrücken (Multipresse)',
   'Arnold Press (Dumbbell)': 'Arnold Press (Kurzhantel)',
   'Push Press (Barbell)': 'Push Press (Langhantel)',
@@ -72,8 +79,8 @@ export const EXERCISE_NAMES_DE = {
   'Upright Row (Barbell)': 'Aufrechtes Rudern (Langhantel)',
   'Upright Row (Cable)': 'Aufrechtes Rudern (Kabelzug)',
   'Face Pull (Cable)': 'Face Pull (Kabelzug)',
-  'Reverse Fly (Dumbbell)': 'Vorgebeugtes Seitheben (Kurzhantel)',
-  'Reverse Fly (Machine)': 'Reverse Butterfly (Maschine)',
+  'Reverse Fly (Dumbbell)': 'Reverse Flys (Kurzhantel)',
+  'Reverse Fly (Machine)': 'Reverse Flys (Maschine)',
   'Reverse Fly (Cable)': 'Reverse Flys (Kabelzug)',
   'Handstand Push Up': 'Handstand-Liegestütze',
   'Bicep Curl (Barbell)': 'Bizepscurls (Langhantel)',
@@ -160,14 +167,14 @@ export const EXERCISE_NAMES_DE = {
   'Pallof Press (Cable)': 'Pallof Press (Kabelzug)',
   'Wood Chop (Cable)': 'Holzhacker (Kabelzug)',
   'Plank': 'Plank',
-  'Side Plank': 'Seitstütz',
+  'Side Plank': 'Side Plank',
   'Hollow Hold': 'Hollow Hold',
   'L-Sit': 'L-Sit',
-  'Clean (Barbell)': 'Umsetzen (Langhantel)',
+  'Clean (Barbell)': 'Clean (Langhantel)',
   'Power Clean (Barbell)': 'Power Clean (Langhantel)',
   'Hang Clean (Barbell)': 'Hang Clean (Langhantel)',
-  'Clean and Jerk (Barbell)': 'Stoßen (Langhantel)',
-  'Snatch (Barbell)': 'Reißen (Langhantel)',
+  'Clean and Jerk (Barbell)': 'Clean and Jerk (Langhantel)',
+  'Snatch (Barbell)': 'Snatch (Langhantel)',
   'Power Snatch (Barbell)': 'Power Snatch (Langhantel)',
   'Thruster (Barbell)': 'Thruster (Langhantel)',
   'Kettlebell Swing': 'Kettlebell Swing',
@@ -175,7 +182,7 @@ export const EXERCISE_NAMES_DE = {
   "Farmer's Walk (Dumbbell)": "Farmer's Walk (Kurzhantel)",
   'Burpee': 'Burpees',
   'Battle Ropes': 'Battle Ropes',
-  'Sled Push': 'Schlitten schieben',
+  'Sled Push': 'Schlittenschieben',
   'Running': 'Laufen',
   'Running (Treadmill)': 'Laufen (Laufband)',
   'Walking': 'Gehen',
@@ -184,7 +191,7 @@ export const EXERCISE_NAMES_DE = {
   'Cycling (Indoor)': 'Radfahren (Indoor)',
   'Rowing (Machine)': 'Rudern (Rudergerät)',
   'Elliptical Trainer': 'Crosstrainer',
-  'Stair Climber': 'Stepper',
+  'Stair Climber': 'Treppensteiger',
   'Ski Erg': 'SkiErg',
   'Air Bike': 'Air Bike',
   'Swimming': 'Schwimmen',

@@ -524,6 +524,12 @@ test('German exercise names: every built-in has one, shown only in German and on
   assert.deepEqual(Object.keys(de).filter((n) => !core.SEED_EXERCISES.some((e) => e.name === n)), []);
   const names = Object.values(de);
   assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), [], 'German names are unique');
+  // every equipment variant of one exercise uses the same German base term (Reverse Fly → Reverse Flys, …)
+  const base = (n) => n.replace(/\s*\(.*\)$/, '');
+  const groups = new Map();
+  for (const e of core.SEED_EXERCISES) groups.set(base(e.name), [...(groups.get(base(e.name)) || []), base(de[e.name])]);
+  const mixed = [...groups].filter(([, g]) => new Set(g).size > 1).map(([en, g]) => `${en}: ${[...new Set(g)].join(' / ')}`);
+  assert.deepEqual(mixed, []);
   const bench = core.SEED_EXERCISES.find((e) => e.id === 'x-bench-press-barbell');
   assert.equal(core.exerciseDisplayName(bench, 'de'), 'Bankdrücken (Langhantel)');
   assert.equal(core.exerciseDisplayName(bench, 'en'), 'Bench Press (Barbell)');

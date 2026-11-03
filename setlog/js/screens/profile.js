@@ -16,7 +16,8 @@ import {
 import {
   fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, relDayLower, parsePlates,
 } from '../util.js';
-import { tr, saveLangPref, getLangPref } from '../i18n.js';
+import { tr, saveLangPref, getLangPref, getLang, exLabel } from '../i18n.js';
+import { privacyPage } from '../core/links.js';
 import {
   metricValue, volume, bwUnit, lenUnit,
 } from '../format.js';
@@ -90,7 +91,7 @@ export function ProfileTab() {
           const kind = ['e1rm', 'weight', 'volume'].includes(p.metric) ? 'weight' : p.metric === 'reps' ? 'count' : p.metric;
           return html`<button class="cell" key=${i} onClick=${() => push('exercise', { id: p.exerciseId })}>
             <span class="trophy"><${Icon} name="trophy" size=${20} /></span>
-            <div class="cell-main"><div class="cell-title">${S.exercises.get(p.exerciseId)?.name}</div>
+            <div class="cell-main"><div class="cell-title">${exLabel(S.exercises.get(p.exerciseId))}</div>
               <div class="cell-sub">${PR_LABEL[p.metric]} · ${relDay(p.at)}</div></div>
             <div class="cell-value">${metricValue(kind, p.value)}</div></button>`;
         })}</div></div>`}
@@ -406,6 +407,12 @@ export function SettingsScreen() {
 
     <div class="group" style="margin-top:18px">
       <${Cell} title=${tr('Delete all data')} danger onClick=${doDeleteAll} />
+    </div>
+
+    <div class="group" style="margin-top:18px">
+      <a class="cell" id="privacy" href=${privacyPage(getLang())} target="_blank" rel="noopener">
+        <div class="cell-main"><div class="cell-title">${tr('Privacy policy')}</div></div>
+        <span class="chev"><${Icon} name="chevronRight" /></span></a>
     </div>
 
     <p class="footnote center" style="margin-top:22px">Setlog ${APP_VERSION} · ${tr('{n} stored', { n: plural(S.workouts.length, 'workout') })}</p>

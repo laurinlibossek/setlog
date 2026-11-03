@@ -2,7 +2,7 @@
 // Used for the running workout (mode "active"), editing a finished workout
 // ("edit") and templates ("template"). Drafts are mutated in place and the
 // owner re-renders through onChange().
-import { tr } from './i18n.js';
+import { tr, exLabel } from './i18n.js';
 import { html, useState, useRef, useEffect } from './lib.js';
 import { Icon } from './icons.js';
 import {
@@ -107,7 +107,7 @@ function ExerciseBlock({
       return;
     }
     onChange();
-    if (r.rest > 0) startRest(r.rest, ex.name);
+    if (r.rest > 0) startRest(r.rest, exLabel(ex));
   };
 
   const setMenu = async (set, i) => {
@@ -144,7 +144,7 @@ function ExerciseBlock({
     const inSuperset = !!entry.supersetId;
     const others = draft.exercises.filter((e) => e !== entry);
     const choice = await actionSheet({
-      title: ex.name,
+      title: exLabel(ex),
       actions: [
         { label: entry.showNotes ? tr('Remove note') : tr('Add note'), value: 'note', icon: 'note' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note to this exercise'), value: 'pin', icon: 'pin' },
@@ -176,7 +176,7 @@ function ExerciseBlock({
     if (choice === 'superset') {
       const target = await actionSheet({
         title: tr('Superset with'),
-        actions: others.map((o) => ({ label: S.exercises.get(o.exerciseId)?.name || tr('Exercise'), value: o.id })),
+        actions: others.map((o) => ({ label: exLabel(S.exercises.get(o.exerciseId)) || tr('Exercise'), value: o.id })),
       });
       if (!target) return;
       // only this exercise moves: it joins the other one's group (or they start a new one)
@@ -186,7 +186,7 @@ function ExerciseBlock({
     if (choice === 'unsuperset') { leaveSuperset(draft.exercises, entry); onChange(); }
     if (choice === 'rest') {
       const v = await actionSheet({
-        title: `${tr('Rest timer')} · ${ex.name}`,
+        title: `${tr('Rest timer')} · ${exLabel(ex)}`,
         message: tr('Starts when you check off a set. Saved for this exercise.'),
         actions: REST_CHOICES.map((sec) => ({ label: sec ? fmtClock(sec) : tr('Off'), value: String(sec), checked: rest === sec })),
       });
@@ -211,7 +211,7 @@ function ExerciseBlock({
       const i = draft.exercises.indexOf(entry);
       draft.exercises.splice(i, 1);
       onChange();
-      toast(tr('{name} removed', { name: ex.name }), { action: { label: tr('Undo'), fn: () => { draft.exercises.splice(i, 0, entry); onChange(); } } });
+      toast(tr('{name} removed', { name: exLabel(ex) }), { action: { label: tr('Undo'), fn: () => { draft.exercises.splice(i, 0, entry); onChange(); } } });
     }
   };
 
@@ -237,14 +237,14 @@ function ExerciseBlock({
   const gridCls = 'set-grid' + (one ? ' one' : '') + (showCheck ? '' : ' no-check');
   const doneCount = entry.sets.filter((s) => s.done).length;
 
-  return html`<section class=${'ex-block' + (ssColor ? ' superset' : '')} style=${ssColor ? `--ss-color:${ssColor}` : ''} aria-label=${ex.name}>
+  return html`<section class=${'ex-block' + (ssColor ? ' superset' : '')} style=${ssColor ? `--ss-color:${ssColor}` : ''} aria-label=${exLabel(ex)}>
     <div class="ex-head">
-      <button class="ex-title" onClick=${menu}>${ex.name}</button>
+      <button class="ex-title" onClick=${menu}>${exLabel(ex)}</button>
       ${showCheck && entry.sets.length > 0 && html`<span class="muted small tnum" style="margin-right:2px">${doneCount}/${entry.sets.length}</span>`}
       ${focusOpts.length > 0 && html`<button class=${'focus-btn' + (focus ? ' on' : '')} onClick=${pickFocus}
-        aria-label=${focus ? `${FOCUS_LABEL[focus]}: ${fmtFocus(focus, focusVals)}` : tr('Focus metric for {name}', { name: ex.name })}>
+        aria-label=${focus ? `${FOCUS_LABEL[focus]}: ${fmtFocus(focus, focusVals)}` : tr('Focus metric for {name}', { name: exLabel(ex) })}>
         <${Icon} name="trend" />${focus && html`<span class="tnum">${fmtFocus(focus, focusVals)}</span>`}</button>`}
-      <button class="icon-btn accent" onClick=${menu} aria-label=${tr('Options for {name}', { name: ex.name })}><${Icon} name="more" /></button>
+      <button class="icon-btn accent" onClick=${menu} aria-label=${tr('Options for {name}', { name: exLabel(ex) })}><${Icon} name="more" /></button>
     </div>
     ${(ssLetter || (rest > 0 && showCheck)) && html`<div class="ex-tags">
       ${ssLetter && html`<span class="tag ss" style=${`color:${ssColor};background:color-mix(in srgb, ${ssColor} 14%, transparent)`}><${Icon} name="link" />${tr('Superset {letter}', { letter: ssLetter })}</span>`}
@@ -498,9 +498,9 @@ function Reorder({ draft, onChange, close }) {
     <div class="scroll" ref=${scrollRef}><div class="page" style="padding-top:12px">
       <div class=${'group reorder-list' + (d ? ' dragging' : '')} ref=${listRef}>${list.map((e, i) => html`<div
         class=${rowClass(i)} key=${e.id} data-id=${e.id} style=${style(i)}>
-        <div class="grow"><div class="cell-title ellipsis">${S.exercises.get(e.exerciseId)?.name}</div>
+        <div class="grow"><div class="cell-title ellipsis">${exLabel(S.exercises.get(e.exerciseId))}</div>
           <div class="cell-sub">${plural(e.sets.length, 'set')}${e.supersetId ? ` · ${tr('superset')}` : ''}</div></div>
-        <button class="icon-btn drag-handle" aria-label=${tr('Move {name}', { name: S.exercises.get(e.exerciseId)?.name || '' })}
+        <button class="icon-btn drag-handle" aria-label=${tr('Move {name}', { name: exLabel(S.exercises.get(e.exerciseId)) || '' })}
           aria-describedby="reorder-hint"
           onPointerDown=${(ev) => onHandleDown(ev, e.id)} onPointerMove=${onHandleMove} onPointerUp=${end} onPointerCancel=${end}
           onKeyDown=${(ev) => { if (ev.key === 'ArrowUp') { ev.preventDefault(); step(i, -1); } if (ev.key === 'ArrowDown') { ev.preventDefault(); step(i, 1); } }}>

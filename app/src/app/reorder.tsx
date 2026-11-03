@@ -90,8 +90,8 @@ export default function Reorder() {
       <ScrollView scrollEnabled={!drag} contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
         <View style={[styles.group, { backgroundColor: c.surface }]}>
           {list.map((e, i) => (
-            <Row key={e.id} entry={e} index={i} name={exercises.get(e.exerciseId)?.name || ''} sub={f.plural(e.sets.length, 'set') + (e.supersetId ? ` · ${tr('superset')}` : '')}
-              lifted={drag?.from === i} shift={shift(i)} dy={dy} api={apiRef} first={i === 0} moveLabel={tr('Move {name}', { name: exercises.get(e.exerciseId)?.name || '' })} />
+            <Row key={e.id} entry={e} index={i} name={f.exName(exercises.get(e.exerciseId)) || ''} sub={f.plural(e.sets.length, 'set') + (e.supersetId ? ` · ${tr('superset')}` : '')}
+              lifted={drag?.from === i} shift={shift(i)} dy={dy} api={apiRef} first={i === 0} moveLabel={tr('Move {name}', { name: f.exName(exercises.get(e.exerciseId)) || '' })} />
           ))}
         </View>
         <Text style={{ color: c.ink3, fontSize: 13, marginTop: 10, paddingHorizontal: 4 }}>{tr('Drag ≡ to move an exercise, or press and hold it.')}</Text>

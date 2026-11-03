@@ -1,6 +1,6 @@
 // Import and export in the web app: files, the share sheet, and the shared
 // formats from core/ (Strong CSV, backups, template links) wired to the app's data.
-import { tr } from './i18n.js';
+import { tr, exLabel } from './i18n.js';
 import {
   S, snapshot, findExerciseByName, APP_VERSION, addExercise, copyTemplate,
 } from './store.js';
@@ -127,7 +127,7 @@ export function templateShareText(t) {
       else if (st.w || st.r || st.d || st.t) v = setText(st, ex.category);
       return v && labels[i] === 'W' ? `W ${v}` : v;
     }).filter(Boolean);
-    lines.push(`• ${ex.name}: ${plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
+    lines.push(`• ${exLabel(ex)}: ${plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
   }
   lines.push('', tr('Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.'), templateShareLink(t));
   return lines.join('\n');

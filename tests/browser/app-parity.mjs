@@ -2,7 +2,7 @@
 // came to the app on 2 Nov 2026. The History calendar, merging exercises, the
 // warm-up scheme editor, the name row, Delete all data, and opening a template
 // link directly (the web build reads it from the page address, the phone
-// through +native-intent.tsx).
+// through +native-intent.tsx), and the German exercise names.
 import assert from 'node:assert/strict';
 import { devices, launch, grantWakeLock, APP as BASE, BACKUP, shots } from './env.mjs';
 import * as core from '../../setlog/js/core/index.js';
@@ -349,6 +349,61 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   assert.match(await id(page, 'cal-stats').innerText(), /Trainingstage/);
   await page.screenshot({ path: `${OUT}/14-calendar-de.png` });
   ok('German: Settings, Warm-up sets and the calendar');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+}
+
+// ---------- 7. Privacy policy ----------
+{
+  const { ctx, page, errors } = await newPage();
+  // expo-web-browser calls window.open on web: note the address instead of opening a window
+  await page.evaluate(() => { window.opened = []; window.open = (u) => { window.opened.push(String(u)); return null; }; });
+  const opened = async () => {
+    await id(page, 'privacy').scrollIntoViewIfNeeded();
+    await id(page, 'privacy').click();
+    await page.waitForFunction(() => window.opened.length > 0);
+    return page.evaluate(() => window.opened.pop());
+  };
+  await openSettings(page);
+  assert.equal(await opened(), `${core.WEB_APP_URL}privacy.html`);
+  await id(page, 'language-de').click();
+  await wait(page, 300);
+  // the row's text ends with the chevron icon's glyph, so compare the first line
+  assert.equal((await id(page, 'privacy').innerText()).split('\n')[0], 'Datenschutzerklärung');
+  assert.equal(await opened(), `${core.WEB_APP_URL}datenschutz.html`);
+  ok('Settings → Privacy policy opens the page in the app’s language');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+}
+
+// ---------- 8. German exercise names ----------
+{
+  const { ctx, page, errors, dialogs } = await newPage({ locale: 'de-DE' });
+  await restore(page, dialogs);
+  await openSettings(page);
+  await id(page, 'language-de').click();
+  await wait(page, 300);
+  await page.goBack();
+  await wait(page, 300);
+  await id(page, 'tab-exercises').click();
+  const rowName = async (exId) => (await id(page, `exercise-${exId}`).innerText()).split('\n')[0];
+  const search = async (q) => { await id(page, 'exercise-search').fill(q); await wait(page, 250); };
+  await search('latzug');
+  assert.equal(await rowName('x-lat-pulldown-cable'), 'Latzug (Kabelzug)');
+  await search('lat pulldown');
+  assert.equal(await rowName('x-lat-pulldown-cable'), 'Latzug (Kabelzug)', 'the English name finds it too');
+  await search('bankdrücken lh');
+  assert.equal(await rowName('x-bench-press-barbell'), 'Bankdrücken (Langhantel)');
+  await search('hang snatch');
+  assert.equal(await rowName('c-hang-snatch-barbell'), 'Hang Snatch (Barbell)', 'a custom exercise keeps its name');
+  await page.screenshot({ path: `${OUT}/15-exercises-de.png` });
+  await search('bankdrücken lh');
+  await id(page, 'exercise-x-bench-press-barbell').click();
+  await wait(page, 400);
+  assert.match(await visibleText(page), /Bankdrücken \(Langhantel\)/);
+  const data = await store(page);
+  assert.equal(data.exercises.find((e) => e.id === 'x-bench-press-barbell').name, 'Bench Press (Barbell)', 'stored in English');
+  ok('German: built-ins show German names (list, search by either name, exercise page); custom names and stored names stay');
   assert.deepEqual(errors, []);
   await ctx.close();
 }

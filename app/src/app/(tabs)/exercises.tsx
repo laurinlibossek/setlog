@@ -25,7 +25,7 @@ export default function ExercisesTab() {
 
   const list = useMemo(() => [...s.exercises.values()]
     .filter((e) => !e.hidden && (part === 'all' || e.bodyPart === part) && matchExercise(e, q))
-    .sort((a, b) => a.name.localeCompare(b.name)), [s.exercises, q, part]);
+    .sort((a, b) => f.exName(a).localeCompare(f.exName(b))), [s.exercises, q, part, f]);
   const total = useMemo(() => [...s.exercises.values()].filter((e) => !e.hidden).length, [s.exercises]);
   const parts = [{ id: 'all', label: tr('All') }, ...(BODY_PARTS as { id: string; label: string }[]).map((b) => ({ id: b.id, label: tr(b.label) }))];
   const partLabel = (id: string) => tr((BODY_PARTS as { id: string; label: string }[]).find((b) => b.id === id)?.label || 'Other');
@@ -67,7 +67,7 @@ export default function ExercisesTab() {
         const last = sessions.get(item.id)?.[0]?.startedAt;
         return (
           <View style={{ marginHorizontal: 16, backgroundColor: c.surface, borderTopLeftRadius: index === 0 ? 14 : 0, borderTopRightRadius: index === 0 ? 14 : 0, borderBottomLeftRadius: index === list.length - 1 ? 14 : 0, borderBottomRightRadius: index === list.length - 1 ? 14 : 0, overflow: 'hidden' }}>
-            <Cell first={index === 0} title={item.name} testID={`exercise-${item.id}`}
+            <Cell first={index === 0} title={f.exName(item)} testID={`exercise-${item.id}`}
               sub={partLabel(item.bodyPart) + (n ? ` · ${f.plural(n, 'time')} · ${f.relDayLower(last!)}` : '')}
               onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: item.id } })} />
           </View>

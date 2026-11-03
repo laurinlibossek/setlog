@@ -2,7 +2,7 @@
 // web app's format.js and util.js, built on the shared unit helpers.
 import { useMemo } from 'react';
 import {
-  kgTo, kmTo, roundW, fmtClock, usesWeight, startOfDay, DAY,
+  kgTo, kmTo, roundW, fmtClock, usesWeight, startOfDay, DAY, exerciseDisplayName,
 } from '@setlog/core';
 
 import { useSettings } from '@/data/store';
@@ -112,7 +112,9 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     return lang === 'de' ? s.replace(/^(Heute|Gestern)$/, (m) => m.toLowerCase()) : s.toLowerCase();
   };
 
-  return { unit, dUnit, num, compact, w, wu, volume, dist, pace, setText, plural, dur, date, relDay, relDayLower, clock: fmtClock };
+  /** An exercise's name as shown: built-ins in German get their German name. */
+  const exName = (ex: { id: string; name: string } | null | undefined) => exerciseDisplayName(ex, lang);
+  return { unit, dUnit, num, compact, w, wu, volume, dist, pace, setText, plural, dur, date, relDay, relDayLower, clock: fmtClock, exName };
 }
 
 export type Format = ReturnType<typeof makeFormat>;

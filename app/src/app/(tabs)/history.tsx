@@ -206,7 +206,7 @@ export function WorkoutCard({ w, s, f }: { w: Workout; s: State; f: Format & { t
         const b = bestSet(e.sets, ex?.category, s.settings.formula);
         return (
           <View key={e.id} style={st.line}>
-            <Txt tone="ink2" style={{ fontSize: 14, flex: 1 }} numberOfLines={1}>{`${e.sets.length} × ${ex?.name || tr('Unknown exercise')}`}</Txt>
+            <Txt tone="ink2" style={{ fontSize: 14, flex: 1 }} numberOfLines={1}>{`${e.sets.length} × ${f.exName(ex) || tr('Unknown exercise')}`}</Txt>
             <Txt tone="ink2" style={{ fontSize: 14, fontVariant: ['tabular-nums'] }} numberOfLines={1}>{b ? f.setText(b, ex?.category) : ''}</Txt>
           </View>
         );

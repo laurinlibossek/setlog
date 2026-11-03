@@ -26,7 +26,7 @@ Read next, in this order:
 - **Both languages:** every text people see is wrapped in `tr('…')` (web: `js/i18n.js`; app: `useLang()` in `src/lib/i18n.ts`) and has German in `setlog/js/core/i18n-de.js`. The English text is the key; German uses "du". `npm test` fails on a missing translation or a duplicate key, in both apps.
 - **Logic both apps need goes into `setlog/js/core/`**, with no browser APIs (checked by `npm test`), and gets a unit test in `tests/core.test.mjs`.
 - **Colours** are tokens in `setlog/css/app.css`. After changing one, run `npm run themes` (regenerates `core/themes.js`; `npm test` checks they match).
-- **Units:** stored as kg, km and seconds; inputs accept decimal commas. Exercise names stay English (they match Strong exports).
+- **Units:** stored as kg, km and seconds; inputs accept decimal commas. Stored exercise names stay English (they match Strong exports); German is a display name from `core/exercise-names-de.js`, so show exercises with `exLabel(ex)` (web) or `f.exName(ex)` (app), never `ex.name`.
 - **UI text:** short, plain, sentence case ("Update template", "Keep original template"), matching the existing strings.
 - **Root README** (Laurin's rule): explain the core mechanics and the non-obvious tricks only, no lists of settings or minor features. Keep the install steps, backup advice, limits, "How it's built" and his Background text.
 

@@ -77,7 +77,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (r.rest && r.rest > 0) startRest(r.rest, ex.name);
+    if (r.rest && r.rest > 0) startRest(r.rest, f.exName(ex));
   };
   const removeSet = (i: number) => {
     const set = entry.sets[i];
@@ -117,7 +117,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (!a) return;
     const others = a.exercises.filter((e) => e.id !== entry.id);
     const choice = await actionSheet<string>({
-      title: ex.name,
+      title: f.exName(ex),
       actions: [
         { label: entry.showNotes ? tr('Remove note') : tr('Add note'), value: 'note', icon: 'note' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note to this exercise'), value: 'pin', icon: 'pin' },
@@ -148,7 +148,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (choice === 'superset') {
       const target = await actionSheet<string>({
         title: tr('Superset with'),
-        actions: others.map((o) => ({ label: getState().exercises.get(o.exerciseId)?.name || tr('Exercise'), value: o.id, testID: `ss-${o.exerciseId}` })),
+        actions: others.map((o) => ({ label: f.exName(getState().exercises.get(o.exerciseId)) || tr('Exercise'), value: o.id, testID: `ss-${o.exerciseId}` })),
       });
       if (!target) return;
       // only this exercise moves: it joins the other one's group (or they start a new one)
@@ -157,7 +157,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     if (choice === 'unsuperset') editDraft(draftKey, (d) => leaveSuperset(d.exercises, d.exercises.find((e) => e.id === entry.id)));
     if (choice === 'rest') {
       const v = await actionSheet<string>({
-        title: `${tr('Rest timer')} · ${ex.name}`, message: tr('Starts when you check off a set. Saved for this exercise.'),
+        title: `${tr('Rest timer')} · ${f.exName(ex)}`, message: tr('Starts when you check off a set. Saved for this exercise.'),
         actions: (REST_CHOICES as number[]).map((sec) => ({ label: sec ? f.clock(sec) : tr('Off'), value: String(sec), checked: rest === sec, testID: `rest-${sec}` })),
       });
       if (v === undefined) return;
@@ -188,7 +188,7 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       const i = a.exercises.findIndex((e) => e.id === entry.id);
       const removed = a.exercises[i];
       editDraft(draftKey, (d) => { d.exercises.splice(i, 1); });
-      toast(tr('{name} removed', { name: ex.name }), { label: tr('Undo'), fn: () => editDraft(draftKey, (d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
+      toast(tr('{name} removed', { name: f.exName(ex) }), { label: tr('Undo'), fn: () => editDraft(draftKey, (d) => { d.exercises.splice(Math.min(i, d.exercises.length), 0, removed); }) });
     }
   };
 
@@ -223,21 +223,21 @@ export const ExerciseBlock = memo(function ExerciseBlock({
   const fieldNames: Record<Field, string> = { w: tr('Weight'), r: tr('Reps'), d: tr('Distance'), t: tr('Time') };
 
   return (
-    <View style={[styles.block, { backgroundColor: c.surface }, ssColor ? { borderLeftWidth: 4, borderLeftColor: ssColor } : null]} accessibilityLabel={ex.name} testID={`block-${ex.id}`}>
+    <View style={[styles.block, { backgroundColor: c.surface }, ssColor ? { borderLeftWidth: 4, borderLeftColor: ssColor } : null]} accessibilityLabel={f.exName(ex)} testID={`block-${ex.id}`}>
       <View style={styles.head}>
         <Pressable onPress={menu} style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" testID={`ex-title-${ex.id}`}>
-          <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '700' }} numberOfLines={2}>{ex.name}</Text>
+          <Text style={{ color: c.accentText, fontSize: 17, fontWeight: '700' }} numberOfLines={2}>{f.exName(ex)}</Text>
         </Pressable>
         {active && entry.sets.length > 0 && <Text style={{ color: c.ink3, fontSize: 13, fontVariant: ['tabular-nums'] }}>{`${done}/${entry.sets.length}`}</Text>}
         {focusOpts.length > 0 && (
           <Pressable onPress={pickFocus} hitSlop={6} accessibilityRole="button" testID={`focus-${ex.id}`}
-            accessibilityLabel={focus ? `${tr(FOCUS_LABEL[focus])}: ${fmtFocus(focus)}` : tr('Focus metric for {name}', { name: ex.name })}
+            accessibilityLabel={focus ? `${tr(FOCUS_LABEL[focus])}: ${fmtFocus(focus)}` : tr('Focus metric for {name}', { name: f.exName(ex) })}
             style={({ pressed }) => [styles.focus, { backgroundColor: focus ? c.accentSoft : pressed ? c.surface3 : c.surface2 }]}>
             <Icon name="trend" size={15} color={focus ? c.accentText : c.ink3} />
             {focus && <Text style={{ color: c.accentText, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} numberOfLines={1}>{fmtFocus(focus)}</Text>}
           </Pressable>
         )}
-        <Pressable onPress={menu} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name: ex.name })} testID={`ex-menu-${ex.id}`}
+        <Pressable onPress={menu} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('Options for {name}', { name: f.exName(ex) })} testID={`ex-menu-${ex.id}`}
           style={({ pressed }) => [styles.more, { backgroundColor: pressed ? c.surface3 : c.accentSoft }]}>
           <Icon name="more" size={18} color={c.accentText} />
         </Pressable>

@@ -3,6 +3,7 @@
 import {
   uid, slug, parseNum, KG_PER_LB, KM_PER_MI, kgTo, kmTo, roundW,
 } from './units.js';
+import { rpeFromRir } from './calc.js';
 
 // ---------- CSV ----------
 export function detectDelimiter(text) {
@@ -396,7 +397,7 @@ export function exportCSV({ workouts, exercises, unit = 'kg', distUnit = 'km', u
           s.t || 0,
           i === 0 ? e.notes || '' : '',
           w.notes || '',
-          s.rpe || '',
+          s.rpe || rpeFromRir(s.rir) || '',
         ].map(csvCell).join(','));
       });
     }

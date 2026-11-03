@@ -1,8 +1,10 @@
-// Logging a workout in the Expo app (web build) on an emulated iPhone:
-// empty workout, check-off rules, placeholders, rest timer, set types, undo,
-// supersets, minimize and reload, reordering, finishing with unchecked sets,
-// a template workout with previous values, records and the template update
-// question (German), "already running", and discarding. 17 checks.
+// Logging a workout in the Expo app (web build) on an emulated iPhone, in the
+// Tally session: empty workout, check-off rules, ghost values, the rest bar
+// with "Reps left?", set types, undo, the keypad, supersets, minimize and
+// reload, reordering, Up next (switch and drag), finishing early with unlogged
+// sets, a template workout with last time's values, the Log button, records
+// and the template update question (German), "already running", and
+// discarding. 19 checks.
 import assert from 'node:assert/strict';
 import { devices, launch, grantWakeLock, APP as BASE, BACKUP, shots } from './env.mjs';
 
@@ -15,6 +17,12 @@ const ok = (n) => { passed++; console.log('PASS', n); };
 async function newPage({ locale = 'en-US' } = {}) {
   const ctx = await browser.newContext({ ...devices['iPhone 13'], locale });
   await ctx.addInitScript(grantWakeLock);
+  // count screen wake locks: the app keeps the screen on only when asked to (Settings → Keep screen on)
+  await ctx.addInitScript(() => {
+    const wl = navigator.wakeLock;
+    window.__wakeLocks = 0;
+    try { Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request: (...x) => { window.__wakeLocks++; return wl.request(...x); } } }); } catch { /* ignore */ }
+  });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -33,6 +41,23 @@ const labels = (page, ex) => block(page, ex).locator('[data-testid^="label-"]');
 const toastText = async (page) => { await id(page, 'toast').waitFor(); return id(page, 'toast').innerText(); };
 const checked = async (loc) => (await loc.getAttribute('aria-checked')) === 'true';
 const wait = (page, ms = 300) => page.waitForTimeout(ms);
+const sec = (t) => t.split(':').map(Number).reduce((a, b) => a * 60 + b, 0);
+/** Finishing before every set is logged: ⋯ → Finish early ("Finish workout" is in the Action bar after the last set). */
+async function finishEarly(page) {
+  await id(page, 'workout-menu').click();
+  await id(page, 'menu-finish').click();
+}
+/** Press and hold an Up next row, then drag it by `dy` pixels. */
+async function dragRow(page, testID, dy) {
+  const b = await id(page, testID).boundingBox();
+  const x = b.x + b.width / 3, y = b.y + b.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await wait(page, 600);
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x, y + (dy * i) / 10);
+  await page.mouse.up();
+  await wait(page, 400);
+}
 async function pick(page, names) {
   await id(page, 'add-exercises').click();
   await id(page, 'pick-search').waitFor();
@@ -53,8 +78,10 @@ async function pick(page, names) {
   assert.match(await id(page, 'workout-name').inputValue(), /^(Morning|Afternoon|Evening|Night) Workout$/);
   await pick(page, [{ q: 'bench bb', id: BENCH }, { q: 'pull up', id: PULLUP }]);
   assert.equal(await block(page, BENCH).count(), 1);
-  assert.equal(await block(page, PULLUP).count(), 1);
-  ok('an empty workout starts with the time-of-day name; exercises are added from the picker');
+  // one exercise at a time: the next one waits under Up next
+  assert.equal(await block(page, PULLUP).count(), 0);
+  assert.equal(await id(page, `jump-${PULLUP}`).count(), 1);
+  ok('an empty workout starts with the time-of-day name; exercises are added from the picker, the second under Up next');
 
   // check-off rules
   await checks(page, BENCH).first().click();
@@ -69,7 +96,8 @@ async function pick(page, names) {
   await wait(page, 200);
   assert.equal(await checked(checks(page, BENCH).first()), true);
   assert.match(await id(page, 'rest-left').innerText(), /^(2:00|1:59|1:58)$/);
-  ok('a set needs reps and weight; checking it off starts the 2:00 rest timer');
+  assert.equal(await page.evaluate(() => window.__wakeLocks), 0, 'the screen may turn off: the rest notification says when rest is over');
+  ok('a set needs reps and weight; checking it off starts the 2:00 rest timer; the screen isn’t kept on');
 
   // placeholders from the row above, check-off fills them in
   await id(page, `add-set-${BENCH}`).click();
@@ -80,37 +108,46 @@ async function pick(page, names) {
   await wait(page, 200);
   assert.equal(await inputs(page, BENCH, 'w').nth(1).inputValue(), '80');
   assert.equal(await checked(checks(page, BENCH).nth(1)), true);
-  assert.equal(await block(page, BENCH).getByText('2/2').count(), 1);
-  ok('a new set shows the row above as grey placeholders; checking it off saves them');
+  assert.match(await id(page, 'session-count').innerText(), /^2 of 3 sets/);
+  ok('a new set shows the row above as ghost values; logging it saves them (2 of 3 sets under the hero tally)');
 
-  // rest panel
-  await id(page, 'rest-pill').click();
-  await id(page, 'rest-panel').waitFor();
-  const before = await id(page, 'rest-big').innerText();
+  // the rest bar: ±15 s, "Reps left?" for the set just logged, Skip
+  const before = await id(page, 'rest-left').innerText();
   await id(page, 'rest-plus').click();
   await wait(page, 300);
-  const after = await id(page, 'rest-big').innerText();
-  const sec = (t) => { const [m, s] = t.split(':').map(Number); return m * 60 + s; };
+  const after = await id(page, 'rest-left').innerText();
   assert.ok(sec(after) - sec(before) >= 13, `${before} → ${after}`);
-  await page.screenshot({ path: `${OUT}/01-rest-panel.png` });
+  await id(page, 'rest-minus').click();
+  await wait(page, 300);
+  assert.ok(sec(after) - sec(await id(page, 'rest-left').innerText()) >= 13, 'minus 15 s');
+  await id(page, 'effort-2').click();
+  await wait(page, 300);
+  assert.equal(await id(page, 'effort-2').getAttribute('aria-pressed'), 'true');
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '2 left');
+  await page.screenshot({ path: `${OUT}/01-rest-bar.png` });
   await id(page, 'rest-skip').click();
   await wait(page, 300);
-  assert.equal(await id(page, 'rest-panel').count(), 0);
   assert.equal(await id(page, 'rest-left').count(), 0);
-  ok('the rest panel adds 15 s and skips the rest');
+  // Bench is done: Pull Up is next, and the Action bar logs its set
+  assert.equal(await block(page, PULLUP).count(), 1);
+  assert.equal(await id(page, 'log-set').innerText(), 'Log set');
+  ok('the rest bar adds and takes 15 s, rates the set just logged (2 left) and skips; Pull Up comes up next');
 
-  // set types and RPE, delete with undo
+  // back to Bench: set types and reps left from the set menu, delete with undo
+  await id(page, `jump-${BENCH}`).click();
+  await wait(page, 300);
   await id(page, `add-set-${BENCH}`).click();
   await wait(page, 200);
+  assert.equal(await id(page, 'log-set').innerText(), 'Log 80 × 5');
   await labels(page, BENCH).nth(2).click();
   await id(page, 'type-drop').click();
   await wait(page, 200);
-  assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'D');
+  assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'Drop');
   await labels(page, BENCH).nth(1).click();
-  await id(page, 'set-rpe').click();
-  await id(page, 'rpe-8.5').click();
+  await id(page, 'set-rir').click();
+  await id(page, 'rir-1').click();
   await wait(page, 200);
-  assert.match(await labels(page, BENCH).nth(1).innerText(), /@8\.5/);
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '1 left');
   await labels(page, BENCH).nth(2).click();
   await id(page, 'set-delete').click();
   await wait(page, 200);
@@ -119,8 +156,37 @@ async function pick(page, names) {
   await id(page, 'toast-action').click();
   await wait(page, 200);
   assert.equal(await checks(page, BENCH).count(), 3);
-  assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'D');
-  ok('set menu: drop set, RPE 8.5, delete and undo');
+  assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'Drop');
+  ok('switching back to Bench from its row; set menu: drop set, 1 rep left, delete and undo');
+
+  // the keypad: typing replaces the ghost value, −2.5 with plates per side, Next → reps → logged
+  const drop = await checks(page, BENCH).nth(2).getAttribute('data-testid');
+  const dropId = drop.replace(/^check-/, '');
+  await id(page, `in-w-${dropId}`).click();
+  await id(page, 'keypad').waitFor();
+  assert.equal(await id(page, 'action-bar').count(), 0, 'the keypad takes the Action bar\'s place');
+  assert.match(await id(page, 'keypad').innerText(), /Weight · drop set/);
+  assert.match(await id(page, 'keypad-aside').innerText(), /Plates per side\s*25 · 5/);
+  await id(page, 'key-7').click();
+  await id(page, 'key-0').click();
+  await id(page, 'key-minus').click();
+  assert.match(await id(page, 'keypad-value').innerText(), /^67\.5/);
+  assert.match(await id(page, 'keypad-aside').innerText(), /20 · 2\.5 · 1\.25/);
+  await page.screenshot({ path: `${OUT}/01b-keypad.png` });
+  await id(page, 'key-next').click();
+  await wait(page, 200);
+  assert.match(await id(page, 'keypad').innerText(), /Reps · drop set/);
+  await id(page, 'key-8').click();
+  await id(page, 'key-next').click();
+  await wait(page, 300);
+  assert.equal(await id(page, 'keypad').count(), 0);
+  assert.equal(await inputs(page, BENCH, 'w').nth(2).inputValue(), '67.5');
+  assert.equal(await inputs(page, BENCH, 'r').nth(2).inputValue(), '8');
+  assert.equal(await checked(checks(page, BENCH).nth(2)), true);
+  assert.match(await id(page, 'rest-left').innerText(), /^(2:00|1:59|1:58)$/);
+  await id(page, 'rest-skip').click();
+  await wait(page, 300);
+  ok('the keypad types 70, steps to 67.5 with plates per side, and Next goes to reps, then logs the set');
 
   // superset and the rest timer of an exercise
   await id(page, `ex-menu-${PULLUP}`).click();
@@ -134,8 +200,12 @@ async function pick(page, names) {
   await id(page, 'rest-90').click();
   await wait(page, 200);
   assert.match(await id(page, `rest-tag-${PULLUP}`).innerText(), /(^|\s)1:30$/);
+  // a superset is done together: both exercises are on screen
+  assert.equal(await block(page, BENCH).count(), 1);
+  await id(page, `add-set-${BENCH}`).click();
+  await wait(page, 200);
   await page.screenshot({ path: `${OUT}/02-workout.png` });
-  ok('Superset with… groups two exercises (Superset A); the rest timer of an exercise changes to 1:30');
+  ok('Superset with… groups two exercises (Superset A), shown together; the rest timer of an exercise changes to 1:30');
 
   // minimize, the mini bar, a reload keeps everything
   await id(page, 'minimize').click();
@@ -171,9 +241,9 @@ async function pick(page, names) {
   assert.deepEqual(blocks, [`block-${PULLUP}`, `block-${BENCH}`], `reorder rows ${order}`);
   ok('dragging ≡ moves Pull Up above Bench Press');
 
-  // finish with a typed but unchecked set
+  // finish early with a typed but unlogged set
   await inputs(page, PULLUP, 'r').first().fill('10');
-  await id(page, 'finish-workout').click();
+  await finishEarly(page);
   await id(page, 'save-pending').waitFor();
   assert.match(await page.locator('body').innerText(), /1 set with numbers isn’t checked off/);
   await id(page, 'save-pending').click();
@@ -182,10 +252,10 @@ async function pick(page, names) {
   await page.screenshot({ path: `${OUT}/04-summary.png` });
   assert.match(sum, /Workout saved/);
   assert.match(sum, /workout #1/);
-  assert.match(sum, /SETS\s*\n?\s*3/i, 'two bench sets (the empty drop set is dropped) and the pull-up set');
+  assert.match(sum, /SETS\s*\n?\s*4/i, 'three bench sets (the untouched fourth is left out) and the pull-up set');
   assert.match(sum, /Pull Up[\s\S]*10 reps/);
   assert.match(sum, /Bench Press \(Barbell\)[\s\S]*80 kg × 5/);
-  ok('Finish offers to save the typed set; the summary shows 3 sets, workout #1');
+  ok('Finish early offers to save the typed set; the summary shows 4 sets, workout #1');
 
   await id(page, 'summary-done').click();
   await wait(page, 500);
@@ -224,35 +294,53 @@ async function pick(page, names) {
   const latW = await inputs(page, LAT, 'w').evaluateAll((els) => els.map((e) => e.placeholder));
   assert.equal(latW.length, 3);
   assert.equal(latW[0], '40');
-  const prev = await block(page, LAT).locator('[data-testid^="prev-"]').allInnerTexts();
+  assert.equal(await page.locator('[data-testid^="jump-"]').count(), 2, 'the other two exercises are under Up next');
   await page.screenshot({ path: `${OUT}/05-template-workout-de.png` });
-  ok(`a template starts with its sets as placeholders (Lat Pulldown: ${latW.join(' / ')}; previous: ${prev.join(' / ')})`);
+  // the web app's backup has its own "Keep screen on" (on); the app's stays off
+  assert.equal(await page.evaluate(() => window.__wakeLocks), 0);
+  ok(`a template starts with its sets as ghost values (Lat Pulldown: ${latW.join(' / ')}); a web backup doesn’t keep the screen on`);
 
-  // an exercise with history: last time's sets, "Previous" copies, a record
+  // Up next: press and hold a row and drag it to the top
   const SQUAT = 'x-squat-barbell';
   await pick(page, [{ q: 'squat bb', id: SQUAT }]);
-  const sqPrev = await block(page, SQUAT).locator('[data-testid^="prev-"]').allInnerTexts();
-  assert.ok(sqPrev.length >= 1 && sqPrev.every((p) => /× \d+/.test(p)), sqPrev.join(' / '));
+  const rows = () => page.locator('[data-testid^="jump-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
+  assert.equal((await rows()).at(-1), `jump-${SQUAT}`);
+  await dragRow(page, `jump-${SQUAT}`, -130);
+  assert.equal((await rows())[0], `jump-${SQUAT}`, (await rows()).join(', '));
+  const order = (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')).kv.active.exercises.map((e) => e.exerciseId)));
+  assert.deepEqual(order.slice(0, 2), [LAT, SQUAT]);
+  ok('Up next: Squat, added last, is dragged to the top of the list');
+
+  // an exercise with history: last time's sets, the Log button logs them, a record
+  await id(page, `jump-${SQUAT}`).click();
+  await wait(page, 300);
+  const sqLast = await id(page, `last-${SQUAT}`).innerText();
+  assert.match(sqLast, /letztes Mal [\d,]+ × \d+/);
   const sqPh = await inputs(page, SQUAT, 'w').first().getAttribute('placeholder');
-  assert.ok(sqPrev[0].startsWith(sqPh), `${sqPh} vs ${sqPrev[0]}`);
-  await block(page, SQUAT).locator('[data-testid^="prev-"]').first().click();
-  await wait(page, 200);
+  assert.ok(sqLast.includes(`letztes Mal ${sqPh} ×`), `${sqPh} vs ${sqLast}`);
+  assert.match(await id(page, 'log-set').innerText(), new RegExp(`^${sqPh} × \\d+ eintragen$`));
+  await id(page, 'log-set').click();
+  await wait(page, 300);
+  assert.equal(await checked(checks(page, SQUAT).nth(0)), true);
   assert.equal(await inputs(page, SQUAT, 'w').first().inputValue(), sqPh);
-  if (sqPrev.length < 2) { await id(page, `add-set-${SQUAT}`).click(); await wait(page, 200); }
+  if ((await checks(page, SQUAT).count()) < 2) { await id(page, `add-set-${SQUAT}`).click(); await wait(page, 200); }
   await inputs(page, SQUAT, 'w').nth(1).fill('250');
   await inputs(page, SQUAT, 'r').nth(1).fill('10');
-  await checks(page, SQUAT).nth(0).click();
   await checks(page, SQUAT).nth(1).click();
+  await wait(page, 300);
+  assert.match(await labels(page, SQUAT).nth(1).innerText(), /Rekord/);
+  assert.match(await id(page, 'session-count').innerText(), /1 Rekord/);
+  await page.screenshot({ path: `${OUT}/05b-record.png` });
+  await id(page, `jump-${LAT}`).click();
+  await wait(page, 300);
   await inputs(page, LAT, 'w').nth(1).fill('62,5');
   for (let i = 0; i < 3; i++) await checks(page, LAT).nth(i).click();
   await wait(page, 300);
-  assert.match(await labels(page, SQUAT).nth(1).innerText(), /PR/);
-  assert.doesNotMatch(await labels(page, LAT).nth(1).innerText(), /PR/, 'no record without history');
-  await page.screenshot({ path: `${OUT}/05b-record.png` });
-  ok(`Squat shows last time (${sqPrev.join(' / ')}); "Previous" copies it; 250 kg × 10 gets a PR badge`);
+  assert.doesNotMatch(await labels(page, LAT).nth(1).innerText(), /Rekord/, 'no record without history');
+  ok(`Squat shows last time (${sqLast}); "Log" logs it; 250 kg × 10 gets the Record chip`);
 
-  // finish: everything typed is checked, so it just asks
-  await id(page, 'finish-workout').click();
+  // finish: everything typed is logged, so it just asks
+  await finishEarly(page);
   await id(page, 'confirm-finish').waitFor();
   assert.match(await page.locator('body').innerText(), /Training beenden\?/);
   await id(page, 'confirm-finish').click();
@@ -295,7 +383,7 @@ async function pick(page, names) {
   ok('starting while a workout runs offers to resume it');
 
   // nothing logged: Finish offers to discard
-  await id(page, 'finish-workout').click();
+  await finishEarly(page);
   await id(page, 'dialog-ok').waitFor();
   assert.match(await page.locator('body').innerText(), /Noch nichts eingetragen/);
   await id(page, 'dialog-ok').click();

@@ -107,9 +107,9 @@ async function screens(store, lang) {
   await wait(300);
   await shot(1, 'workout');
 
-  // 2. the rest timer, opened from the pill
-  await id('rest-pill').click();
-  await id('rest-panel').waitFor();
+  // 2. the rest timer in the Action bar, with "Reps left?" rated for the set just logged
+  await id('rest-bar').waitFor();
+  await id('effort-1').click();
   await shot(2, 'rest-timer');
 
   if (errors.length) throw new Error(errors.join('\n'));

@@ -5,7 +5,7 @@
 // Messages are English translation keys (WORKOUT_MESSAGES), translated by the UI.
 import { uid, numToInput, parseNum } from './units.js';
 import {
-  usesWeight, setIsValid, loggedFields, warmupSets, newRecords, countsVolume, setVolume, isWorking,
+  usesWeight, setIsValid, loggedFields, warmupSets, newRecords, countsVolume, setVolume, isWorking, normRir,
 } from './calc.js';
 import {
   newSetDraft, setToDraft, draftToSet, entryToDraft, newEntryDraft, remapSupersets, draftEntries,
@@ -211,6 +211,102 @@ export function finishWorkout(a, { settings, exercises, now = Date.now(), mode =
     templateId: a.templateId || null,
     exercises: draftEntries(a, settings, exercises, { onlyDone: mode === 'done' }),
   };
+}
+
+/**
+ * Rate a set by the reps left in reserve (0–3, 3 meaning "3+"), or clear the
+ * rating with null. An RPE on the set gives way, so the two never disagree.
+ */
+export function rateSet(set, rir) {
+  const v = normRir(rir);
+  if (v === null) delete set.rir;
+  else set.rir = v;
+  if (set.rpe !== undefined) set.rpe = '';
+}
+
+// ---------- the session: what comes next ----------
+// The running workout is done exercise by exercise; a superset is done
+// together, one round after another. A "unit" is one exercise or one
+// superset; its id is the id of its first entry.
+
+/** The units of a list of entries, in order. A superset stays together where its first exercise is. */
+export function sessionUnits(list) {
+  const units = [];
+  const bySuperset = new Map();
+  for (const e of list) {
+    const group = e.supersetId ? bySuperset.get(e.supersetId) : null;
+    if (group) { group.entries.push(e); continue; }
+    const unit = { id: e.id, entries: [e] };
+    if (e.supersetId) bySuperset.set(e.supersetId, unit);
+    units.push(unit);
+  }
+  return units;
+}
+
+/** The sets of a unit in the order they are done: set 1 of each exercise, then set 2… */
+export function unitSets(unit) {
+  const out = [];
+  const rounds = Math.max(0, ...unit.entries.map((e) => e.sets.length));
+  for (let i = 0; i < rounds; i++) {
+    for (const entry of unit.entries) if (entry.sets[i]) out.push({ entry, set: entry.sets[i], index: i });
+  }
+  return out;
+}
+
+/** The unit an entry belongs to. */
+export const unitOf = (units, entryId) => units.find((u) => u.entries.some((e) => e.id === entryId)) || null;
+
+/**
+ * Where the session is: the unit on screen and the set to log next.
+ * `current` is the entry the person switched to (or null): its unit stays on
+ * screen. Otherwise, while a rest runs, the unit of the set just logged
+ * stays (to rate it, or add one more); else it is the first unit with sets
+ * left to log. Returns { units, unit, next } where `next` is
+ * { entry, set, index } or null when the unit has nothing left to log.
+ * @param {any} draft
+ * @param {{ current?: string | null, restEntryId?: string | null }} [o]
+ */
+export function sessionState(draft, { current = null, restEntryId = null } = {}) {
+  const units = sessionUnits(draft.exercises);
+  const pending = (u) => unitSets(u).find((x) => !x.set.done) || null;
+  const unit = (current && unitOf(units, current))
+    || (restEntryId && unitOf(units, restEntryId))
+    || units.find((u) => pending(u))
+    || units[units.length - 1]
+    || null;
+  return { units, unit, next: unit ? pending(unit) : null };
+}
+
+/**
+ * The smallest change of an exercise's weight, in the person's unit, for the
+ * keypad's −/+ keys: a pair of the smallest plates on a barbell (2.5 kg,
+ * 5 lb), the dumbbell rack's step (2 kg, 5 lb), else 2.5 kg or 5 lb.
+ */
+export function weightStep(cat, settings) {
+  const lb = settings.unit === 'lb';
+  if (cat === 'barbell') {
+    const smallest = Math.min(...(settings.plates || []).filter((p) => p > 0));
+    if (Number.isFinite(smallest)) return smallest * 2;
+  }
+  if (cat === 'dumbbell') return lb ? 5 : 2;
+  return lb ? 5 : 2.5;
+}
+
+/** Is there any set left to log in the workout? */
+export const hasPendingSets = (draft) => draft.exercises.some((e) => e.sets.some((s) => !s.done));
+
+/**
+ * Move the unit that starts with entry `fromId` to where the unit starting
+ * with `toId` is (before it when moving up, after it when moving down),
+ * keeping supersets together. Returns false if nothing moved.
+ */
+export function moveUnit(list, fromId, toId) {
+  const units = sessionUnits(list);
+  const from = units.findIndex((u) => u.id === fromId);
+  const to = units.findIndex((u) => u.id === toId);
+  if (!moveItem(units, from, to)) return false;
+  list.splice(0, list.length, ...units.flatMap((u) => u.entries));
+  return true;
 }
 
 // ---------- editing the list ----------

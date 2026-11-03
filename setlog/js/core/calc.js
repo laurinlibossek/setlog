@@ -1,5 +1,6 @@
 // Training math and derived statistics (history per exercise, PRs, records).
 // Labels are English; they double as translation keys in the apps.
+import { parseNum } from './units.js';
 
 export const WEIGHT_CATS = new Set(['barbell', 'dumbbell', 'machine', 'weighted_bw', 'assisted_bw']);
 export const usesWeight = (cat) => WEIGHT_CATS.has(cat);
@@ -65,6 +66,41 @@ export function setIsValid(s, cat) {
   if (cat === 'cardio') return (s.d > 0) || (s.t > 0);
   if (cat === 'duration') return s.t > 0;
   return false;
+}
+
+// ---------- effort: reps in reserve ----------
+// A set can carry how many more reps were left in the tank (`rir`: 0, 1, 2 or
+// 3, shown "3+"). Older logs and Strong imports have RPE instead; it stays on
+// the set and reads as reps in reserve: 10 → 0, 9 → 1, 8 → 2, 7 and below → 3+.
+// Half points count towards failure (9.5 → 0, 8.5 → 1, 7.5 → 2).
+export const RIR_CHOICES = [0, 1, 2, 3];
+const num = (v) => (typeof v === 'number' ? (Number.isFinite(v) ? v : null) : parseNum(v));
+
+/** Reps in reserve as 0–3 (more than 3 is "3+"), or null when there is none. */
+export function normRir(v) {
+  const n = num(v);
+  if (n === null || n < 0) return null;
+  return Math.min(3, Math.round(n));
+}
+
+/** RPE (a number or the text a draft keeps) as reps in reserve, or null. */
+export function rirFromRpe(rpe) {
+  const n = num(rpe);
+  if (n === null || n <= 0) return null;
+  return Math.max(0, Math.min(3, 10 - Math.ceil(n)));
+}
+
+/** Reps in reserve as RPE, for places that only know RPE (Strong's CSV): 0 → 10, 3+ → 7. */
+export function rpeFromRir(rir) {
+  const r = normRir(rir);
+  return r === null ? null : 10 - r;
+}
+
+/** A set's reps in reserve: its own, else read from its RPE, else null. Stored sets and drafts alike. */
+export function setRir(s) {
+  if (!s) return null;
+  const own = normRir(s.rir);
+  return own !== null ? own : rirFromRpe(s.rpe);
 }
 
 /** Does this category count towards volume (with the current settings)? */

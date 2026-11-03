@@ -199,7 +199,7 @@ export default function AccountSheet() {
           onPress={() => pick(tr('Default rest timer'), (REST_CHOICES as number[]).map((x) => ({ value: x, label: restLabel(x) })), st.defaultRest, (v) => set('defaultRest', v))} />
         <SwitchCell title={tr('Rest timer alerts')} sub={tr('A notification when rest is over, also with the phone locked')} value={st.restAlert !== false}
           onChange={(v) => set('restAlert', v)} testID="set-rest-alert" />
-        <SwitchCell title={tr('Keep screen on')} sub={tr('While a workout is running')} value={st.keepAwake !== false} onChange={(v) => set('keepAwake', v)} testID="set-keep-awake" />
+        <SwitchCell title={tr('Keep screen on')} sub={tr('While a workout is running')} value={st.appKeepAwake === true} onChange={(v) => set('appKeepAwake', v)} testID="set-keep-awake" />
         <Cell title={tr('Previous values')} value={st.prevSource === 'template' ? tr('Same template') : tr('Any workout')}
           onPress={() => pick(tr('Previous values'), [{ value: 'any', label: tr('Any workout') }, { value: 'template', label: tr('Same template') }], st.prevSource, (v) => set('prevSource', v as Settings['prevSource']))} />
         <Cell title={tr('Warm-up sets')} value={warmupText} onPress={() => router.push('/warmup')} testID="set-warmup" />

@@ -297,6 +297,9 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   assert.match(await id(page, 'pick-add').innerText(), /Add 1/);
   await id(page, 'pick-add').click();
   await wait(page, 500);
+  // it waits under Up next; tapping its row brings it up
+  await id(page, 'jump-c-zercher-squat').click();
+  await wait(page, 300);
   assert.equal(await block(page, 'c-zercher-squat').count(), 1);
   ok('the picker creates “Zercher Squat” (barbell, legs) and adds it to the workout');
 
@@ -304,7 +307,8 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await inputs(page, 'c-zercher-squat', 'w').first().fill('60');
   await inputs(page, 'c-zercher-squat', 'r').first().fill('8');
   await checks(page, 'c-zercher-squat').first().click();
-  await id(page, 'finish-workout').click();
+  await id(page, 'workout-menu').click();
+  await id(page, 'menu-finish').click();
   await id(page, 'drop-pending').click();
   await id(page, 'summary-done').click();
   await wait(page, 500);

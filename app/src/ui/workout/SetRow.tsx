@@ -1,112 +1,77 @@
-// One set in the running workout: its stroke (tap to log it), type label,
-// last time's numbers and the inputs (grey placeholders = what will be saved if
-// left empty). Swipe left to delete.
-import { memo, useEffect, useMemo, useRef } from 'react';
-import {
-  Animated, PanResponder, Platform, Pressable, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+// A value of a set, typed in place: weight, reps, distance or time. In the
+// running workout the app's keypad types into it (the phone's keyboard stays
+// down; a hardware keyboard still works); in the editors it's a plain number
+// field. Pending sets show last time's numbers in ghost ink; only the set
+// being logged, or the field the keypad types into, draws a field box.
+import { memo, useEffect, useRef } from 'react';
+import { Platform, TextInput } from 'react-native';
 import { fmtDigits } from '@setlog/core';
 
-import type { SetDraft } from '@/data/types';
-import { useColors } from '@/lib/theme';
-import { Stroke } from '@/ui/tally/Tally';
+import { RADIUS, TYPE } from '@/design/tally';
+import { useTally } from '@/lib/theme';
 
+/** The "Done" bar above the iPhone number pad (DraftBlocks → KeyboardDoneBar). */
 export const KEYBOARD_BAR = 'set-keys';
 
 export type Field = 'w' | 'r' | 'd' | 't';
+export const FIELD_W: Record<Field, number> = { w: 92, r: 64, d: 92, t: 92 };
+
+/** Typed text as the set keeps it: times are digits ("130" = 1:30), numbers digits and one separator. */
+export const cleanInput = (f: Field, v: string) => (f === 't'
+  ? v.replace(/\D/g, '').replace(/^0+/, '').slice(0, 6)
+  : v.replace(/[^\d.,]/g, '').slice(0, f === 'r' ? 3 : 7));
+
 type Props = {
-  set: SetDraft;
+  field: Field;
+  /** what the set holds (time as digits) */
+  value: string;
+  /** the ghost value (time as digits) */
+  ghost: string;
+  /** one field on its own (reps only, a duration) is wider */
+  single?: boolean;
+  /** draw the field box (the set being logged, or every set in an editor) */
+  boxed: boolean;
+  /** the keypad types into this field */
+  editing?: boolean;
+  /** ink for a logged value; pending typed values are ink too */
   label: string;
-  fields: Field[];
-  ph: Record<string, string>;
-  prevText: string;
-  badge: 'pr' | string | null;
-  shake: number;
-  showCheck: boolean;
-  labels: { set: string; prev: string; field: Record<Field, string>; check: string; uncheck: string; delete: string };
-  onChange: (f: Field, v: string) => void;
-  onToggle: () => void;
-  onMenu: () => void;
-  onPrev: () => void;
-  onDelete: () => void;
+  testID: string;
+  onChange: (v: string) => void;
+  /** running workout: the keypad opens instead of the phone's keyboard */
+  onKeypad?: () => void;
+  /** registers the field so the keypad can focus it and scroll it into view */
+  register?: (ref: TextInput | null) => void;
 };
 
-export const COLS = { label: 40, two: [76, 64], one: 96, check: 40, gap: 8 };
-
-export const SetRow = memo(function SetRow({
-  set, label, fields, ph, prevText, badge, shake, showCheck, labels, onChange, onToggle, onMenu, onPrev, onDelete,
+export const SetField = memo(function SetField({
+  field, value, ghost, single, boxed, editing, label, testID, onChange, onKeypad, register,
 }: Props) {
-  const c = useColors();
-  const dx = useRef(new Animated.Value(0)).current;
-  const shakeX = useRef(new Animated.Value(0)).current;
-  const del = useRef(onDelete);
-  del.current = onDelete;
-  const native = Platform.OS !== 'web';
-
+  const { colors: t } = useTally();
+  const ref = useRef<TextInput>(null);
   useEffect(() => {
-    if (!shake) return;
-    Animated.sequence([-5, 5, -4, 4, 0].map((v) => Animated.timing(shakeX, { toValue: v, duration: 60, useNativeDriver: native }))).start();
-  }, [shake, shakeX, native]);
-
-  const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => g.dx < -12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
-    onPanResponderMove: (_, g) => dx.setValue(Math.min(0, g.dx)),
-    onPanResponderRelease: (_, g) => {
-      if (g.dx < -90) Animated.timing(dx, { toValue: -600, duration: 160, useNativeDriver: native }).start(() => del.current());
-      else Animated.spring(dx, { toValue: 0, useNativeDriver: native }).start();
-    },
-    onPanResponderTerminate: () => Animated.spring(dx, { toValue: 0, useNativeDriver: native }).start(),
-  }), [dx, native]);
-
-  const typeColor = set.type === 'warmup' ? [c.warm, c.warmSoft] : set.type === 'drop' ? [c.drop, c.dropSoft] : set.type === 'failure' ? [c.danger, c.dangerSoft] : [c.ink, c.surface2];
-  const widths = fields.length === 1 ? [COLS.one] : COLS.two;
-  const input = (f: Field, i: number) => {
-    const isTime = f === 't';
-    const value = isTime ? fmtDigits(set.t) : set[f];
-    const placeholder = isTime ? (fmtDigits(ph.t) || '0:00') : (ph[f] || '');
-    return (
-      <TextInput key={f} value={value} placeholder={placeholder} placeholderTextColor={c.ink3}
-        onChangeText={(v) => onChange(f, isTime ? v.replace(/\D/g, '').replace(/^0+/, '').slice(0, 6) : v.replace(/[^\d.,]/g, '').slice(0, 7))}
-        keyboardType={f === 'r' || isTime ? 'number-pad' : 'decimal-pad'} selectTextOnFocus inputAccessoryViewID={Platform.OS === 'ios' ? KEYBOARD_BAR : undefined}
-        accessibilityLabel={labels.field[f]} testID={`in-${f}-${set.id}`} maxLength={isTime ? 8 : 7}
-        style={[styles.input, { width: widths[i], color: c.ink, backgroundColor: set.done ? 'transparent' : c.surface2 }]} />
-    );
-  };
-
+    register?.(ref.current);
+    return () => register?.(null);
+  }, [register]);
+  const isTime = field === 't';
+  const shown = isTime ? fmtDigits(value) : value;
+  const placeholder = isTime ? fmtDigits(ghost) : ghost;
+  const keypad = !!onKeypad;
   return (
-    <View style={styles.wrap}>
-      <View style={[StyleSheet.absoluteFill, styles.delBg, { backgroundColor: c.danger }]}><Text style={styles.delText}>{labels.delete}</Text></View>
-      <Animated.View {...pan.panHandlers} testID={`set-${set.id}`}
-        style={[styles.row, { backgroundColor: c.surface, transform: [{ translateX: Animated.add(dx, shakeX) }] }]}>
-        {/* the done tint can be see-through, so it sits on the row's solid background */}
-        {set.done && <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.doneSoft }]} />}
-        {showCheck && (
-          <Pressable onPress={onToggle} accessibilityRole="checkbox" aria-checked={set.done} accessibilityLabel={set.done ? labels.uncheck : labels.check}
-            testID={`check-${set.id}`} hitSlop={6} style={styles.check}>
-            <Stroke state={set.done ? (badge === 'pr' ? 'record' : set.type === 'warmup' ? 'warmup' : 'done') : set.type === 'warmup' ? 'warmupPending' : 'pending'} />
-          </Pressable>
-        )}
-        <Pressable onPress={onMenu} accessibilityRole="button" accessibilityLabel={labels.set} testID={`label-${set.id}`}
-          style={[styles.label, { backgroundColor: set.done ? 'transparent' : typeColor[1] }]}>
-          <Text style={{ color: typeColor[0], fontWeight: '800', fontSize: 15 }}>{label}</Text>
-          {!!badge && <Text style={{ color: badge === 'pr' ? c.gold : c.ink3, fontSize: 9.5, fontWeight: '700' }}>{badge === 'pr' ? 'PR' : `@${badge}`}</Text>}
-        </Pressable>
-        <Pressable onPress={onPrev} accessibilityRole="button" accessibilityLabel={labels.prev} style={styles.prev} testID={`prev-${set.id}`}>
-          <Text style={{ color: c.ink3, fontSize: 14, fontVariant: ['tabular-nums'] }} numberOfLines={1}>{prevText}</Text>
-        </Pressable>
-        {fields.map(input)}
-      </Animated.View>
-    </View>
+    <TextInput ref={ref} value={shown} placeholder={placeholder || (isTime ? '0:00' : '')} placeholderTextColor={t.ink3}
+      onChangeText={(v) => onChange(cleanInput(field, v))}
+      onFocus={onKeypad}
+      // the keypad is the keyboard; the phone's stays down
+      showSoftInputOnFocus={keypad ? false : undefined} caretHidden={keypad && Platform.OS !== 'web'} contextMenuHidden={keypad}
+      keyboardType={field === 'r' || isTime ? 'number-pad' : 'decimal-pad'} selectTextOnFocus={!keypad}
+      inputAccessoryViewID={!keypad && Platform.OS === 'ios' ? KEYBOARD_BAR : undefined}
+      accessibilityLabel={label} accessibilityHint={placeholder && !shown ? placeholder : undefined} testID={testID} maxLength={isTime ? 8 : 7}
+      style={{
+        ...TYPE.numberM, fontVariant: ['tabular-nums'], textAlign: 'center', color: t.ink,
+        width: single ? FIELD_W.t : FIELD_W[field], height: 40, paddingHorizontal: 6, paddingVertical: 0, borderRadius: RADIUS.m,
+        backgroundColor: editing ? t.paper : boxed ? t.paper3 : 'transparent',
+        borderWidth: 2, borderColor: editing ? t.ink : 'transparent',
+        // web: the keypad's ink box is the focus; an editor's field keeps the browser's ring
+        ...(keypad && Platform.OS === 'web' ? { outlineStyle: 'none' } as object : null),
+      }} />
   );
-});
-
-const styles = StyleSheet.create({
-  wrap: { overflow: 'hidden' },
-  delBg: { alignItems: 'flex-end', justifyContent: 'center', paddingRight: 22 },
-  delText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  row: { flexDirection: 'row', alignItems: 'center', height: 48, paddingLeft: 8, paddingRight: 10, gap: COLS.gap },
-  label: { width: COLS.label, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  prev: { flex: 1, minWidth: 0, height: 36, justifyContent: 'center', paddingHorizontal: 4, borderRadius: 8 },
-  input: { height: 34, borderRadius: 8, textAlign: 'center', fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'], paddingHorizontal: 4, paddingVertical: 0 },
-  check: { width: COLS.check, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

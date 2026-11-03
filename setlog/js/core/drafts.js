@@ -4,7 +4,7 @@
 import {
   uid, parseNum, numToInput, kgTo, toKg, kmTo, toKm, roundW, digitsToSec, secToDigits,
 } from './units.js';
-import { setIsValid } from './calc.js';
+import { setIsValid, normRir } from './calc.js';
 
 export function newSetDraft(type = 'normal', extra = {}) {
   return { id: uid(), type, w: '', r: '', d: '', t: '', rpe: '', done: false, ...extra };
@@ -29,6 +29,8 @@ export function setToDraft(s, st, keepId = true) {
   // Remember the stored numbers behind the rounded display strings, so saving
   // an untouched set gives back exactly what was stored (no drift in lb, mi,
   // or from weights imported with more decimals than the display shows).
+  const rir = normRir(s.rir);
+  if (rir !== null) d.rir = rir;
   const orig = {};
   if (d.w !== '') orig.w = [d.w, s.w];
   if (d.d !== '') orig.d = [d.d, s.d];
@@ -47,6 +49,8 @@ export function draftToSet(sd, st) {
   if (d !== null) out.d = kept(sd, 'd') ?? toKm(d, st.distUnit);
   if (t !== null && t > 0) out.t = t;
   if (rpe !== null && rpe > 0) out.rpe = Math.min(10, rpe);
+  const rir = normRir(sd.rir);
+  if (rir !== null) out.rir = rir;
   return out;
 }
 

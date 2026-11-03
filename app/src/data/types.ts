@@ -13,6 +13,8 @@ export interface WorkSet {
   d?: number;
   t?: number;
   rpe?: number;
+  /** reps left in reserve: 0–3 (3 = "3+"); older sets may have RPE instead */
+  rir?: number;
 }
 
 export interface Entry {
@@ -113,6 +115,8 @@ export interface SetDraft {
   d: string;
   t: string;
   rpe: string;
+  /** reps left in reserve, rated after the set (0–3) */
+  rir?: number;
   done: boolean;
   /** template target, shown as the placeholder */
   tpl?: { w: number | null; r: number | null; d: number | null; t: number | null };
@@ -136,6 +140,9 @@ export interface Rest {
   end: number;
   total: number;
   label: string;
+  /** the set it follows (the one "Reps left?" rates) */
+  entryId?: string;
+  setId?: string;
 }
 
 export interface ActiveWorkout {
@@ -149,6 +156,8 @@ export interface ActiveWorkout {
   templateNotes: string;
   exercises: EntryDraft[];
   rest: Rest | null;
+  /** the exercise switched to ("Up next"), or none: the session's order */
+  current?: string | null;
   updatedAt: number;
 }
 

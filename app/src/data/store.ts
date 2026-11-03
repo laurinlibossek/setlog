@@ -626,10 +626,11 @@ export async function finishActive(mode: 'done' | 'all', defaultName: string): P
 }
 
 // ---------- rest timer ----------
-export function startRest(sec: number, label = '') {
+/** Start the rest timer; `after` is the set it follows. */
+export function startRest(sec: number, label = '', after?: { entryId: string; setId: string }) {
   if (!state.active || !(sec > 0)) return;
   const now = Date.now();
-  patchActive({ rest: { start: now, end: now + sec * 1000, total: sec, label } });
+  patchActive({ rest: { start: now, end: now + sec * 1000, total: sec, label, ...after } });
 }
 export function adjustRest(deltaSec: number) {
   const r = state.active?.rest;

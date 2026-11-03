@@ -314,7 +314,8 @@ svg { display: block; }
 .cell + .cell::before, .cell + .cell-wrap::before, .cell-wrap + .cell::before {
   content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--line);
 }
-button.cell:active, .cell.tappable:active { background: var(--surface-2); }
+a.cell { color: inherit; text-decoration: none; }
+button.cell:active, a.cell:active, .cell.tappable:active { background: var(--surface-2); }
 .cell-main { flex: 1; min-width: 0; }
 .cell-title { font-size: 16px; font-weight: 500; }
 .cell-sub { font-size: 13px; color: var(--ink-3); margin-top: 1px; }

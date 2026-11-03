@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import * as WebBrowser from 'expo-web-browser';
 import { File } from 'expo-file-system';
 import {
-  DEFAULT_WARMUP, FORMULAS, REST_CHOICES, exportCSV, parsePlates, startOfDay,
+  DEFAULT_WARMUP, FORMULAS, REST_CHOICES, WEB_APP_URL, exportCSV, parsePlates, privacyPage, startOfDay,
 } from '@setlog/core';
 
 import {
@@ -45,6 +46,9 @@ export default function SettingsScreen() {
     const v = await prompt({ title: tr('Your name'), value: s.profile.name, placeholder: tr('Name') });
     if (v !== null) setProfile({ name: v.trim() });
   };
+  // the web app's page in the app's language, in an in-app browser
+  const openPrivacy = () => { WebBrowser.openBrowserAsync(WEB_APP_URL + privacyPage(f.lang)).catch(() => {}); };
+
   const doDeleteAll = async () => {
     const ok = await ask({
       title: tr('Delete all data?'),
@@ -243,6 +247,10 @@ export default function SettingsScreen() {
 
       <Group style={{ marginTop: 22 }}>
         <Cell first title={tr('Delete all data')} danger chevron={false} onPress={busy ? undefined : doDeleteAll} testID="delete-all" />
+      </Group>
+
+      <Group style={{ marginTop: 22 }}>
+        <Cell first title={tr('Privacy policy')} onPress={openPrivacy} testID="privacy" />
       </Group>
 
       <Txt tone="ink3" style={{ fontSize: 13, textAlign: 'center', marginTop: 28 }}>

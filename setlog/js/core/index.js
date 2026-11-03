@@ -14,6 +14,7 @@ export * from './suggest.js';
 export * from './csv.js';
 export * from './backup.js';
 export * from './share.js';
+export * from './links.js';
 export * from './search.js';
 export * from './seed.js';
 export * from './i18n.js';

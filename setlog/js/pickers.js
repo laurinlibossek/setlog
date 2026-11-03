@@ -1,5 +1,5 @@
 // Exercise picker and the create/edit exercise form.
-import { tr } from './i18n.js';
+import { tr, exLabel } from './i18n.js';
 import { html, useState, useMemo, useRef, useEffect } from './lib.js';
 import { Icon } from './icons.js';
 import {
@@ -32,9 +32,9 @@ export function recentExerciseIds(limit = 8) {
 
 function ExerciseRow({ ex, on, onClick, count }) {
   return html`<button class=${'picker-row' + (on ? ' on' : '')} onClick=${onClick} aria-pressed=${on}>
-    <div class="avatar">${on ? html`<${Icon} name="check" />` : ex.name.charAt(0).toUpperCase()}</div>
+    <div class="avatar">${on ? html`<${Icon} name="check" />` : exLabel(ex).charAt(0).toUpperCase()}</div>
     <div class="cell-main">
-      <div class="cell-title">${ex.name}</div>
+      <div class="cell-title">${exLabel(ex)}</div>
       <div class="cell-sub">${BODY_PART_LABEL[ex.bodyPart] || tr('Other')}${count ? ` · ${count}×` : ''}</div>
     </div>
   </button>`;
@@ -78,7 +78,7 @@ function Picker({ multi, title, close }) {
   const groups = [];
   let cur = null;
   for (const ex of list) {
-    const L = /[a-z]/i.test(ex.name[0]) ? ex.name[0].toUpperCase() : '#';
+    const L = /[a-z]/i.test(exLabel(ex)[0]) ? exLabel(ex)[0].toUpperCase() : '#';
     if (!cur || cur.L !== L) { cur = { L, items: [] }; groups.push(cur); }
     cur.items.push(ex);
   }
@@ -133,15 +133,15 @@ function ExerciseForm({ ex, preset, close }) {
     const n = name.trim();
     if (!n) { toast(tr('Give the exercise a name')); return; }
     const dupe = findExerciseByName(n);
-    if (dupe && dupe.id !== ex?.id) { toast(tr('“{name}” already exists', { name: dupe.name })); return; }
+    if (dupe && dupe.id !== ex?.id) { toast(tr('“{name}” already exists', { name: exLabel(dupe) })); return; }
     const used = ex ? allSessions(ex.id).length : 0;
     if (ex && used && category !== ex.category) {
       const same = loggedFields(category).join() === loggedFields(ex.category).join();
       const ok = await confirmDialog({
         title: tr('Change what you log?'),
         message: same
-          ? tr('“{name}” is in {n}. Their sets stay as they are, but records and volume are worked out the new way.', { name: ex.name, n: plural(used, 'workout') })
-          : tr('“{name}” is in {n}, logged with other fields. Those sets may show up empty or incomplete afterwards.', { name: ex.name, n: plural(used, 'workout') }),
+          ? tr('“{name}” is in {n}. Their sets stay as they are, but records and volume are worked out the new way.', { name: exLabel(ex), n: plural(used, 'workout') })
+          : tr('“{name}” is in {n}, logged with other fields. Those sets may show up empty or incomplete afterwards.', { name: exLabel(ex), n: plural(used, 'workout') }),
         ok: tr('Change'), destructive: !same,
       });
       if (!ok) return;

@@ -1,6 +1,6 @@
 // App state, persistence and all data actions. UI components subscribe to
 // "topics" so a keystroke in the active workout doesn't re-render History.
-import { tr } from './i18n.js';
+import { tr, exLabel } from './i18n.js';
 import * as db from './db.js';
 import { useEffect, useReducer } from './lib.js';
 import { SEED_EXERCISES, SEED_VERSION } from './seed.js';
@@ -261,12 +261,12 @@ export function setMeta(patch) {
 let exListCache = null, exListKey = -1;
 export function exerciseList() {
   if (exListKey !== S.v.exercises || !exListCache) {
-    exListCache = [...S.exercises.values()].sort((a, b) => a.name.localeCompare(b.name));
+    exListCache = [...S.exercises.values()].sort((a, b) => exLabel(a).localeCompare(exLabel(b)));
     exListKey = S.v.exercises;
   }
   return exListCache;
 }
-export const exName = (id) => S.exercises.get(id)?.name || tr('Unknown exercise');
+export const exName = (id) => exLabel(S.exercises.get(id)) || tr('Unknown exercise');
 
 export const findExerciseByName = (name) => findByName(S.exercises, name);
 

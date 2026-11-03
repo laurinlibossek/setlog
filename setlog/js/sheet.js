@@ -1,5 +1,5 @@
 // The running workout: full-screen sheet, mini bar, rest timer, finish flow.
-import { tr } from './i18n.js';
+import { tr, exLabel } from './i18n.js';
 import { html, useRef } from './lib.js';
 import { Icon } from './icons.js';
 import {
@@ -302,7 +302,7 @@ function Summary({ result, close }) {
           const ex = S.exercises.get(p.exerciseId);
           const kind = ['e1rm', 'weight', 'volume'].includes(p.metric) ? 'weight' : p.metric === 'reps' ? 'count' : p.metric;
           return html`<div class="cell" key=${p.exerciseId + p.metric}><span class="trophy"><${Icon} name="trophy" size=${20} /></span>
-            <div class="cell-main"><div class="cell-title">${ex?.name}</div><div class="cell-sub">${PR_LABEL[p.metric]}</div></div>
+            <div class="cell-main"><div class="cell-title">${exLabel(ex)}</div><div class="cell-sub">${PR_LABEL[p.metric]}</div></div>
             <div class="cell-value">${metricValue(kind, p.value)}</div></div>`;
         })}</div></div>`}
       <div><div class="section"><span class="section-title">${tr('Exercises')}</span></div>

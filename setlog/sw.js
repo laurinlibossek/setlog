@@ -42,6 +42,7 @@ const ASSETS = [
   './js/core/csv.js',
   './js/core/drafts.js',
   './js/core/editing.js',
+  './js/core/exercise-names-de.js',
   './js/core/i18n.js',
   './js/core/i18n-de.js',
   './js/core/links.js',

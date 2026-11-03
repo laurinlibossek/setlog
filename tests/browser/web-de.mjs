@@ -1,5 +1,6 @@
 // Web app, v1.4.0: the German UI. Everything visible is translated, and the
-// language setting switches and survives reloads. 5 checks.
+// language setting switches and survives reloads, and built-in exercises
+// show their German names. 6 checks.
 import assert from 'node:assert/strict';
 import { devices, launch, WEB as BASE, shots, waitReady } from './env.mjs';
 
@@ -8,7 +9,7 @@ const browser = await launch();
 let passed = 0;
 const ok = (n) => { passed++; console.log('PASS', n); };
 const ev = (page, fn, arg) => page.evaluate(fn, arg);
-// English UI words that must not show up in the German UI (exercise names are removed first)
+// English UI words that must not show up in the German UI (exercise names, stored and shown, are removed first)
 const ENGLISH = /\b(Add|Delete|Save|Cancel|Settings|Templates?|History|Records|Previous|Finish|Show|Hide|Edit|the|your|Workouts?|Reps|Weight|Sets|Volume|Duration|Today|Yesterday|ago|Start|Rest|Notes?|Done|Close|Body|Share|Archive|Suggested|Usually|Last|Search|Recent|Other)\b/;
 
 const ctx = await browser.newContext({ ...devices['iPhone 13'], locale: 'de-DE', colorScheme: 'dark', serviceWorkers: 'block' });
@@ -18,7 +19,7 @@ page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(BASE);
 await waitReady(page);
-const names = await ev(page, async () => [...(await import('/js/store.js')).S.exercises.values()].map((e) => e.name));
+const names = await ev(page, async () => { const { exLabel } = await import('/js/i18n.js'); return [...(await import('/js/store.js')).S.exercises.values()].flatMap((e) => [e.name, exLabel(e)]); });
 async function screenText(where) {
   let text = await page.locator('body').innerText();
   for (const n of names.sort((a, b) => b.length - a.length)) text = text.split(n).join('');
@@ -109,6 +110,34 @@ await page.waitForTimeout(1000);
 await waitReady(page);
 assert.deepEqual(await page.locator('.tabbar .tab').allInnerTexts(), ['Profil', 'Verlauf', 'Training', 'Übungen', 'Messen']);
 ok('language setting switches to English and back to the phone language');
+
+// German exercise names: shown for built-ins, stored in English; search takes both
+{
+  await ev(page, async () => {
+    const st = await import('/js/store.js');
+    st.addExercise({ name: 'Zercher Squat', category: 'barbell', bodyPart: 'legs' });
+    (await import('/js/ui.js')).setTab('exercises');
+  });
+  const search = page.locator('#exercise-search');
+  const titles = async (q) => {
+    await search.fill(q);
+    await page.waitForTimeout(150);
+    return page.locator('.tab-panel:not([hidden]) .cell-title').allInnerTexts();
+  };
+  const bench = await titles('bankdrücken lh');
+  assert.ok(bench.includes('Bankdrücken (Langhantel)'), bench.join(' | '));
+  assert.ok(!bench.some((t) => /Bench Press/.test(t)), 'no English name on screen');
+  assert.deepEqual(await titles('lat pulldown'), await titles('latzug'), 'English and German search find the same exercises');
+  assert.ok((await titles('latzug')).includes('Latzug (Kabelzug)'));
+  assert.deepEqual(await titles('zercher'), ['Zercher Squat'], 'a custom exercise keeps its name');
+  const stored = await ev(page, async () => (await import('/js/store.js')).findExerciseByName('Bench Press (Barbell)')?.name);
+  assert.equal(stored, 'Bench Press (Barbell)', 'stored names stay English');
+  await search.fill('kreuzheben');
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: `${OUT}/de-exercise-names.png` });
+  await search.fill('');
+  ok('built-in exercises show German names, search takes German or English, custom names stay');
+}
 
 // dates and numbers
 const bits = await ev(page, async () => { const u = await import('/js/util.js'); return [u.relDay(Date.now() - 3 * 86400000), u.fmtDur(65 * 60000), u.plural(3, 'set'), u.plural(1, 'workout')]; });

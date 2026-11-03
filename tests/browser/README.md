@@ -64,3 +64,20 @@ node tests/browser/run.mjs --serve app &               # yours on :8765 and :879
 ```
 
 Drop `app` to serve only the web apps. The worktree needs its own `npm ci` in `app/` (the runner does it).
+
+## Store screenshots
+
+```sh
+node tests/browser/run.mjs app-store-shots     # builds and serves the app, then writes tests/browser/.out/store/
+```
+
+`app-store-shots.mjs` isn't a test suite (CI doesn't run it). From the test backup, moved so the last workout was yesterday, it takes six screens in English and German: a running workout with the "previous" column, the rest timer, an exercise's 1RM chart, the History calendar, templates with the suggested workout, and Profile. Sizes: App Store 6.9″ (1320 × 2868) and Google Play phone (1080 × 1920, 9:16). It also draws the 1024 × 500 Play feature graphic from `app/assets/images/icon.png`. The PNGs stay out of git.
+
+Store screenshots have to show the real app, and the web build differs from it:
+
+- **Icons:** the app uses SF Symbols on iPhone and Material Symbols on Android and the web. The web screenshots show the Android icons.
+- **Font:** the browser's sans-serif (Inter in the cloud container, whatever is installed elsewhere), not SF Pro (iPhone) or Roboto (Android).
+- **No status bar or home indicator.** Both stores accept that, but a phone screenshot has them.
+- **The running workout** is a full screen in the web build; on iPhone it's a page sheet with the screen behind it showing at the top.
+
+So the Play screenshots from the web build are close to the Android app (icons match; only the font differs), and the App Store screenshots are drafts for layout and text. Take the final App Store ones in the iOS Simulator (an iPhone with a 6.9″ screen, `xcrun simctl io booted screenshot <file>.png`) or on a phone, with the same backup restored and the same six screens.

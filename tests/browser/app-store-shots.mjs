@@ -50,7 +50,6 @@ async function screens(store, lang) {
   page.on('pageerror', (e) => errors.push(String(e)));
   const id = (t) => page.getByTestId(t);
   const wait = (ms = 500) => page.waitForTimeout(ms);
-  const tr = core.translator(lang);
   const shot = async (n, name) => {
     await wait();
     const raw = path.join(RAW, `${store}-${lang}-${n}-${name}.png`);
@@ -76,7 +75,6 @@ async function screens(store, lang) {
   await id('tab-search').click();
   await id('exercise-search').fill('squat bb');
   await id('exercise-x-squat-barbell').click();
-  await id('exercise-tabs').getByText(tr('Charts'), { exact: true }).click();
   await id('exercise-chart').waitFor();
   await shot(3, 'exercise-chart');
   await page.goBack();

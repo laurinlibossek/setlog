@@ -419,18 +419,40 @@ for (const scheme of ['light', 'dark']) {
   await id(page, `exercise-${SQUAT}`).click();
   await id(page, 'exercise-chart').waitFor();
   await wait(page, 400);
+  // the hero number (estimated 1RM of the last session), one line, a signal dot per record
+  assert.match(await id(page, 'exercise-hero').innerText(), /^[\d.,]+\s*kg$/);
+  assert.match(await id(page, 'exercise-metric').innerText(), /Estimated 1RM, best of last session/);
   const paths = await id(page, 'exercise-chart').locator('svg path').count();
   const dots = await id(page, 'exercise-chart').locator('svg circle').count();
-  assert.ok(paths >= 2 && dots >= 1, `paths ${paths}, dots ${dots}`);
+  assert.ok(paths === 1 && dots >= 1, `paths ${paths}, record dots ${dots}`);
   const box = await id(page, 'exercise-chart').boundingBox();
   await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
   await id(page, 'chart-tip').waitFor();
   assert.match(await id(page, 'chart-tip').innerText(), /kg/);
   await page.screenshot({ path: `${OUT}/08-exercise-chart-${scheme}.png` });
+  // the range control; All shows every session since "Start history from"
+  const data = await store(page);
+  const squats = data.workouts.filter((w) => w.exercises.some((e) => e.exerciseId === SQUAT)).sort((a, b) => b.startedAt - a.startedAt);
+  await id(page, 'exercise-range-0').click();
+  await wait(page, 200);
+  assert.equal(await id(page, 'exercise-range-0').getAttribute('aria-checked'), 'true');
+  const entries = squats.reduce((n, w) => n + w.exercises.filter((e) => e.exerciseId === SQUAT).length, 0);
+  assert.equal(await id(page, 'exercise-sessions').innerText(), `Sessions\n${entries}`);
+  // rep maxes: fewer reps never show a lighter weight than more reps
+  const maxes = await page.locator('[data-testid^="repmax-"]').evaluateAll((els) => els.map((e) => [Number(e.dataset.testid.slice(7)), e.innerText]));
+  assert.ok(maxes.length >= 1);
+  const kgOf = (t) => Number(t.match(/([\d.]+)\s*kg/)[1]);
+  for (let i = 1; i < maxes.length; i++) assert.ok(maxes[i][0] > maxes[i - 1][0] && kgOf(maxes[i][1]) <= kgOf(maxes[i - 1][1]), JSON.stringify(maxes));
+  // History: the latest sessions, each opens its workout
+  assert.equal(await page.locator('[data-testid^="ex-session-"]').count(), Math.min(10, entries));
+  assert.equal(await page.locator('[data-testid^="ex-session-"]').first().getAttribute('data-testid'), `ex-session-${squats[0].id}`);
+  // the hero's label picks another metric
+  await id(page, 'exercise-metric').click();
   await id(page, 'metric-totalReps').click();
   await wait(page, 300);
-  assert.match(await visibleText(page), /Total reps/);
-  ok(`exercise Charts tab: est. 1RM over time with a tooltip, other metrics (${scheme})`);
+  assert.match(await id(page, 'exercise-metric').innerText(), /Total reps, last session/);
+  assert.match(await id(page, 'exercise-hero').innerText(), /^\d+\s*reps$/);
+  ok(`exercise page: est. 1RM with its chart, record dots and a tooltip, range, rep maxes, history, other metrics (${scheme})`);
 
   // Measure: log body weight, chart, delete with undo
   await page.goBack();

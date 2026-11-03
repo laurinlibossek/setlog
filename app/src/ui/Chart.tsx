@@ -1,18 +1,19 @@
-// Minimal charts in the web app's style (setlog/js/charts.js): a one-line
-// chart over time and a column chart. One accent hue, hairline grid, 2 px
-// line, a bigger end dot with a surface ring, sparse labels; touch a point
-// or bar for its value. The axis maths is the shared core's (core/chart.js).
+// The app's charts: a line over time (the Tally LineChart, ui/tally/LineChart.tsx,
+// with the props Measure was built with) and a column chart in ink with dotted
+// grid lines; touch a bar for its value. The axis maths is the shared core's
+// (core/chart.js).
 import { useState } from 'react';
 import {
   Platform, StyleSheet, Text, View, type LayoutChangeEvent,
 } from 'react-native';
 import Svg, {
-  Circle, G, Line, Path, Text as SvgText,
+  G, Line, Path, Text as SvgText,
 } from 'react-native-svg';
 import { niceTicks, tickDecimals } from '@setlog/core';
 
 import { useFormat } from '@/lib/format';
 import { useColors } from '@/lib/theme';
+import { LineChart as TallyLineChart } from '@/ui/tally/LineChart';
 
 // SVG text in a browser falls back to a serif font; use the system one
 const FONT = Platform.OS === 'web' ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' : undefined;
@@ -36,73 +37,20 @@ function Tip({ left, width, value, sub }: { left: number; width: number; value: 
 
 type Point = { x: number; y: number };
 
-/** points oldest first, x = ms, y in display units */
+/**
+ * points oldest first, x = ms, y in display units. The Tally line chart
+ * (ui/tally/LineChart.tsx) with this file's older props, for Measure.
+ */
 export function LineChart({
-  points, height = 200, fmtAxis = (v: number) => String(v), fmtVal = (v: number) => String(v), time = false, emptyText, label, testID,
+  points, height = 180, fmtAxis = (v: number) => String(v), fmtVal = (v: number) => String(v), time = false, emptyText, label, testID,
 }: {
   points: Point[]; height?: number; fmtAxis?: (v: number, dec: number) => string; fmtVal?: (v: number) => string;
   time?: boolean; emptyText: string; label: string; testID?: string;
 }) {
-  const c = useColors();
-  const f = useFormat();
-  const [width, onLayout] = useWidth();
-  const [sel, setSel] = useState<number | null>(null);
-  if (!points.length) {
-    return <View onLayout={onLayout} style={styles.empty} testID={testID}><Text style={{ color: c.ink3, fontSize: 14, textAlign: 'center' }}>{emptyText}</Text></View>;
-  }
-  const padL = 44, padR = 16, padT = 22, padB = 26;
-  const W = Math.max(width, 200), H = height;
-  const iw = W - padL - padR, ih = H - padT - padB;
-  const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs);
-  const ticks = niceTicks(Math.min(...ys), Math.max(...ys), 4, { time }) as number[];
-  const y0 = ticks[0], y1 = ticks[ticks.length - 1];
-  const dec = tickDecimals(ticks) as number;
-  const sx = (x: number) => (x1 === x0 ? padL + iw / 2 : padL + ((x - x0) / (x1 - x0)) * iw);
-  const sy = (y: number) => padT + ih - ((y - y0) / (y1 - y0 || 1)) * ih;
-  const d = points.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
-  const area = points.length > 1 ? `${d}L${sx(points[points.length - 1].x).toFixed(1)},${padT + ih}L${sx(points[0].x).toFixed(1)},${padT + ih}Z` : '';
-  const spanDays = (x1 - x0) / 86400000;
-  const xLabel = (t: number) => (spanDays > 300 ? `${f.date.monthShort(t)} ${String(new Date(t).getFullYear()).slice(2)}` : f.date.dayMonth(t));
-  const xTicks = points.length === 1 ? [x0] : [x0, x0 + (x1 - x0) / 2, x1];
-  const showDots = points.length <= 24;
-  const last = points[points.length - 1];
-  const pick = (px: number) => {
-    let best = 0, bd = Infinity;
-    points.forEach((p, i) => { const dd = Math.abs(sx(p.x) - px); if (dd < bd) { bd = dd; best = i; } });
-    setSel(best);
-  };
-  const sp = sel !== null ? points[sel] : null;
-  const anchor = (i: number) => (points.length === 1 ? 'middle' : i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle');
   return (
-    <View onLayout={onLayout} style={{ marginTop: 10 }} testID={testID}
-      accessible accessibilityRole="image" accessibilityLabel={`${label}: ${fmtVal(last.y)}`}
-      onStartShouldSetResponder={() => true}
-      onResponderGrant={(e) => pick(e.nativeEvent.locationX)} onResponderMove={(e) => pick(e.nativeEvent.locationX)}
-      onResponderRelease={() => setTimeout(() => setSel(null), 1600)} onResponderTerminationRequest={() => true}>
-      {width > 0 && (
-        <Svg width={W} height={H}>
-          {ticks.map((t) => (
-            <G key={'t' + t}>
-              <Line x1={padL} x2={W - padR} y1={sy(t)} y2={sy(t)} stroke={c.line} strokeWidth={1} />
-              <SvgText fontFamily={FONT} x={padL - 8} y={sy(t) + 4} textAnchor="end" fontSize={11} fill={c.ink3}>{fmtAxis(t, dec)}</SvgText>
-            </G>
-          ))}
-          {xTicks.map((t, i) => <SvgText fontFamily={FONT} key={'x' + i} x={sx(t)} y={H - 6} textAnchor={anchor(i)} fontSize={11} fill={c.ink3}>{xLabel(t)}</SvgText>)}
-          {!!area && <Path d={area} fill={c.chart} opacity={0.1} />}
-          <Path d={d} fill="none" stroke={c.chart} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          {showDots && points.slice(0, -1).map((p, i) => <Circle key={'p' + i} cx={sx(p.x)} cy={sy(p.y)} r={3.5} fill={c.chart} stroke={c.surface} strokeWidth={2} />)}
-          <Circle cx={sx(last.x)} cy={sy(last.y)} r={5} fill={c.chart} stroke={c.surface} strokeWidth={2} />
-          {!sp && <SvgText fontFamily={FONT} x={Math.min(sx(last.x), W - padR)} y={Math.max(sy(last.y) - 11, 12)} textAnchor="end" fontSize={12} fontWeight="700" fill={c.ink}>{fmtVal(last.y)}</SvgText>}
-          {sp && (
-            <G>
-              <Line x1={sx(sp.x)} x2={sx(sp.x)} y1={padT - 6} y2={padT + ih} stroke={c.ink3} strokeWidth={1} />
-              <Circle cx={sx(sp.x)} cy={sy(sp.y)} r={6} fill={c.chart} stroke={c.surface} strokeWidth={2} />
-            </G>
-          )}
-        </Svg>
-      )}
-      {sp && <Tip left={sx(sp.x)} width={W} value={fmtVal(sp.y)} sub={f.date.medium(sp.x)} />}
+    <View style={{ marginTop: 14 }}>
+      <TallyLineChart points={points.map((p) => ({ at: p.x, value: p.y }))} height={height} formatAxis={fmtAxis} formatValue={fmtVal}
+        time={time} emptyText={emptyText} label={label} testID={testID} />
     </View>
   );
 }
@@ -146,7 +94,7 @@ export function BarChart({
         <Svg width={W} height={H}>
           {ticks.map((t) => (
             <G key={'t' + t}>
-              <Line x1={padL} x2={W - padR} y1={sy(t)} y2={sy(t)} stroke={t === 0 ? c.lineStrong : c.line} strokeWidth={1} />
+              <Line x1={padL} x2={W - padR} y1={sy(t)} y2={sy(t)} stroke={c.line} strokeWidth={1} strokeDasharray={t === 0 ? undefined : '2 4'} />
               <SvgText fontFamily={FONT} x={padL - 6} y={sy(t) + 4} textAnchor="end" fontSize={11} fill={c.ink3}>{String(t)}</SvgText>
             </G>
           ))}
@@ -175,6 +123,5 @@ export function BarChart({
 }
 
 const styles = StyleSheet.create({
-  empty: { paddingVertical: 36, paddingHorizontal: 8, alignItems: 'center' },
   tip: { position: 'absolute', top: -8, width: 128, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 5 },
 });

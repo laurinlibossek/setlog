@@ -1,14 +1,17 @@
 // Starting and finishing a workout: the questions on the way (a workout is
-// already running, unchecked sets, update the template?) and where the app
-// goes next. The rules are the shared core's (core/workout.js, templates.js).
+// already running, unchecked sets), where the app goes next, and saving a
+// finished workout into its template (the summary's switch row). The rules
+// are the shared core's (core/workout.js, templates.js).
 import { router } from 'expo-router';
 import { progressOf, workoutNameKey, pendingSets, templateChanges } from '@setlog/core';
 
 import {
   discardActive, editActive, finishActive, getState, previousSets, restoreTemplateExercises, startWorkout, updateTemplateFromWorkout,
 } from '@/data/store';
-import type { ActiveWorkout, Template, Workout } from '@/data/types';
-import { actionSheet, ask, choose, toast } from '@/ui/overlay';
+import type {
+  ActiveWorkout, Template, TemplateEntry, Workout,
+} from '@/data/types';
+import { actionSheet, ask, toast } from '@/ui/overlay';
 import type { Format } from './format';
 import type { Tr } from './i18n';
 
@@ -96,44 +99,64 @@ export async function finishFlow(f: F) {
   if (result) router.replace({ pathname: '/summary/[id]', params: { id: result.workout.id } });
 }
 
-/** After a workout from a template: offer to save what changed into the template. */
-export async function offerTemplateUpdate(workout: Workout, f: F) {
-  const { tr } = f;
+/** What a finished workout changed in its template (core templateChanges). */
+export interface TemplateDiff {
+  addedExercises: number; removedExercises: number; reordered: boolean; addedSets: number; removedSets: number;
+  typesChanged: boolean; supersetsChanged: boolean; valueSets: number; structure: boolean;
+}
+
+/**
+ * The summary's template question: the template a finished workout came from
+ * and what saving the workout into it would change, or null when there is
+ * nothing to ask (no template, an example or a repeated workout, nothing
+ * changed, or Settings → Ask to update templates is off). Ask it once, when
+ * the summary opens: after saving, the template no longer differs.
+ */
+export function templateQuestion(workout: Workout): { templateId: string; diff: TemplateDiff } | null {
   const s = getState();
-  if (s.settings.askTemplateUpdate === false || !workout.templateId) return;
+  if (s.settings.askTemplateUpdate === false || !workout.templateId) return null;
   const t = s.templates.find((x) => x.id === workout.templateId);
-  if (!t) return;
-  const ch = templateChanges(t, workout) as {
-    addedExercises: number; removedExercises: number; reordered: boolean; addedSets: number; removedSets: number;
-    typesChanged: boolean; supersetsChanged: boolean; valueSets: number; structure: boolean;
-  };
-  if (!ch.structure && !ch.valueSets) return;
-  const name = tr('“{name}”', { name: t.name });
-  const lines = [
-    ch.addedExercises ? tr('Adds {n}.', { n: f.plural(ch.addedExercises, 'exercise') }) : '',
-    ch.removedExercises ? tr('Removes {n}.', { n: f.plural(ch.removedExercises, 'exercise') }) : '',
-    ch.reordered ? tr('Reorders exercises.') : '',
-    ch.addedSets ? tr('Adds {n}.', { n: f.plural(ch.addedSets, 'set') }) : '',
-    ch.removedSets ? tr('Removes {n}.', { n: f.plural(ch.removedSets, 'set') }) : '',
-    ch.typesChanged ? tr('Changes set types.') : '',
-    ch.supersetsChanged ? tr('Changes supersets.') : '',
+  if (!t) return null;
+  const diff = templateChanges(t, workout) as TemplateDiff;
+  if (!diff.structure && !diff.valueSets) return null;
+  return { templateId: t.id, diff };
+}
+
+/** One line of what saving into the template changes: "Removes 2 exercises. Updates values for 1 set." */
+export function describeTemplateDiff(d: TemplateDiff, f: F) {
+  const { tr } = f;
+  return [
+    d.addedExercises ? tr('Adds {n}.', { n: f.plural(d.addedExercises, 'exercise') }) : '',
+    d.removedExercises ? tr('Removes {n}.', { n: f.plural(d.removedExercises, 'exercise') }) : '',
+    d.reordered ? tr('Reorders exercises.') : '',
+    d.addedSets ? tr('Adds {n}.', { n: f.plural(d.addedSets, 'set') }) : '',
+    d.removedSets ? tr('Removes {n}.', { n: f.plural(d.removedSets, 'set') }) : '',
+    d.typesChanged ? tr('Changes set types.') : '',
+    d.supersetsChanged ? tr('Changes supersets.') : '',
+    d.valueSets ? tr('Updates values for {n}.', { n: f.plural(d.valueSets, 'set') }) : '',
   ].filter(Boolean).join(' ');
-  const choice = await choose<'values' | 'all' | 'keep'>({
-    title: tr('Update template'),
-    message: ch.structure
-      ? tr('You changed {name} during this workout. Update the template?', { name })
-      : tr('You logged different numbers than {name} has saved. Update the template?', { name }),
-    cancel: false,
-    options: [
-      ch.valueSets > 0 ? { label: ch.structure ? tr('Update values only') : tr('Update values'), sub: tr('Updates values for {n}.', { n: f.plural(ch.valueSets, 'set') }), value: 'values' as const, tone: 'primary' as const, testID: 'tpl-update-values' } : null,
-      ch.structure ? { label: tr('Update template and values'), sub: lines, value: 'all' as const, tone: 'danger' as const, testID: 'tpl-update-all' } : null,
-      { label: tr('Keep original template'), value: 'keep' as const, tone: 'plain' as const, testID: 'tpl-update-keep' },
-    ].filter((x) => x !== null),
+}
+
+/**
+ * Save a finished workout into its template (the summary's switch turned on):
+ * its exercises, sets and numbers, or only the numbers when nothing else
+ * changed. Toasts with Undo; `onUndo` runs after Undo put the template back.
+ * Returns the template's previous exercises, for switching it off again.
+ */
+export async function saveIntoTemplate(templateId: string, workout: Workout, d: TemplateDiff, f: F, onUndo?: () => void) {
+  const { tr } = f;
+  const valuesOnly = !d.structure;
+  const before = await updateTemplateFromWorkout(templateId, workout, valuesOnly);
+  if (!before) return null;
+  toast(valuesOnly ? tr('Template values updated') : tr('Template updated'), {
+    label: tr('Undo'),
+    fn: () => { restoreTemplateExercises(templateId, before).then(() => { onUndo?.(); toast(tr('Template change undone')); }); },
   });
-  if (choice !== 'values' && choice !== 'all') return;
-  const before = await updateTemplateFromWorkout(t.id, workout, choice === 'values');
-  if (!before) return;
-  toast(choice === 'values' ? tr('Template values updated') : tr('Template updated'), {
-    label: tr('Undo'), fn: () => { restoreTemplateExercises(t.id, before).then(() => toast(tr('Template change undone'))); },
-  });
+  return before;
+}
+
+/** Put a template back as it was before saveIntoTemplate (the switch turned off). */
+export async function restoreTemplate(templateId: string, before: TemplateEntry[], f: F) {
+  await restoreTemplateExercises(templateId, before);
+  toast(f.tr('Template change undone'));
 }

@@ -38,8 +38,8 @@ When you update Playwright, change the version in `package.json` here; the suite
 | `web-fixes` | 33 | the 18 fixes of 1.6.0, drag-and-drop reorder (mouse, touch, keys), unit switch round trip |
 | `web-smoke` | 4 | Profile chart, new template from the editor and from a workout, exercise chart |
 | `app-first-start` | 15 | first start, restore a web-app backup (Account), every screen with data, live theme/language/unit switches, Strong import |
-| `app-logging` | 19 | logging a workout end to end in the Tally session: Log button, keypad, rest bar and "Reps left?", set types, supersets, Up next (switch and drag), minimize and reload, reorder, finish early, screen not kept on, template update (German) |
-| `app-editing` | 22 | template editor and menus on Plan, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Body, Progress and backups, settings |
+| `app-logging` | 19 | logging a workout end to end in the Tally session: Log button, keypad, rest bar and "Reps left?", set types, supersets, Up next (switch and drag), minimize and reload, reorder, finish early, screen not kept on, the summary tally and its template switch with Undo (German) |
+| `app-editing` | 22 | template editor and menus on Plan, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, the exercise page (hero number, chart, range, rep maxes, history), Body, Progress and backups, settings |
 | `web-privacy` | 4 | the privacy pages (light and dark, both languages, contact link), the Settings link to them, and that they load as themselves with the service worker running |
 | `app-parity` | 13 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app, Settings → Privacy policy |
 | `app-tabs` | 7 | the tabs with the store demo data: Today (Up next, week strip and sets per muscle against the core), Now Lifting (rest, Skip, every tab), Plan's + menu, the Progress hub and its pages, Search focused on open, the Account sheet, German and dark |

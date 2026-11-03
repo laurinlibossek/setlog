@@ -3,7 +3,7 @@
 // with "Reps left?", set types, undo, the keypad, supersets, minimize and
 // reload, reordering, Up next (switch and drag), finishing early with unlogged
 // sets, a template workout with last time's values, the Log button, records
-// and the template update question (German), "already running", and
+// and the summary’s template switch (German), "already running", and
 // discarding. 19 checks.
 import assert from 'node:assert/strict';
 import { devices, launch, grantWakeLock, APP as BASE, BACKUP, shots } from './env.mjs';
@@ -250,12 +250,20 @@ async function pick(page, names) {
   await id(page, 'summary-title').waitFor();
   const sum = await page.locator('body').innerText();
   await page.screenshot({ path: `${OUT}/04-summary.png` });
-  assert.match(sum, /Workout saved/);
+  assert.match(await id(page, 'summary-title').innerText(), /^(Morning|Afternoon|Evening|Night) Workout$/, 'titled with the workout name');
   assert.match(sum, /workout #1/);
   assert.match(sum, /SETS\s*\n?\s*4/i, 'three bench sets (the untouched fourth is left out) and the pull-up set');
-  assert.match(sum, /Pull Up[\s\S]*10 reps/);
-  assert.match(sum, /Bench Press \(Barbell\)[\s\S]*80 kg × 5/);
-  ok('Finish early offers to save the typed set; the summary shows 4 sets, workout #1');
+  // the hero tally: one stroke per saved set, one group per exercise, no record on a first workout
+  const groups = await id(page, 'summary-tally').evaluate((el) => [...el.children].map((t) => t.firstElementChild.children.length));
+  assert.deepEqual(groups, [1, 3], 'Pull Up 1 set, Bench Press 3');
+  assert.equal(await id(page, 'summary-tally').getAttribute('aria-label'), '4 sets · workout #1');
+  assert.equal(await page.locator('[data-testid^="pr-"]').count(), 0);
+  assert.equal(await id(page, 'tpl-save').count(), 0, 'no template question for an empty workout');
+  const saved = (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).workouts[0];
+  assert.deepEqual(saved.exercises.find((e) => e.exerciseId === PULLUP).sets.map((x) => x.r), [10]);
+  assert.equal(saved.exercises.find((e) => e.exerciseId === BENCH).sets.length, 3);
+  assert.ok(saved.exercises.find((e) => e.exerciseId === BENCH).sets.some((x) => x.w === 80 && x.r === 5));
+  ok('Finish early offers to save the typed set; the summary shows its name, 4 sets in two groups of strokes, workout #1');
 
   await id(page, 'summary-done').click();
   await wait(page, 500);
@@ -345,21 +353,43 @@ async function pick(page, names) {
   assert.match(await page.locator('body').innerText(), /Training beenden\?/);
   await id(page, 'confirm-finish').click();
   await id(page, 'summary-title').waitFor();
-  assert.equal(await id(page, 'summary-title').innerText(), 'Neue Rekorde!');
-  await id(page, 'tpl-update-values').waitFor({ timeout: 5000 });
-  const dlg = await page.locator('body').innerText();
-  await page.screenshot({ path: `${OUT}/06-summary-update-de.png` });
-  assert.match(dlg, /Vorlage aktualisieren/);
-  assert.match(dlg, /Du hast „Pull“ in diesem Training verändert/);
-  assert.match(dlg, /Entfernt 2 Übungen\./);
-  assert.match(dlg, /Aktualisiert die Werte von 1 Satz\./);
-  ok('the summary shows new records, then asks to update the template (German)');
+  assert.equal(await id(page, 'summary-title').innerText(), 'Pull');
+  // the squat record: its row with the highlighted value, and a signal stroke in the hero tally
+  await id(page, `pr-${SQUAT}`).waitFor();
+  assert.match(await id(page, `pr-${SQUAT}`).innerText(), /Kniebeuge[\s\S]*250 kg × 10[\s\S]*Gesch\. 1RM/);
+  assert.match(await id(page, 'summary-tally').getAttribute('aria-label'), /Rekord/);
+  // the template question is a switch row, not a dialog, and nothing changes until it's switched on
+  await wait(page, 600);
+  assert.equal(await id(page, 'dialog-ok').count() + await page.locator('[data-testid^="tpl-update-"]').count(), 0, 'no dialog');
+  const sum = await page.locator('body').innerText();
+  await page.screenshot({ path: `${OUT}/06-summary-template-de.png` });
+  assert.match(sum, /Änderungen in Pull übernehmen/);
+  assert.match(await id(page, 'tpl-changes').innerText(), /^Fügt 1 Übung hinzu\. Entfernt 2 Übungen\. .*Aktualisiert die Werte für 1 Satz\.$/);
+  const tplBefore = (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).templates.find((x) => x.name === 'Pull');
+  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), false);
+  ok('the summary shows the workout name, the record and the template question as a switch row (German)');
 
-  await id(page, 'tpl-update-values').click();
-  assert.match(await toastText(page), /Werte der Vorlage aktualisiert/);
+  // on: the workout's exercises and numbers go into the template, with Undo
+  const tplNow = async () => (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).templates.find((x) => x.id === tplBefore.id);
+  await id(page, 'tpl-save').click();
+  assert.match(await toastText(page), /Vorlage aktualisiert/);
+  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), true);
+  let tpl = await tplNow();
+  assert.ok(tpl.exercises.some((e) => e.exerciseId === SQUAT), 'Squat added to the template');
+  assert.notDeepEqual(tpl.exercises, tplBefore.exercises);
   await id(page, 'toast-action').click();
   assert.match(await toastText(page), /rückgängig/);
-  ok('"Update values only" with Undo');
+  await wait(page, 200);
+  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), false, 'Undo switches it off');
+  assert.deepEqual((await tplNow()).exercises, tplBefore.exercises);
+  // on again, then off: the template is back as it was
+  await id(page, 'tpl-save').click();
+  await wait(page, 300);
+  assert.ok((await tplNow()).exercises.some((e) => e.exerciseId === SQUAT));
+  await id(page, 'tpl-save').click();
+  assert.match(await toastText(page), /rückgängig/);
+  assert.deepEqual((await tplNow()).exercises, tplBefore.exercises);
+  ok('"Änderungen in Pull übernehmen" saves into the template, Undo and switching off restore it');
 
   await id(page, 'summary-done').click();
   await wait(page, 500);

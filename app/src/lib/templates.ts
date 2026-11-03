@@ -51,7 +51,7 @@ export function templateShareText(t: Template, f: F) {
       else if (st.w || st.r || st.d || st.t) v = f.setText(st, ex.category);
       return v && labels[i] === 'W' ? `W ${v}` : v;
     }).filter(Boolean);
-    lines.push(`• ${ex.name}: ${f.plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
+    lines.push(`• ${f.exName(ex)}: ${f.plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
   }
   lines.push('', tr('Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.'),
     `${WEB_APP_URL}#template=${encodeTemplate(t, s.exercises)}`);

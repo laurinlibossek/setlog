@@ -27,7 +27,7 @@ function workoutAsText(w: Workout, s: State, f: Format & { tr: Tr }) {
   if (w.notes) lines.push(w.notes);
   for (const e of w.exercises) {
     const ex = s.exercises.get(e.exerciseId);
-    lines.push('', ex?.name || tr('Exercise'));
+    lines.push('', f.exName(ex) || tr('Exercise'));
     const labels = setLabels(e.sets);
     e.sets.forEach((x, i) => lines.push(`  ${labels[i].padEnd(2)} ${f.setText(x, ex?.category)}`));
     if (e.notes) lines.push(`  ${tr('“{name}”', { name: e.notes })}`);
@@ -97,7 +97,7 @@ export default function WorkoutDetail() {
         return (
           <View key={e.id} style={{ marginTop: 18 }}>
             <Pressable onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: e.exerciseId } })} accessibilityRole="link" testID={`ex-link-${e.exerciseId}`}>
-              <Txt tone="accent" style={{ fontSize: 17, fontWeight: '700', marginBottom: 4 }}>{ex?.name || tr('Unknown exercise')}</Txt>
+              <Txt tone="accent" style={{ fontSize: 17, fontWeight: '700', marginBottom: 4 }}>{f.exName(ex) || tr('Unknown exercise')}</Txt>
             </Pressable>
             {!!e.notes && <Txt tone="ink3" style={{ fontSize: 14, marginBottom: 4 }}>{e.notes}</Txt>}
             {e.sets.map((x, i) => {

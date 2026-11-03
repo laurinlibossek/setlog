@@ -2,6 +2,7 @@
 // core/i18n.js; this picks the language before anything renders (it's
 // mirrored to localStorage whenever the setting changes, "auto" follows the phone).
 import { translator, pickLanguage } from './core/i18n.js';
+import { exerciseDisplayName } from './core/search.js';
 
 const LS_KEY = 'setlog.lang';
 
@@ -30,3 +31,6 @@ export function saveLangPref(pref) {
 
 /** Translate `s`, filling {placeholders} from `vars`. */
 export const tr = translator(lang);
+
+/** An exercise's name as shown: built-ins in German get their German name. */
+export const exLabel = (ex) => exerciseDisplayName(ex, lang);

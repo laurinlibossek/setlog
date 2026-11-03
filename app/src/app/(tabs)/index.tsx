@@ -66,7 +66,7 @@ export default function WorkoutTab() {
       <Card key={t.id} onPress={() => router.push({ pathname: '/template/[id]', params: { id: t.id } })} style={st.tpl} testID={`template-${t.id}`}>
         <Txt style={[st.tplName, !t.example && { paddingRight: 26 }]} numberOfLines={1}>{t.name}</Txt>
         {lines.slice(0, 4).map((e, i) => (
-          <Txt key={i} tone="ink2" style={st.tplLine} numberOfLines={1}>{`${e.sets.length} × ${s.exercises.get(e.exerciseId)!.name}`}</Txt>
+          <Txt key={i} tone="ink2" style={st.tplLine} numberOfLines={1}>{`${e.sets.length} × ${f.exName(s.exercises.get(e.exerciseId))}`}</Txt>
         ))}
         {lines.length > 4 && <Txt tone="ink3" style={st.tplLine}>{tr('+ {n} more', { n: lines.length - 4 })}</Txt>}
         {!lines.length && <Txt tone="ink3" style={st.tplLine}>{tr('No exercises')}</Txt>}

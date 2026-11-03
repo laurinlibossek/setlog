@@ -16,7 +16,7 @@ import {
 import {
   relDay, relDayLower, fmtClock, fmt, plural, isIOS, isStandalone,
 } from '../util.js';
-import { tr, getLang } from '../i18n.js';
+import { tr, getLang, exLabel } from '../i18n.js';
 import {
   shareText, templateShareText, parseSharedTemplate, addSharedTemplate,
 } from '../io.js';
@@ -36,7 +36,7 @@ function TemplateCard({ t, onOpen, onMenu }) {
     <button class="tpl-card" onClick=${onOpen}>
       <div class="name">${t.name}</div>
       <div class="lines">
-        ${lines.slice(0, 4).map((e, i) => html`<div key=${i}>${e.sets.length} × ${S.exercises.get(e.exerciseId).name}</div>`)}
+        ${lines.slice(0, 4).map((e, i) => html`<div key=${i}>${e.sets.length} × ${exLabel(S.exercises.get(e.exerciseId))}</div>`)}
         ${lines.length > 4 && html`<div class="muted">${tr('+ {n} more', { n: lines.length - 4 })}</div>`}
         ${!lines.length && html`<div class="muted">${tr('No exercises')}</div>`}
       </div>
@@ -304,7 +304,7 @@ function TemplatePreview({ t, close }) {
           return s.w || s.r || s.t || s.d ? setText(s, ex.category, { short: true }) : null;
         }).filter(Boolean);
         return html`<div class="cell" key=${i}>
-          <div class="cell-main"><div class="cell-title">${ex.name}</div>
+          <div class="cell-main"><div class="cell-title">${exLabel(ex)}</div>
             <div class="cell-sub">${plural(e.sets.length, 'set')}${targets.length ? ' · ' + [...new Set(targets)].join(', ') : ''}${e.restSec ? ` · ${tr('rest {time}', { time: fmtClock(e.restSec) })}` : ''}</div></div>
         </div>`;
       })}</div>

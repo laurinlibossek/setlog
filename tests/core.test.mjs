@@ -517,6 +517,29 @@ test('core/themes.js matches the colours in app.css (run `npm run themes` after 
   assert.equal(core.THEMES['intense-red'].colors.accent, '#e5202e');
 });
 
+// ---------- German exercise names ----------
+test('German exercise names: every built-in has one, shown only in German and only while not renamed', () => {
+  const de = core.EXERCISE_NAMES_DE;
+  assert.deepEqual(core.SEED_EXERCISES.filter((e) => !de[e.name]).map((e) => e.name), []);
+  assert.deepEqual(Object.keys(de).filter((n) => !core.SEED_EXERCISES.some((e) => e.name === n)), []);
+  const names = Object.values(de);
+  assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), [], 'German names are unique');
+  const bench = core.SEED_EXERCISES.find((e) => e.id === 'x-bench-press-barbell');
+  assert.equal(core.exerciseDisplayName(bench, 'de'), 'Bankdrücken (Langhantel)');
+  assert.equal(core.exerciseDisplayName(bench, 'en'), 'Bench Press (Barbell)');
+  assert.equal(core.exerciseDisplayName({ ...bench, name: 'Flat Bench' }, 'de'), 'Flat Bench', 'a renamed built-in keeps its name');
+  assert.equal(core.exerciseDisplayName({ id: 'c-bench-press-barbell', name: 'Bench Press (Barbell)' }, 'de'), 'Bench Press (Barbell)', 'custom ones keep theirs');
+  assert.equal(core.exerciseDisplayName(undefined, 'de'), '');
+  // search finds built-ins by either name, in either language
+  const find = (q) => core.SEED_EXERCISES.filter((e) => core.matchExercise(e, q)).map((e) => e.id);
+  assert.deepEqual(find('latzug'), find('lat pulldown'));
+  assert.ok(find('bankdrücken kh').includes('x-bench-press-dumbbell'));
+  assert.ok(find('kreuzheben').includes('x-deadlift-barbell'));
+  assert.ok(find('rumanisch').includes('x-romanian-deadlift-barbell'), 'accents are ignored');
+  assert.deepEqual(find('bench bb'), find('bankdrücken lh'));
+  assert.equal(core.matchExercise({ id: 'c-x', name: 'Bankdrücken eng' }, 'bankdrücken'), true);
+});
+
 // ---------- offline ----------
 test('the service worker caches every module the app loads', () => {
   const assets = new Set([...read(path.join(APP, 'sw.js')).matchAll(/'\.\/([^']+)'/g)].map((m) => m[1]));

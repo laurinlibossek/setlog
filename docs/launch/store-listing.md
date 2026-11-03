@@ -99,7 +99,7 @@ Gym-Log, privat und offline
 Bei jedem Satz siehst du, was du letztes Mal geschafft hast. Der Pausentimer meldet sich, auch bei gesperrtem Handy. Kein Konto, keine Werbung, alles bleibt bei dir.
 ```
 
-### Description (4000) · 1740
+### Description (4000) · 1705
 
 ```text
 Increment ist ein Trainingstagebuch fürs Gym. Trag deine Sätze ein, sieh, was du letztes Mal geschafft hast, und schau zu, wie deine Zahlen steigen. Ohne Werbung und ohne Konto, und dein Trainingslog bleibt auf deinem Handy.
@@ -114,7 +114,7 @@ TRAINIEREN
 PLANEN
 • Vorlagen in Ordnern, und ein Vorschlag für das Training, das wahrscheinlich als Nächstes dran ist.
 • Teile eine Vorlage als Link.
-• 190 eingebaute Übungen, dazu deine eigenen. Die Übungsnamen sind auf Englisch.
+• 190 eingebaute Übungen, dazu deine eigenen.
 
 FORTSCHRITT
 • Diagramme und Rekorde für jede Übung: geschätztes 1RM, bester Satz, Volumen und mehr.
@@ -203,7 +203,7 @@ Increment: Trainingstagebuch
 Sätze eintragen, Werte vom letzten Mal sehen, Rekorde verfolgen. Ohne Konto.
 ```
 
-### Full description (4000) · 1739
+### Full description (4000) · 1704
 
 ```text
 Increment ist ein Trainingstagebuch fürs Gym. Trag deine Sätze ein, sieh, was du letztes Mal geschafft hast, und schau zu, wie deine Zahlen steigen. Ohne Werbung und ohne Konto, und dein Trainingslog bleibt auf deinem Handy.
@@ -218,7 +218,7 @@ TRAINIEREN
 PLANEN
 • Vorlagen in Ordnern, und ein Vorschlag für das Training, das wahrscheinlich als Nächstes dran ist.
 • Teile eine Vorlage als Link.
-• 190 eingebaute Übungen, dazu deine eigenen. Die Übungsnamen sind auf Englisch.
+• 190 eingebaute Übungen, dazu deine eigenen.
 
 FORTSCHRITT
 • Diagramme und Rekorde für jede Übung: geschätztes 1RM, bester Satz, Volumen und mehr.

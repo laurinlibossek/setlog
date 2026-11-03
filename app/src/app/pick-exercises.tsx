@@ -35,7 +35,7 @@ export default function PickExercises() {
 
   const list = useMemo(() => [...exercises.values()]
     .filter((e) => !e.hidden && (part === 'all' || e.bodyPart === part) && matchExercise(e, q))
-    .sort((a, b) => a.name.localeCompare(b.name)), [exercises, q, part]);
+    .sort((a, b) => f.exName(a).localeCompare(f.exName(b))), [exercises, q, part, f]);
   const parts = [{ id: 'all', label: tr('All') }, ...(BODY_PARTS as { id: string; label: string }[]).map((b) => ({ id: b.id, label: tr(b.label) }))];
   const partLabel = (id: string) => tr((BODY_PARTS as { id: string; label: string }[]).find((b) => b.id === id)?.label || 'Other');
 
@@ -114,7 +114,7 @@ export default function PickExercises() {
               }]}>
               {index > 0 && <View style={[styles.hairline, { backgroundColor: c.line }]} />}
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{item.name}</Text>
+                <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{f.exName(item)}</Text>
                 <Text style={{ color: c.ink3, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{partLabel(item.bodyPart) + (n ? ` · ${f.plural(n, 'time')}` : '')}</Text>
               </View>
               {on && <Icon name="check" size={18} color={c.accentText} />}

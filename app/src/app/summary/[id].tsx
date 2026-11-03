@@ -93,7 +93,7 @@ export default function Summary() {
                 <View key={p.exerciseId + p.metric} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line }]} testID={`pr-${p.exerciseId}-${p.metric}`}>
                   <Icon name="trophy" size={18} color={c.gold} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{exercises.get(p.exerciseId)?.name}</Text>
+                    <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{f.exName(exercises.get(p.exerciseId))}</Text>
                     <Text style={{ color: c.ink3, fontSize: 13 }}>{tr((PR_LABEL as Record<string, string>)[p.metric] || p.metric)}</Text>
                   </View>
                   <Text style={{ color: c.ink, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{value(p.metric, p.value)}</Text>
@@ -110,7 +110,7 @@ export default function Summary() {
             return (
               <View key={e.id} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line }]}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{ex?.name || tr('Unknown exercise')}</Text>
+                  <Text style={{ color: c.ink, fontSize: 16 }} numberOfLines={1}>{f.exName(ex) || tr('Unknown exercise')}</Text>
                   <Text style={{ color: c.ink3, fontSize: 13 }}>{f.plural(e.sets.length, 'set')}</Text>
                 </View>
                 <Text style={{ color: c.ink2, fontSize: 15, fontVariant: ['tabular-nums'] }}>{b ? f.setText(b, ex?.category) : ''}</Text>

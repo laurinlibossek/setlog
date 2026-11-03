@@ -45,7 +45,7 @@ export default function ExerciseDetail() {
   const label = (list: { id: string; label: string }[], key: string) => tr(list.find((x) => x.id === key)?.label || 'Other');
   const menu = async () => {
     const c = await actionSheet<string>({
-      title: ex.name,
+      title: f.exName(ex),
       actions: [
         { label: tr('Edit exercise'), value: 'edit', icon: 'edit', testID: 'ex-edit' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note'), value: 'pin', icon: 'pin' },
@@ -60,18 +60,18 @@ export default function ExerciseDetail() {
       if (v !== null) updateExercise(ex.id, { pinnedNote: v.trim() });
     }
     if (c === 'merge') {
-      const ids = await pickExercises({ title: tr('Merge “{name}” into', { name: ex.name }) });
+      const ids = await pickExercises({ title: tr('Merge “{name}” into', { name: f.exName(ex) }) });
       const into = ids?.[0];
       if (!into || into === ex.id) return;
       const target = getState().exercises.get(into);
       if (!target) return;
       if (!canMergeExercises(ex, target)) {
-        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: ex.name, to: target.name }));
+        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: f.exName(ex), to: f.exName(target) }));
         return;
       }
       const ok = await ask({
         title: tr('Merge exercises?'),
-        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: f.plural(every.length, 'session'), from: ex.name, to: target.name }),
+        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: f.plural(every.length, 'session'), from: f.exName(ex), to: f.exName(target) }),
         ok: tr('Merge'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-merge',
       });
       if (!ok) return;
@@ -96,7 +96,7 @@ export default function ExerciseDetail() {
         return;
       }
       const ok = await ask({
-        title: tr('Delete “{name}”?', { name: ex.name }),
+        title: tr('Delete “{name}”?', { name: f.exName(ex) }),
         message: u.templates ? tr('It will also be removed from {n}.', { n: f.plural(u.templates, 'template') }) : tr('It has never been used.'),
         ok: tr('Delete'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete',
       });
@@ -109,8 +109,8 @@ export default function ExerciseDetail() {
 
   return (
     <Page>
-      <Stack.Screen options={{ title: ex.name, headerRight: () => <IconButton icon="more" label={tr('Exercise options')} onPress={menu} testID="exercise-options" /> }} />
-      <Txt style={{ fontSize: 26, fontWeight: '800' }}>{ex.name}</Txt>
+      <Stack.Screen options={{ title: f.exName(ex), headerRight: () => <IconButton icon="more" label={tr('Exercise options')} onPress={menu} testID="exercise-options" /> }} />
+      <Txt style={{ fontSize: 26, fontWeight: '800' }}>{f.exName(ex)}</Txt>
       <Txt tone="ink3" style={{ fontSize: 14, marginTop: 2, marginBottom: 14 }}>
         {`${label(BODY_PARTS, ex.bodyPart)} · ${label(CATEGORIES, ex.category)}${ex.hidden ? ` · ${tr('Hidden')}` : ''}`}
       </Txt>
@@ -247,7 +247,7 @@ function Charts({ ex, sessions }: { ex: Exercise; sessions: Session[] }) {
           {change !== null ? ` ${tr('in range')}` : ''}
         </Txt>
         <LineChart points={pts} fmtVal={fmtVal} fmtAxis={fmtAxis} time={m.kind === 'time' || m.kind === 'pace'} testID="exercise-chart"
-          label={tr('{metric} for {name}', { metric: tr(m.label), name: ex.name })}
+          label={tr('{metric} for {name}', { metric: tr(m.label), name: f.exName(ex) })}
           emptyText={sessions.length ? tr('No sessions in this range') : tr('Log this exercise to see your progress')} />
         <View style={{ marginTop: 10 }}>
           <Segments value={range} onChange={setRange} options={(EXERCISE_RANGES as { value: number; label: string }[]).map((r) => ({ value: String(r.value), label: tr(r.label) }))} />

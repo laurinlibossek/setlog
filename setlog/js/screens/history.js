@@ -1,5 +1,5 @@
 // History tab: workout list, calendar, workout detail, edit finished workouts.
-import { tr } from '../i18n.js';
+import { tr, exLabel } from '../i18n.js';
 import { html, useState, useRef } from '../lib.js';
 import { Icon } from '../icons.js';
 import {
@@ -36,7 +36,7 @@ export function WorkoutCard({ w, onClick }) {
       ${lines.map((e) => {
         const ex = S.exercises.get(e.exerciseId);
         const b = bestSet(e.sets, ex?.category, S.settings.formula);
-        return html`<div class="ellipsis" key=${e.id + 'n'}>${e.sets.length} × ${ex?.name || tr('Unknown exercise')}</div>
+        return html`<div class="ellipsis" key=${e.id + 'n'}>${e.sets.length} × ${exLabel(ex) || tr('Unknown exercise')}</div>
           <div class="v" key=${e.id + 'v'}>${b ? setText(b, ex?.category) : ''}</div>`;
       })}
     </div>
@@ -116,7 +116,7 @@ export function workoutAsText(w) {
   if (w.notes) lines.push(w.notes);
   for (const e of w.exercises) {
     const ex = S.exercises.get(e.exerciseId);
-    lines.push('', ex?.name || tr('Exercise'));
+    lines.push('', exLabel(ex) || tr('Exercise'));
     const labels = setLabels(e.sets);
     e.sets.forEach((s, i) => lines.push(`  ${labels[i].padEnd(2)} ${setText(s, ex?.category)}`));
     if (e.notes) lines.push(`  ${tr('“{name}”', { name: e.notes })}`);
@@ -175,7 +175,7 @@ export function WorkoutDetailScreen({ id }) {
       const ex = S.exercises.get(e.exerciseId);
       const labels = setLabels(e.sets);
       return html`<div class="detail-ex" key=${e.id}>
-        <h4><button onClick=${() => push('exercise', { id: e.exerciseId })}>${ex?.name || tr('Unknown exercise')}</button></h4>
+        <h4><button onClick=${() => push('exercise', { id: e.exerciseId })}>${exLabel(ex) || tr('Unknown exercise')}</button></h4>
         ${e.notes && html`<div class="small muted" style="margin:-2px 0 6px">${e.notes}</div>`}
         ${e.sets.map((s, i) => {
           const flags = prSets.get(s.id);

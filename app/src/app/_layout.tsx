@@ -8,6 +8,7 @@ import { load, useAppState } from '@/data/store';
 import { useLang } from '@/lib/i18n';
 import { useNavigationTheme, usePalette } from '@/lib/theme';
 import { Empty, Loading } from '@/ui/kit';
+import { IncomingLinks } from '@/ui/IncomingLinks';
 import { OverlayHost } from '@/ui/overlay';
 import { RestWatcher } from '@/ui/workout/Rest';
 
@@ -33,6 +34,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerTintColor: palette.colors.accentText, headerBackButtonDisplayMode: 'minimal', headerShadowVisible: false, headerStyle: { backgroundColor: palette.colors.bg } }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />
             <Stack.Screen name="settings" options={{ title: tr('Settings') }} />
+            <Stack.Screen name="warmup" options={{ title: tr('Warm-up sets') }} />
             <Stack.Screen name="workout/[id]" options={{ title: '' }} />
             <Stack.Screen name="template/[id]" options={{ title: '' }} />
             <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
@@ -50,6 +52,7 @@ export default function RootLayout() {
           </Stack>
           <RestWatcher />
           <OverlayHost />
+          <IncomingLinks />
         </View>
       )}
     </ThemeProvider>

@@ -8,7 +8,7 @@ import {
   parseBackup, parseStrongCSV, suggestTemplate, previousSetsFrom, newActiveWorkout, finishWorkout, prsForNewWorkout,
   workoutVolume, applyWorkoutToTemplate, makeBackup, uid,
   templateFromDraft, workoutFromEditDraft, copyTemplateRecord, folderNames, findExerciseByName, newExerciseRecord,
-  exerciseInDraft, patchDraftExercise, changeSetting, convertDraftUnits,
+  exerciseInDraft, patchDraftExercise, changeSetting, convertDraftUnits, mergeExercisePatch, moveExerciseEntries,
 } from '@setlog/core';
 
 import * as db from './storage';
@@ -202,6 +202,20 @@ export async function restoreBackup(preview: BackupPreview) {
   await ensureSeed();
 }
 
+/**
+ * Delete everything: workouts, templates, measurements, custom exercises,
+ * settings, name and folders; the built-in exercises come back as new. Like
+ * restoring a backup, a running workout keeps going.
+ */
+export async function deleteAllData() {
+  const data: Data = { exercises: [], workouts: [], templates: [], measurements: [], kv: { meta: { seedVersion: 0 } } };
+  await db.replaceAll(data);
+  const active = state.active;
+  setState({ ...fromData(data), active, edit: null });
+  if (active) await db.kvSet('active', active);
+  await ensureSeed();
+}
+
 /** Everything in the app as a backup file's text (the same format as the web app's). */
 export function backupText(appVersion: string) {
   const s = state;
@@ -298,6 +312,45 @@ export async function deleteExercise(id: string) {
   setState({ exercises, templates });
   await db.remove('exercises', id);
   await db.putMany('templates', changed);
+}
+
+/**
+ * Merge one exercise into another: its workouts, templates and the running
+ * workout (and an open editor) move to the target, then it is deleted. The
+ * target keeps its own rest timer and notes; ones it lacks come from the
+ * source. The caller checks canMergeExercises first.
+ */
+export async function mergeExercise(fromId: string, intoId: string) {
+  const from = state.exercises.get(fromId);
+  const into = state.exercises.get(intoId);
+  if (!from || !into || fromId === intoId) return;
+  const target = { ...into, ...mergeExercisePatch(from, into) } as Exercise;
+  const exercises = new Map(state.exercises);
+  exercises.delete(fromId);
+  exercises.set(intoId, target);
+  const movedWorkouts = moveExerciseEntries(state.workouts, fromId, intoId) as Workout[];
+  const movedTemplates = moveExerciseEntries(state.templates, fromId, intoId) as Template[];
+  const swap = <T extends { id: string }>(list: T[], changed: T[]) => {
+    if (!changed.length) return list;
+    const byId = new Map(changed.map((x) => [x.id, x]));
+    return list.map((x) => byId.get(x.id) || x);
+  };
+  const patch: Partial<State> = { exercises, workouts: swap(state.workouts, movedWorkouts), templates: swap(state.templates, movedTemplates) };
+  const [active] = state.active ? moveExerciseEntries([state.active], fromId, intoId) as ActiveWorkout[] : [];
+  if (active) patch.active = active;
+  const [edit] = state.edit ? moveExerciseEntries([state.edit], fromId, intoId) as EditDraft[] : [];
+  if (edit) patch.edit = edit;
+  if (state.edit?.exPatches?.[fromId]) {
+    const d = (patch.edit || state.edit) as EditDraft;
+    const { [fromId]: _drop, ...rest } = d.exPatches || {};
+    patch.edit = { ...d, exPatches: rest } as EditDraft;
+  }
+  setState(patch);
+  if (active) persistActive(true);
+  await db.put('exercises', target);
+  await db.putMany('workouts', movedWorkouts);
+  await db.putMany('templates', movedTemplates);
+  await db.remove('exercises', fromId);
 }
 
 // ---------- workouts ----------

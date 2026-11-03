@@ -1,7 +1,13 @@
+// History: finished workouts by month, or a month calendar (the button next
+// to the title switches). The calendar's maths is core's calendarMonth().
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import {
+  FlatList, Pressable, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 import { router } from 'expo-router';
-import { startOfMonth, workoutVolume, bestSet } from '@setlog/core';
+import {
+  startOfMonth, startOfDay, addMonths, calendarMonth, workoutVolume, bestSet,
+} from '@setlog/core';
 
 import { stats, useAppState, type State } from '@/data/store';
 import type { Workout } from '@/data/types';
@@ -9,7 +15,7 @@ import { useFormat, type Format } from '@/lib/format';
 import { useColors } from '@/lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Button, Card, Empty, Icon, LargeTitle, Txt,
+  Button, Card, Empty, Icon, IconButton, LargeTitle, Txt,
 } from '@/ui/kit';
 
 type Row = { kind: 'month'; m: number; count: number } | { kind: 'workout'; w: Workout };
@@ -21,6 +27,7 @@ export default function HistoryTab() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const [limit, setLimit] = useState(40);
+  const [view, setView] = useState<'list' | 'cal'>('list');
 
   const rows = useMemo(() => {
     const out: Row[] = [];
@@ -45,13 +52,25 @@ export default function HistoryTab() {
       </View>
     );
   }
+  const toggle = (
+    <IconButton icon={view === 'list' ? 'calendar' : 'list'} label={view === 'list' ? tr('Show calendar') : tr('Show list')}
+      onPress={() => setView(view === 'list' ? 'cal' : 'list')} testID="history-view" />
+  );
+  if (view === 'cal') {
+    return (
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}>
+        <LargeTitle title={tr('History')} right={toggle} />
+        <Calendar s={s} f={f} />
+      </ScrollView>
+    );
+  }
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: c.bg }}
       contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}
       data={rows}
       keyExtractor={(r) => (r.kind === 'month' ? 'm' + r.m : r.w.id)}
-      ListHeaderComponent={<LargeTitle title={tr('History')} />}
+      ListHeaderComponent={<LargeTitle title={tr('History')} right={toggle} />}
       renderItem={({ item }) => (item.kind === 'month'
         ? (
           <View style={st.month}>
@@ -66,6 +85,101 @@ export default function HistoryTab() {
       initialNumToRender={12}
       windowSize={7}
     />
+  );
+}
+
+const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+
+/** A month of days with workouts highlighted; tap one to see its workouts below. */
+function Calendar({ s, f }: { s: State; f: Format & { tr: (t: string, v?: Record<string, string | number>) => string } }) {
+  const c = useColors();
+  const { tr } = f;
+  const [month, setMonth] = useState(() => startOfMonth(Date.now()));
+  const [sel, setSel] = useState<number | null>(null);
+  const cal = useMemo(() => calendarMonth(s.workouts, month, { weekStart: s.settings.weekStart }) as {
+    start: number; next: number; days: number[]; byDay: Map<number, Workout[]>; workouts: number; daysTrained: number; time: number;
+  }, [s.workouts, month, s.settings.weekStart]);
+  const today = startOfDay(Date.now());
+  const go = (n: number) => { setMonth(addMonths(month, n)); setSel(null); };
+  const selected = sel !== null ? cal.byDay.get(sel) || [] : [];
+  const weeks: number[][] = [];
+  for (let i = 0; i < cal.days.length; i += 7) weeks.push(cal.days.slice(i, i + 7));
+  return (
+    <View style={{ paddingHorizontal: 16 }}>
+      <View style={[st.cal, { backgroundColor: c.surface }]}>
+        <View style={st.calHead}>
+          <MonthButton icon="chevronLeft" label={tr('Previous month')} onPress={() => go(-1)} testID="cal-prev" />
+          <Txt style={{ fontSize: 17, fontWeight: '700' }} testID="cal-month">{f.date.monthYear(month)}</Txt>
+          <MonthButton icon="chevron" label={tr('Next month')} onPress={() => go(1)} testID="cal-next" />
+        </View>
+        <View style={st.week}>
+          {cal.days.slice(0, 7).map((d) => (
+            <Text key={'w' + d} style={[st.wd, { color: c.ink3 }]}>{f.date.weekdayNarrow(d)}</Text>
+          ))}
+        </View>
+        {weeks.map((wk) => (
+          <View key={wk[0]} style={st.week}>
+            {wk.map((d) => {
+              const n = cal.byDay.get(d)?.length || 0;
+              const out = d < cal.start || d >= cal.next;
+              const on = sel === d;
+              return (
+                <View key={d} style={st.dayWrap}>
+                  <Pressable onPress={() => setSel(n ? d : null)} testID={`cal-${dayKey(d)}`}
+                    accessibilityRole="button" accessibilityState={{ selected: on }}
+                    accessibilityLabel={n ? `${f.date.full(d)}, ${f.plural(n, 'workout')}` : f.date.full(d)}
+                    style={[st.day, {
+                      backgroundColor: n ? c.primary : 'transparent', opacity: out ? 0.3 : 1,
+                      borderColor: on ? c.ink : 'transparent',
+                    }]}>
+                    <Text style={{
+                      fontSize: 15, fontVariant: ['tabular-nums'],
+                      color: n ? c.primaryInk : d === today ? c.accentText : c.ink2,
+                      fontWeight: n || d === today ? '700' : '400',
+                    }}>{new Date(d).getDate()}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        ))}
+        <View style={[st.stats, { borderTopColor: c.line }]} testID="cal-stats">
+          <Stat value={f.num(cal.workouts, 0)} label={tr('Workouts')} />
+          <Stat value={f.num(cal.daysTrained, 0)} label={tr('Days trained')} />
+          <Stat value={f.dur(cal.time)} label={tr('Time')} />
+        </View>
+      </View>
+      {sel !== null && (
+        <>
+          <View style={[st.month, { paddingHorizontal: 4 }]}>
+            <Txt style={{ fontSize: 20, fontWeight: '700' }}>{f.date.full(sel)}</Txt>
+          </View>
+          {selected.map((w) => <View key={w.id} style={{ marginBottom: 10 }}><WorkoutCard w={w} s={s} f={f} /></View>)}
+        </>
+      )}
+      {sel === null && cal.workouts > 0 && (
+        <Txt tone="ink3" style={{ fontSize: 13, textAlign: 'center', marginTop: 14 }}>{tr('Tap a highlighted day to see that workout.')}</Txt>
+      )}
+    </View>
+  );
+}
+
+function MonthButton({ icon, label, onPress, testID }: { icon: 'chevron' | 'chevronLeft'; label: string; onPress: () => void; testID: string }) {
+  const c = useColors();
+  return (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label} testID={testID}
+      style={({ pressed }) => [st.monthBtn, { backgroundColor: pressed ? c.surface3 : 'transparent' }]}>
+      <Icon name={icon} size={17} color={c.accentText} />
+    </Pressable>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={{ alignItems: 'center', flex: 1 }}>
+      <Txt style={{ fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{value}</Txt>
+      <Txt tone="ink3" style={{ fontSize: 12 }}>{label}</Txt>
+    </View>
   );
 }
 
@@ -117,4 +231,12 @@ const st = StyleSheet.create({
   linesHead: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, marginBottom: 2 },
   head: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
   line: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  cal: { borderRadius: 14, padding: 12 },
+  calHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  monthBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  week: { flexDirection: 'row' },
+  wd: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', paddingVertical: 4 },
+  dayWrap: { flex: 1, padding: 2 },
+  day: { aspectRatio: 1, borderRadius: 999, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  stats: { flexDirection: 'row', marginTop: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
 });

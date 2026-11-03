@@ -78,6 +78,7 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     monthYear: dtf({ month: 'long', year: 'numeric' }),
     time: dtf({ hour: '2-digit', minute: '2-digit' }),
     weekdayLong: dtf({ weekday: 'long' }),
+    weekdayNarrow: dtf({ weekday: 'narrow' }),
     dayMonth: dtf({ day: 'numeric', month: 'short' }),
     monthShort: dtf({ month: 'short' }),
   };
@@ -88,6 +89,7 @@ export function makeFormat(settings: Settings, locale: string, lang: 'en' | 'de'
     monthYear: (t: number) => F.monthYear.format(t),
     time: (t: number) => F.time.format(t),
     weekdayLong: (t: number) => F.weekdayLong.format(t),
+    weekdayNarrow: (t: number) => F.weekdayNarrow.format(t),
     dayMonth: (t: number) => F.dayMonth.format(t),
     monthShort: (t: number) => F.monthShort.format(t),
   };

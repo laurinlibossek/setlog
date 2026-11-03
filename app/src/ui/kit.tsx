@@ -20,6 +20,8 @@ export const ICONS = {
   measure: { ios: 'ruler', android: 'straighten', web: 'straighten' },
   settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
   chevron: { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
+  chevronLeft: { ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' },
+  list: { ios: 'list.bullet', android: 'list', web: 'list' },
   play: { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' },
   plus: { ios: 'plus', android: 'add', web: 'add' },
   trophy: { ios: 'trophy.fill', android: 'emoji_events', web: 'emoji_events' },
@@ -64,11 +66,11 @@ export function Icon({ name, size = 20, color }: { name: IconName; size?: number
 }
 
 // ---------- text ----------
-type TxtProps = { children: ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number; tone?: 'ink' | 'ink2' | 'ink3' | 'accent' | 'danger' | 'gold' };
-export function Txt({ children, style, numberOfLines, tone = 'ink' }: TxtProps) {
+type TxtProps = { children: ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number; tone?: 'ink' | 'ink2' | 'ink3' | 'accent' | 'danger' | 'gold'; testID?: string };
+export function Txt({ children, style, numberOfLines, tone = 'ink', testID }: TxtProps) {
   const c = useColors();
   const color = { ink: c.ink, ink2: c.ink2, ink3: c.ink3, accent: c.accentText, danger: c.danger, gold: c.gold }[tone];
-  return <Text style={[{ color, fontSize: 16 }, style]} numberOfLines={numberOfLines}>{children}</Text>;
+  return <Text style={[{ color, fontSize: 16 }, style]} numberOfLines={numberOfLines} testID={testID}>{children}</Text>;
 }
 
 // ---------- screens ----------

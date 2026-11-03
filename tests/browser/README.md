@@ -15,9 +15,15 @@ The runner serves `setlog/` on :8765 and `app/dist` on :8790 itself, runs `npm c
 ## Setup
 
 - Node 20 or newer.
-- Playwright: `env.mjs` uses a local install (`npm install` in this folder) or a global one (cloud containers often have one at `/opt/npm-tools`).
+- Playwright: `env.mjs` uses a local install (`npm install` in this folder installs the version pinned in `package.json`, the one CI uses) or a global one (cloud containers often have one at `/opt/npm-tools`).
 - Chromium: Playwright's own if it matches, otherwise any `chromium-*` under `$PLAYWRIGHT_BROWSERS_PATH`, `/opt/pw-browsers` or `~/.cache/ms-playwright`, or the path in `$CHROMIUM`. With none installed: `npx playwright install chromium` (needs access to Playwright's download host).
 - Network for the app suites: the npm registry (`npm ci`) and `raw.githubusercontent.com` (the sample export, 86 workouts from a public Strong export, not committed because its licence is unknown).
+
+## In CI
+
+The `browser` job in `.github/workflows/test.yml` runs every suite on every push and pull request: `npm ci` in `app/`, `npm install` here, `npx playwright install --with-deps chromium` (the browser and the Linux libraries it needs), then `node tests/browser/run.mjs`. When a suite fails, `.out/` is attached to the run as the artifact `browser-test-screenshots` (kept 14 days): open the run on GitHub, then Artifacts at the bottom of its summary. The job takes about 4 minutes (3 of them the suites).
+
+When you update Playwright, change the version in `package.json` here; the suites have to pass with it locally first.
 
 ## Suites
 
@@ -34,6 +40,7 @@ The runner serves `setlog/` on :8765 and `app/dist` on :8790 itself, runs `npm c
 | `app-first-start` | 15 | first start, restore a web-app backup, every screen with data, live theme/language/unit switches, Strong import |
 | `app-logging` | 17 | logging a workout end to end, rest timer, set types, supersets, minimize and reload, reorder, finish, template update (German) |
 | `app-editing` | 22 | template editor and menus, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, charts, Measure, backups, settings |
+| `app-parity` | 11 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app |
 
 `make-backup.mjs` is a helper, not a suite: it imports the sample export into the web app, adds a "Pull" template in an "Upper / Lower" folder, two body weights, Intense Red, German and the name "Laurin", and saves `data/setlog-backup.json` through the app's own backup code. The app suites restore it (`restore(page, dialogs, { english: true })` in `app-editing.mjs` switches to English afterwards).
 

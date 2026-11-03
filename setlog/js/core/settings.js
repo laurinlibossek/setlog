@@ -1,6 +1,7 @@
 // Default settings, shared by every app. Stored settings are merged over these,
 // so a backup from an older version gets new settings at their defaults.
 import { DEFAULT_WARMUP } from './calc.js';
+import { parseNum } from './units.js';
 
 export const KG_PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
 export const LB_PLATES = [45, 35, 25, 10, 5, 2.5];
@@ -50,4 +51,15 @@ export function changeSetting(settings, key, value) {
     if (value === 'kg' && plates === JSON.stringify(LB_PLATES)) { next.plates = KG_PLATES; next.bar = 20; }
   }
   return next;
+}
+
+/**
+ * The warm-up scheme from what was typed in its editor: reps with the empty
+ * bar, and [percent, reps] rows. Rows without a percent between 0 and 100 or
+ * without reps are dropped; the rest are sorted by percent.
+ */
+export function warmupFromInput(barReps, steps) {
+  const clean = (steps || []).map(([p, r]) => [parseNum(p), Math.round(parseNum(r) || 0)])
+    .filter(([p, r]) => p > 0 && p < 100 && r > 0).sort((a, b) => a[0] - b[0]);
+  return { barReps: Math.max(0, Math.round(parseNum(barReps) || 0)), steps: clean };
 }

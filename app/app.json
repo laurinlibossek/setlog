@@ -17,7 +17,7 @@
     "android": {
       "package": "io.github.laurinlibossek.increment",
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -36,9 +36,9 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#f1f3f6",
+          "backgroundColor": "#000000",
           "dark": {
-            "backgroundColor": "#0b0d11"
+            "backgroundColor": "#000000"
           }
         }
       ],

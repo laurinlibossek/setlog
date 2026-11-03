@@ -23,7 +23,7 @@ What's needed to put the app in `app/` into the App Store and on Google Play. No
 
 - **Fill in the contact email** in `setlog/js/core/links.js`, before `expo-app` is merged into `main`.
 - **Name checks:** TMview, creating the app record in App Store Connect (which also reserves the name), and a Play Store search (name-check.md).
-- **Icon and splash** with the final "I" design, then the **store screenshots:** iPhone 6.9″ (1320 × 2868) for the App Store; at least two phone screenshots and a 1024 × 500 feature graphic for Google Play.
+- **The final App Store screenshots** from the iOS Simulator: restore the demo data (`node tests/browser/store-demo.mjs en > store-demo-en.json`), take the six screens and frame them with `node tests/browser/store-frame.mjs`. The Google Play set and the feature graphic come from `node tests/browser/run.mjs app-store-shots`. See "Store screenshots" in `tests/browser/README.md`.
 - **Accounts:** the Apple Developer Program and a Google Play developer account (with an identity check).
 - **Google Play's closed test:** a new personal account needs at least 12 testers opted in for 14 days in a row before the first production release.
 

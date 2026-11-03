@@ -4,15 +4,15 @@ Texts for App Store Connect and the Google Play Console, in English and German, 
 
 The texts follow the app's own style: short, plain, sentence case, and "du" in German. A few things they deliberately leave out:
 
-- **"Strong" appears once, in the description,** as the format the import reads. Never in the name, subtitle or keywords: Apple rejects other apps' names in those fields (2.3.7). See "For Laurin to decide" in [README.md](README.md).
+- **Strong isn't named anywhere** (Laurin, 3 Nov 2026). The import line says "the CSV export of other workout apps".
 - **No promises beyond what the app does today:** no Apple Health, no Watch, no sync.
 
 ## App Store, English (U.S.)
 
-### Name (30) · 22
+### Name (30) · 26
 
 ```text
-Increment: Workout Log
+Increment: Lifting Tracker
 ```
 
 ### Subtitle (30) · 28
@@ -29,7 +29,7 @@ Shown above the description and can be changed at any time without a new version
 Every set shows what you lifted last time. The rest timer tells you when to go again, even with the phone locked. No account, no ads, and nothing leaves your phone.
 ```
 
-### Description (4000) · 1462
+### Description (4000) · 1464
 
 ```text
 Increment is a workout log for the gym. Log your sets, see what you lifted last time, and watch your numbers go up. No ads, no account, and your training log stays on your phone.
@@ -56,35 +56,35 @@ YOUR DATA
 • No account, no ads, no tracking. Nothing is uploaded.
 • Works offline, in the basement gym too.
 • Back up to a file whenever you like (Files, iCloud Drive, AirDrop) and restore it on a new phone.
-• Coming from Strong? Import your history from its CSV export. Export as CSV too.
+• Import your history from the CSV export of other workout apps. Export as CSV too.
 • kg or lb, km or mi. English and German.
 
 Increment is open source (MIT): github.com/laurinlibossek/setlog
 ```
 
-### Keywords (100) · 99
+### Keywords (100) · 96
 
 Comma-separated, no spaces. Apple already searches the words in the name and subtitle, so these don't repeat them.
 
 ```text
-tracker,weightlifting,lifting,strength,training,sets,reps,1rm,overload,powerlifting,routine,journal
+workout,weightlifting,strength,training,sets,reps,1rm,overload,powerlifting,bodybuilding,routine
 ```
 
 ### Other fields
 
 - **Category:** Health & Fitness. No secondary category needed.
-- **Support URL:** has to lead to a way of contacting you. `https://github.com/laurinlibossek/setlog/issues` works (opening an issue needs a GitHub account), or the privacy policy page if it has your email.
+- **Support URL:** `https://github.com/laurinlibossek/setlog/issues` (Laurin, 3 Nov 2026).
 - **Marketing URL** (optional): `https://github.com/laurinlibossek/setlog`
-- **Privacy policy URL:** wherever [privacy-policy.md](privacy-policy.md) ends up (README, decision 2).
+- **Privacy policy URL:** `https://laurinlibossek.github.io/setlog/privacy.html` (German store: `…/setlog/datenschutz.html`).
 - **Copyright:** `2026 Laurin Libossek`
 - **Version 1.0 "What's New":** not shown for a first release.
 
 ## App Store, German
 
-### Name (30) · 28
+### Name (30) · 26
 
 ```text
-Increment: Trainingstagebuch
+Increment: Lifting Tracker
 ```
 
 ### Subtitle (30) · 27
@@ -99,7 +99,7 @@ Gym-Log, privat und offline
 Bei jedem Satz siehst du, was du letztes Mal geschafft hast. Der Pausentimer meldet sich, auch bei gesperrtem Handy. Kein Konto, keine Werbung, alles bleibt bei dir.
 ```
 
-### Description (4000) · 1740
+### Description (4000) · 1741
 
 ```text
 Increment ist ein Trainingstagebuch fürs Gym. Trag deine Sätze ein, sieh, was du letztes Mal geschafft hast, und schau zu, wie deine Zahlen steigen. Ohne Werbung und ohne Konto, und dein Trainingslog bleibt auf deinem Handy.
@@ -126,26 +126,26 @@ DEINE DATEN
 • Kein Konto, keine Werbung, kein Tracking. Nichts wird hochgeladen.
 • Funktioniert offline, auch im Keller-Gym.
 • Sichere alles in eine Datei, wann du willst (Dateien, iCloud Drive, AirDrop), und stell es auf einem neuen Handy wieder her.
-• Du kommst von Strong? Übernimm deinen Verlauf aus dem CSV-Export. Export als CSV geht auch.
+• Übernimm deinen Verlauf aus dem CSV-Export anderer Trainings-Apps. Export als CSV geht auch.
 • kg oder lb, km oder mi. Deutsch und Englisch.
 
 Increment ist Open Source (MIT): github.com/laurinlibossek/setlog
 ```
 
-### Keywords (100) · 97
+### Keywords (100) · 100
 
 ```text
-Krafttraining,Fitness,Tracker,Workout,Sätze,Wiederholungen,Muskelaufbau,Trainingsplan,1RM,Hanteln
+Krafttraining,Fitness,Workout,Sätze,Wiederholungen,Muskelaufbau,Trainingsplan,1RM,Hanteln,Kraftsport
 ```
 
-The other fields are the same as in English. The privacy policy URL points to the German page ([datenschutz.md](datenschutz.md)) if it gets one of its own.
+The other fields are the same as in English. The privacy policy URL is the German page, `https://laurinlibossek.github.io/setlog/datenschutz.html`.
 
 ## Google Play, English (en-US)
 
-### App name (30) · 22
+### App name (30) · 26
 
 ```text
-Increment: Workout Log
+Increment: Lifting Tracker
 ```
 
 ### Short description (80) · 69
@@ -154,7 +154,7 @@ Increment: Workout Log
 Log your sets, see last time's numbers and track records. No account.
 ```
 
-### Full description (4000) · 1460
+### Full description (4000) · 1462
 
 The App Store description, with Android's places for the backup file.
 
@@ -183,7 +183,7 @@ YOUR DATA
 • No account, no ads, no tracking. Nothing is uploaded.
 • Works offline, in the basement gym too.
 • Back up to a file whenever you like (Google Drive, Files, email) and restore it on a new phone.
-• Coming from Strong? Import your history from its CSV export. Export as CSV too.
+• Import your history from the CSV export of other workout apps. Export as CSV too.
 • kg or lb, km or mi. English and German.
 
 Increment is open source (MIT): github.com/laurinlibossek/setlog
@@ -191,10 +191,10 @@ Increment is open source (MIT): github.com/laurinlibossek/setlog
 
 ## Google Play, German (de-DE)
 
-### App name (30) · 28
+### App name (30) · 26
 
 ```text
-Increment: Trainingstagebuch
+Increment: Lifting Tracker
 ```
 
 ### Short description (80) · 76
@@ -203,7 +203,7 @@ Increment: Trainingstagebuch
 Sätze eintragen, Werte vom letzten Mal sehen, Rekorde verfolgen. Ohne Konto.
 ```
 
-### Full description (4000) · 1739
+### Full description (4000) · 1740
 
 ```text
 Increment ist ein Trainingstagebuch fürs Gym. Trag deine Sätze ein, sieh, was du letztes Mal geschafft hast, und schau zu, wie deine Zahlen steigen. Ohne Werbung und ohne Konto, und dein Trainingslog bleibt auf deinem Handy.
@@ -230,7 +230,7 @@ DEINE DATEN
 • Kein Konto, keine Werbung, kein Tracking. Nichts wird hochgeladen.
 • Funktioniert offline, auch im Keller-Gym.
 • Sichere alles in eine Datei, wann du willst (Google Drive, Dateien, E-Mail), und stell es auf einem neuen Handy wieder her.
-• Du kommst von Strong? Übernimm deinen Verlauf aus dem CSV-Export. Export als CSV geht auch.
+• Übernimm deinen Verlauf aus dem CSV-Export anderer Trainings-Apps. Export als CSV geht auch.
 • kg oder lb, km oder mi. Deutsch und Englisch.
 
 Increment ist Open Source (MIT): github.com/laurinlibossek/setlog
@@ -239,9 +239,9 @@ Increment ist Open Source (MIT): github.com/laurinlibossek/setlog
 ### Other Play fields
 
 - **Category:** Health & Fitness. Tags: pick the strength-training and workout-tracker ones the Console offers.
-- **Contact email:** required, and shown publicly on the store page (README, decision 3).
+- **Contact email:** required, and shown publicly on the store page: the app's own address, the same as `CONTACT_EMAIL` in `setlog/js/core/links.js`.
 - **Website** (optional): `https://github.com/laurinlibossek/setlog`
-- **Privacy policy URL:** required, even for an app that collects nothing.
+- **Privacy policy URL:** required, even for an app that collects nothing: the same pages as for the App Store.
 
 ## The stores' questions
 
@@ -253,11 +253,11 @@ Increment ist Open Source (MIT): github.com/laurinlibossek/setlog
 
 Answer "None" or "No" to the questions about violence, mature content, gambling, user-generated content, messaging and web access. A template link is shared through the system share sheet to an app the user picks, not inside Increment, so it isn't messaging or user-generated content.
 
-One question needs a choice: **Health or Wellness Topics.** Apple's examples include exercise recommendations, and Increment ships the example templates Push, Pull and Legs and suggests the next workout. I'd answer **Yes**, which should give **9+** instead of 4+ (third-party guides say so; App Store Connect shows the result as you answer). Answering No is arguable, because the app mostly logs what you do, but a wrong No is the kind of thing review sends back. "Medical or Treatment Information" stays No.
+**Health or Wellness Topics: Yes** (Laurin, 3 Nov 2026), because Apple's examples include exercise recommendations and Increment ships the example templates Push, Pull and Legs and suggests the next workout. That should give **9+** instead of 4+; App Store Connect shows the result as you answer. "Medical or Treatment Information" stays No.
 
 ### App Store: export compliance
 
-The app has no encryption of its own, so the answer is "None of the algorithms mentioned". Adding `"config": { "usesNonExemptEncryption": false }` under `ios` in `app.json` answers it for every upload (README, still to do).
+The app has no encryption of its own, so the answer is "None of the algorithms mentioned". `app.json` has `"config": { "usesNonExemptEncryption": false }` under `ios`, which answers it for every upload.
 
 ### Google Play: Data safety
 

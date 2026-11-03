@@ -9,12 +9,12 @@ import { workoutVolume, bestSet, est1RM, hasLoadRecords, PR_LABEL } from '../cal
 import { WorkoutEditor } from '../editor.js';
 import { beginWorkout } from '../sheet.js';
 import { workoutEditDraft, workoutFromEditDraft } from '../core/editing.js';
-import { weeklyCounts as weeklyFrom, weekStreak as streakFrom } from '../core/chart.js';
+import { weeklyCounts as weeklyFrom, weekStreak as streakFrom, calendarMonth } from '../core/chart.js';
 import {
   Screen, Empty, push, pop, actionSheet, confirmDialog, toast, useForce, Seg, useLeaveGuard,
 } from '../ui.js';
 import {
-  fmt, fmtDur, startOfMonth, addMonths, startOfDay, startOfWeek, addDays, DAY, toLocalInput, fromLocalInput, plural, fmtNum,
+  fmt, fmtDur, startOfMonth, addMonths, startOfDay, DAY, toLocalInput, fromLocalInput, plural, fmtNum,
 } from '../util.js';
 import { volume, setText, setLabels, w as fmtW, wUnit } from '../format.js';
 import { shareText } from '../io.js';
@@ -77,24 +77,10 @@ export function HistoryTab() {
 function Calendar() {
   const [month, setMonth] = useState(startOfMonth(Date.now()));
   const [sel, setSel] = useState(null);
-  const ws = S.workouts;
-  const byDay = new Map();
-  for (const w of ws) {
-    const d = startOfDay(w.startedAt);
-    if (!byDay.has(d)) byDay.set(d, []);
-    byDay.get(d).push(w);
-  }
-  const weekStart = S.settings.weekStart;
-  const gridStart = startOfWeek(month, weekStart);
-  const days = [];
-  for (let i = 0; i < 42; i++) days.push(addDays(gridStart, i));
-  const nextMonth = addMonths(month, 1);
-  const rows = days[35] >= nextMonth ? 5 : 6;
-  const inMonth = ws.filter((w) => w.startedAt >= month && w.startedAt < nextMonth);
+  const cal = calendarMonth(S.workouts, month, { weekStart: S.settings.weekStart });
+  const { days, byDay, next: nextMonth } = cal;
   const today = startOfDay(Date.now());
   const selected = sel ? byDay.get(sel) || [] : [];
-  const totalTime = inMonth.reduce((a, w) => a + ((w.endedAt || w.startedAt) - w.startedAt), 0);
-  const activeDays = new Set(inMonth.map((w) => startOfDay(w.startedAt))).size;
   return html`<div>
     <div class="cal">
       <div class="cal-head">
@@ -104,21 +90,21 @@ function Calendar() {
       </div>
       <div class="cal-grid">
         ${days.slice(0, 7).map((d) => html`<div class="wd" key=${'w' + d}>${fmt.weekdayNarrow(d)}</div>`)}
-        ${days.slice(0, rows * 7).map((d) => {
+        ${days.map((d) => {
           const has = byDay.has(d);
           const cls = ['cal-day', d < month || d >= nextMonth ? 'out' : '', d === today ? 'today' : '', has ? 'has' : '', sel === d ? 'sel' : ''].join(' ');
           return html`<button key=${d} class=${cls} onClick=${() => setSel(has ? d : null)} aria-label=${fmt.full(d) + (has ? ', workout' : '')}>${new Date(d).getDate()}</button>`;
         })}
       </div>
       <div class="cal-stats">
-        <div><div class="v tnum">${inMonth.length}</div><div class="k">${tr('Workouts')}</div></div>
-        <div><div class="v tnum">${activeDays}</div><div class="k">${tr('Days trained')}</div></div>
-        <div><div class="v tnum">${fmtDur(totalTime)}</div><div class="k">${tr('Time')}</div></div>
+        <div><div class="v tnum">${cal.workouts}</div><div class="k">${tr('Workouts')}</div></div>
+        <div><div class="v tnum">${cal.daysTrained}</div><div class="k">${tr('Days trained')}</div></div>
+        <div><div class="v tnum">${fmtDur(cal.time)}</div><div class="k">${tr('Time')}</div></div>
       </div>
     </div>
     ${sel && html`<div class="month-head"><h3>${fmt.full(sel)}</h3></div>
       ${selected.map((w) => html`<${WorkoutCard} key=${w.id} w=${w} onClick=${() => push('workout-detail', { id: w.id })} />`)}`}
-    ${!sel && inMonth.length > 0 && html`<p class="footnote center">${tr('Tap a highlighted day to see that workout.')}</p>`}
+    ${!sel && cal.workouts > 0 && html`<p class="footnote center">${tr('Tap a highlighted day to see that workout.')}</p>`}
   </div>`;
 }
 

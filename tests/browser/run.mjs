@@ -19,7 +19,7 @@ import path from 'node:path';
 import { HERE, ROOT, WEB, APP, STRONG } from './env.mjs';
 
 export const WEB_SUITES = ['web-template-update', 'web-start-screen', 'web-v13', 'web-de', 'web-themes', 'web-suggest', 'web-fixes', 'web-smoke'];
-export const APP_SUITES = ['app-first-start', 'app-logging', 'app-editing'];
+export const APP_SUITES = ['app-first-start', 'app-logging', 'app-editing', 'app-parity'];
 const STRONG_URL = 'https://raw.githubusercontent.com/AlexandrosKyriakakis/StrongAppAnalytics/main/Data/strong.csv';
 
 const args = process.argv.slice(2);

@@ -1,26 +1,26 @@
-import { useEffect, useState } from 'react';
-import { Platform, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, View } from 'react-native';
+import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import {
-  FORMULAS, REST_CHOICES, exportCSV, parsePlates, startOfDay,
+  DEFAULT_WARMUP, FORMULAS, REST_CHOICES, exportCSV, parsePlates, startOfDay,
 } from '@setlog/core';
 
 import {
-  readBackup, readStrong, restoreBackup, saveStrongImport, setProfile, setSetting, useAppState,
+  deleteAllData, readBackup, readStrong, restoreBackup, saveStrongImport, setProfile, setSetting, useAppState,
 } from '@/data/store';
 import type { LanguageSetting, Settings, ThemeSetting } from '@/data/types';
 import { appVersion, backupNow } from '@/lib/backup';
 import { dateStamp, saveTextFile } from '@/lib/files';
 import { useFormat } from '@/lib/format';
 import { bodyUnit, lengthUnit } from '@/lib/measure';
-import { useColors } from '@/lib/theme';
 import { confirm, notice } from '@/lib/notice';
 import {
   Cell, Group, Page, Segments, SectionTitle, SwitchCell, Txt,
 } from '@/ui/kit';
 import {
-  actionSheet, pickDateTime, prompt, toast,
+  actionSheet, ask, pickDateTime, prompt, toast,
 } from '@/ui/overlay';
 
 /** Let the user pick a file and read it as text (null if they cancel). */
@@ -39,11 +39,25 @@ export default function SettingsScreen() {
   const st = s.settings;
   const [strongUnits, setStrongUnits] = useState<{ weightUnit: 'kg' | 'lb'; distUnit: 'km' | 'mi' }>({ weightUnit: st.unit, distUnit: st.distUnit });
   const [busy, setBusy] = useState(false);
-  const [name, setName] = useState(s.profile.name);
-  useEffect(() => { setName(s.profile.name); }, [s.profile.name]); // e.g. after a restore
-  const c = useColors();
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => { setSetting(k, v); };
 
+  const editName = async () => {
+    const v = await prompt({ title: tr('Your name'), value: s.profile.name, placeholder: tr('Name') });
+    if (v !== null) setProfile({ name: v.trim() });
+  };
+  const doDeleteAll = async () => {
+    const ok = await ask({
+      title: tr('Delete all data?'),
+      message: tr('Every workout, template, measurement and custom exercise on this phone will be erased. Your settings, name, folders and changes to built-in exercises are reset too.'),
+      ok: tr('Continue'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete-all',
+    });
+    if (!ok) return;
+    const word = tr('DELETE');
+    const v = await prompt({ title: tr('Type {word} to confirm', { word }), placeholder: word, ok: tr('Delete everything') });
+    if ((v || '').trim().toUpperCase() !== word.toUpperCase()) { if (v !== null) toast(tr('Nothing was deleted')); return; }
+    setBusy(true);
+    try { await deleteAllData(); toast(tr('All data deleted')); } finally { setBusy(false); }
+  };
   const doBackup = () => backupNow(tr);
   const doCSV = async () => {
     const text = exportCSV({ workouts: s.workouts, exercises: s.exercises, unit: st.unit, distUnit: st.distUnit, unknownName: tr('Unknown exercise') });
@@ -136,16 +150,14 @@ export default function SettingsScreen() {
   const formula = (FORMULAS as { id: string; label: string }[]).find((x) => x.id === st.formula) || FORMULAS[0];
   const weekdays: { value: number; label: string }[] = [{ value: 1, label: tr('Monday') }, { value: 0, label: tr('Sunday') }, { value: 6, label: tr('Saturday') }];
   const barOptions = st.unit === 'lb' ? [45, 35, 33, 25, 15, 0] : [20, 15, 10, 7.5, 0];
+  const wu = (st.warmup || DEFAULT_WARMUP) as { barReps: number; steps: [number, number][] };
+  const warmupText = [wu.barReps > 0 ? `${tr('Bar')} × ${wu.barReps}` : null, ...wu.steps.map(([p, r]) => `${f.num(p, 0)}% × ${r}`)]
+    .filter(Boolean).join(', ') || tr('None');
 
   return (
     <Page>
       <Group>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 50, gap: 12 }}>
-          <Txt style={{ fontSize: 16, flexShrink: 0 }}>{tr('Your name')}</Txt>
-          <TextInput value={name} onChangeText={setName} onEndEditing={() => setProfile({ name: name.trim() })} onBlur={() => setProfile({ name: name.trim() })}
-            placeholder={tr('Not set')} placeholderTextColor={c.ink3} returnKeyType="done" testID="set-name"
-            style={{ flex: 1, minWidth: 0, textAlign: 'right', color: c.ink, fontSize: 16, paddingVertical: 10 }} />
-        </View>
+        <Cell first icon="profile" title={tr('Your name')} value={s.profile.name || tr('Not set')} onPress={editName} testID="set-name" />
       </Group>
 
       <SectionTitle>{tr('Units')}</SectionTitle>
@@ -169,6 +181,7 @@ export default function SettingsScreen() {
         <SwitchCell title={tr('Keep screen on')} sub={tr('While a workout is running')} value={st.keepAwake !== false} onChange={(v) => set('keepAwake', v)} testID="set-keep-awake" />
         <Cell title={tr('Previous values')} value={st.prevSource === 'template' ? tr('Same template') : tr('Any workout')}
           onPress={() => pick(tr('Previous values'), [{ value: 'any', label: tr('Any workout') }, { value: 'template', label: tr('Same template') }], st.prevSource, (v) => set('prevSource', v as Settings['prevSource']))} />
+        <Cell title={tr('Warm-up sets')} value={warmupText} onPress={() => router.push('/warmup')} testID="set-warmup" />
         <SwitchCell title={tr('Ask to update templates')} sub={tr('When a finished workout differs from its template')} value={st.askTemplateUpdate !== false}
           onChange={(v) => set('askTemplateUpdate', v)} testID="set-ask-template" />
         <SwitchCell title={tr('Example templates')} value={st.showExamples !== false} onChange={(v) => set('showExamples', v)} testID="set-examples" />
@@ -227,6 +240,10 @@ export default function SettingsScreen() {
       <Txt tone="ink3" style={{ fontSize: 13, marginTop: 12, paddingHorizontal: 4 }}>
         {tr('Everything stays on this phone. Nothing is uploaded anywhere — back up regularly and keep the file in iCloud Drive or another safe place.')}
       </Txt>
+
+      <Group style={{ marginTop: 22 }}>
+        <Cell first title={tr('Delete all data')} danger chevron={false} onPress={busy ? undefined : doDeleteAll} testID="delete-all" />
+      </Group>
 
       <Txt tone="ink3" style={{ fontSize: 13, textAlign: 'center', marginTop: 28 }}>
         {`Increment ${appVersion()} · ${tr('{n} stored', { n: f.plural(s.workouts.length, 'workout') })}`}

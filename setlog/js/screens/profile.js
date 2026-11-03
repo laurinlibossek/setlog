@@ -14,13 +14,14 @@ import {
   Screen, push, openDialog, confirmDialog, promptDialog, toast, Seg, Switch, Cell,
 } from '../ui.js';
 import {
-  fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, relDayLower, parseNum, parsePlates,
+  fmt, fmtNum, plural, isIOS, isStandalone, DAY, fmtClock, relDay, relDayLower, parsePlates,
 } from '../util.js';
 import { tr, saveLangPref, getLangPref } from '../i18n.js';
 import {
   metricValue, volume, bwUnit, lenUnit,
 } from '../format.js';
 import { weeklyCounts, weekStreak } from './history.js';
+import { warmupFromInput } from '../core/settings.js';
 import {
   parseStrongCSV, backupJSON, parseBackup, exportCSV, saveFile, pickFile, dateStamp,
 } from '../io.js';
@@ -238,9 +239,7 @@ function WarmupDialog({ close }) {
   const edit = (i, k, v) => setSteps(steps.map((row, j) => (j === i ? (k === 0 ? [v, row[1]] : [row[0], v]) : row)));
   const save = (e) => {
     e.preventDefault();
-    const clean = steps.map(([p, r]) => [parseNum(p), Math.round(parseNum(r) || 0)])
-      .filter(([p, r]) => p > 0 && p < 100 && r > 0).sort((a, b) => a[0] - b[0]);
-    setSetting('warmup', { barReps: Math.max(0, Math.round(parseNum(bar) || 0)), steps: clean });
+    setSetting('warmup', warmupFromInput(bar, steps));
     close(true);
   };
   const reset = () => { setBar(String(DEFAULT_WARMUP.barReps)); setSteps(DEFAULT_WARMUP.steps.map(([p, r]) => [String(p), String(r)])); };

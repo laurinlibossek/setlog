@@ -7,13 +7,13 @@ The store version of Setlog, built with [Expo](https://expo.dev) (React Native).
 - **Logging:** start a workout empty, from a template or again from History. Last time's numbers show as grey placeholders, and checking a set off saves them. Rest timer, set types and RPE, supersets, warm-up sets, focus metric, plate calculator, drag-and-drop reordering, a start time you can move, and Finish with records and the "update the template?" question. Pull the workout down and it waits in a bar above the tabs; it survives closing the app.
 - **Rest timer alerts:** when rest is over and the app isn't open (phone locked, another app), a notification arrives. The first rest timer asks for permission. Settings → Rest timer alerts turns it off.
 - **Templates:** create and edit them (or make one from a finished workout), with ⋯ to rename, duplicate, move to a folder, archive, share as a link and delete (with undo). Templates ⋯ sorts, makes folders and adds a template someone shared with you.
-- **History:** edit a finished workout (sets, name, start, duration), save it as a template, share it as text, delete it with undo.
-- **Exercises:** create your own (also right from the picker), edit, pin a note, hide or delete; charts and records per exercise.
+- **History:** a list by month or a calendar; edit a finished workout (sets, name, start, duration), save it as a template, share it as text, delete it with undo.
+- **Exercises:** create your own (also right from the picker), edit, pin a note, merge into another, hide or delete; charts and records per exercise.
 - **Measure:** log body weight and measurements, with a chart per measurement.
 - **Profile:** workouts per week, streak, recent records, a reminder to back up, plate and 1RM calculators.
-- **Your data:** Back up now (Save to Files, iCloud Drive, AirDrop…), restore, Strong import, CSV export. Backups are the same file as the web app's, in both directions.
+- **Your data:** Back up now (Save to Files, iCloud Drive, AirDrop…), restore, Strong import, CSV export, Delete all data. Backups are the same file as the web app's, in both directions.
 
-Not in the app yet: the History calendar, merging exercises, editing the warm-up scheme, Delete all data, and opening a shared template link directly (paste it under Templates ⋯ instead). After that: the Increment name and icon, and the store release.
+Everything the web app does is in the app now. What's left before the store release: the Increment name and icon, and template links that open the app straight from the web address (a universal link; until then the app opens `increment://` links, and web app links are pasted under Templates ⋯ → Add shared template).
 
 ## Try it on your iPhone (free, no Apple Developer account)
 
@@ -45,6 +45,8 @@ src/app/              screens (Expo Router: every file is a route)
   tools.tsx           plate calculator and 1RM calculator
   exercise-form.tsx   creating or editing an exercise
   settings.tsx        units, workouts, stats, plates, theme, language, your data
+  warmup.tsx          the warm-up scheme (Settings → Warm-up sets)
+  +native-intent.tsx  links that open the app: template links are offered, not routed
   workout/[id].tsx    a finished workout and its ⋯ menu
   exercise/[id].tsx   an exercise: about, history, charts, records
   measure/[type].tsx  a measurement: chart, entries

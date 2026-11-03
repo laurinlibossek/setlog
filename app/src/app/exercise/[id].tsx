@@ -1,5 +1,5 @@
 // An exercise: about (settings and notes), its history, charts and records,
-// and the ⋯ menu (edit, pinned note, hide, delete). Charts and records follow
+// and the ⋯ menu (edit, pinned note, merge into another, hide, delete). Charts and records follow
 // "Start history from"; History and the counts show everything.
 import { useMemo, useState } from 'react';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -8,14 +8,15 @@ import {
 } from 'react-native';
 import {
   BODY_PARTS, CATEGORIES, exerciseRecords, exerciseSeries, chartMetricsFor, hasLoadRecords, est1RM, formulaLabel,
-  kgTo, kmTo, DAY, EXERCISE_RANGES, REST_CHOICES,
+  kgTo, kmTo, DAY, EXERCISE_RANGES, REST_CHOICES, canMergeExercises,
 } from '@setlog/core';
 
 import {
-  allSessions, deleteExercise, exerciseUsage, stats, updateExercise, useAppState,
+  allSessions, deleteExercise, exerciseUsage, getState, mergeExercise, stats, updateExercise, useAppState,
 } from '@/data/store';
 import type { Exercise, Workout } from '@/data/types';
 import { editExercise } from '@/lib/exerciseForm';
+import { pickExercises } from '@/lib/picker';
 import { setLabels, useFormat } from '@/lib/format';
 import { useColors } from '@/lib/theme';
 import {
@@ -48,6 +49,7 @@ export default function ExerciseDetail() {
       actions: [
         { label: tr('Edit exercise'), value: 'edit', icon: 'edit', testID: 'ex-edit' },
         { label: ex.pinnedNote ? tr('Edit pinned note') : tr('Pin a note'), value: 'pin', icon: 'pin' },
+        { label: tr('Merge into another exercise…'), value: 'merge', icon: 'swap', testID: 'ex-merge' },
         { label: ex.hidden ? tr('Show in lists again') : tr('Hide from lists'), value: 'hide', icon: ex.hidden ? 'eye' : 'eyeOff', testID: 'ex-hide' },
         { label: tr('Delete exercise'), value: 'delete', destructive: true, icon: 'trash', testID: 'ex-delete' },
       ],
@@ -56,6 +58,27 @@ export default function ExerciseDetail() {
     if (c === 'pin') {
       const v = await prompt({ title: tr('Pinned note'), message: tr('Shown every time you do this exercise.'), value: ex.pinnedNote || '', multiline: true });
       if (v !== null) updateExercise(ex.id, { pinnedNote: v.trim() });
+    }
+    if (c === 'merge') {
+      const ids = await pickExercises({ title: tr('Merge “{name}” into', { name: ex.name }) });
+      const into = ids?.[0];
+      if (!into || into === ex.id) return;
+      const target = getState().exercises.get(into);
+      if (!target) return;
+      if (!canMergeExercises(ex, target)) {
+        toast(tr('“{from}” and “{to}” log different things, so they can’t be merged.', { from: ex.name, to: target.name }));
+        return;
+      }
+      const ok = await ask({
+        title: tr('Merge exercises?'),
+        message: tr('All {n} of “{from}” move to “{to}”, and “{from}” is deleted. This can’t be undone.', { n: f.plural(every.length, 'session'), from: ex.name, to: target.name }),
+        ok: tr('Merge'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-merge',
+      });
+      if (!ok) return;
+      // to the target's page first, so this one never shows "not found"
+      router.replace({ pathname: '/exercise/[id]', params: { id: into } });
+      await mergeExercise(ex.id, into);
+      toast(tr('Exercises merged'));
     }
     if (c === 'hide') {
       await updateExercise(ex.id, { hidden: !ex.hidden });

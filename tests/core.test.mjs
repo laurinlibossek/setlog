@@ -315,6 +315,64 @@ test('chart ticks, weekly counts and the streak', () => {
   assert.equal(core.weekStreak(ws, { goal: 3, weekStart: 1, now }), 1, 'this week doesn’t count until it reaches the goal');
 });
 
+test('History calendar: the grid from the week start, workouts per day, the month’s totals', () => {
+  const at = (m, d, h = 18, min = 0) => new Date(2026, m, d, h, min).getTime();
+  const w = (start, minutes) => ({ id: String(start), startedAt: start, endedAt: start + minutes * 60000 });
+  const ws = [w(at(11, 1), 30), w(at(10, 30, 19), 60), w(at(10, 30, 7), 45), w(at(10, 3), 50), w(at(9, 31), 40)];
+  // November 2026 starts on a Sunday and ends on a Monday
+  const mon = core.calendarMonth(ws, at(10, 17), { weekStart: 1 });
+  assert.equal(mon.start, new Date(2026, 10, 1).getTime());
+  assert.equal(mon.days.length, 42, 'Monday weeks: Nov 30 needs a sixth row');
+  assert.equal(mon.days[0], new Date(2026, 9, 26).getTime());
+  assert.equal(new Date(mon.days[0]).getDay(), 1);
+  const sun = core.calendarMonth(ws, at(10, 17), { weekStart: 0 });
+  assert.equal(sun.days.length, 35, 'Sunday weeks fit in five rows');
+  assert.equal(sun.days[0], mon.start);
+  assert.equal(mon.workouts, 3, 'Oct 31 and Dec 1 are outside the month');
+  assert.equal(mon.daysTrained, 2, 'two workouts on the 30th count as one day');
+  assert.equal(mon.time, (60 + 45 + 50) * 60000);
+  assert.equal(mon.byDay.get(new Date(2026, 10, 30).getTime()).length, 2);
+  assert.ok(mon.byDay.has(new Date(2026, 9, 31).getTime()), 'days of the month before in the grid show their workouts');
+  assert.ok(!sun.byDay.has(new Date(2026, 9, 31).getTime()), 'but not outside the grid');
+  const empty = core.calendarMonth([], at(1, 10));
+  assert.equal(empty.workouts + empty.daysTrained + empty.time, 0);
+  assert.equal(empty.days.length % 7, 0);
+});
+
+test('merging exercises: same logged fields only; the target keeps its own rest timer and notes', () => {
+  const bench = { id: 'x-bench', category: 'barbell', restSec: null, notes: '', pinnedNote: 'Arch' };
+  const db = { id: 'x-db', category: 'dumbbell', restSec: 90, notes: 'Slow', pinnedNote: 'Elbows in' };
+  const plank = { id: 'x-plank', category: 'duration' };
+  const run = { id: 'x-run', category: 'cardio' };
+  assert.equal(core.canMergeExercises(db, bench), true, 'weight and reps both');
+  assert.equal(core.canMergeExercises(db, plank), false);
+  assert.equal(core.canMergeExercises(plank, run), false, 'time vs. distance and time');
+  assert.equal(core.canMergeExercises(bench, bench), false, 'not into itself');
+  assert.equal(core.canMergeExercises(bench, undefined), false);
+  assert.deepEqual(core.mergeExercisePatch(db, bench), { restSec: 90, notes: 'Slow' }, 'the pinned note stays the target’s');
+  assert.deepEqual(core.mergeExercisePatch(bench, db), {}, 'a target with everything keeps it');
+  assert.deepEqual(core.mergeExercisePatch({ restSec: 0 }, { restSec: undefined }), { restSec: 0 }, 'a timer set to off counts');
+  const ws = [
+    { id: 'a', exercises: [{ id: 'e1', exerciseId: 'x-db', sets: [] }, { id: 'e2', exerciseId: 'x-row', sets: [] }] },
+    { id: 'b', exercises: [{ id: 'e3', exerciseId: 'x-row', sets: [] }] },
+  ];
+  const before = JSON.stringify(ws);
+  const changed = core.moveExerciseEntries(ws, 'x-db', 'x-bench');
+  assert.deepEqual(changed.map((x) => x.id), ['a']);
+  assert.deepEqual(changed[0].exercises.map((e) => e.exerciseId), ['x-bench', 'x-row']);
+  assert.equal(changed[0].exercises[1], ws[0].exercises[1], 'untouched entries keep their identity');
+  assert.equal(JSON.stringify(ws), before, 'the records passed in stay as they were');
+});
+
+test('warm-up scheme from the editor: decimal commas, empty and odd rows dropped, sorted', () => {
+  assert.deepEqual(core.warmupFromInput('8', [['60', '3'], ['42,5', '5'], ['', '4'], ['100', '1'], ['70', '0'], ['85', '1,4']]),
+    { barReps: 8, steps: [[42.5, 5], [60, 3], [85, 1]] });
+  assert.deepEqual(core.warmupFromInput('', []), { barReps: 0, steps: [] });
+  assert.deepEqual(core.warmupFromInput('-3', [['50', '5']]), { barReps: 0, steps: [[50, 5]] });
+  const s = core.warmupFromInput('10', [['40', '5'], ['80', '2']]);
+  assert.equal(core.warmupSets(100, 20, core.KG_PLATES, true, s).length, 3, 'the result works as a scheme');
+});
+
 // ---------- Strong CSV ----------
 const STRONG = `Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
 2026-09-01 18:00:00,"Upper",1h 5m,"T Bar Row",W,60,6,0,0,"","Felt strong",

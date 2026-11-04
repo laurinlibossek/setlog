@@ -1,6 +1,6 @@
 # Status and backlog
 
-Last updated 4 Nov 2026 (the session's follow-ups). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
+Last updated 4 Nov 2026 (the session's follow-ups; the routine after a workout). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
 
 ## Where things are
 
@@ -37,9 +37,18 @@ Reference for anyone touching the summary or templates.
 - Structure changed → **Update values only** ("Updates values for N sets.", hidden if 0), **Update template and values** (red; "Removes 2 exercises. Removes 2 sets. Changes set types."), **Keep original template**. Only numbers changed → **Update values** or **Keep original template**. Nothing changed → no dialog.
 - Updating returns the previous exercises, and the toast offers **Undo**. A full update keeps the template's own exercise notes and RPE.
 - No question for example templates, "Do this workout again" or empty workouts (`templateId` is null), or when Settings → Ask to update templates is off. Sets that are unchecked or empty at finish are dropped, so they count as removed.
-- **The store app asks differently since Tally phase 4 (3 Nov 2026):** no dialog. The summary has a Template section with one switch row, "Save changes to Push A", and one line of what changes ("Adds 1 exercise. Removes 2 exercises. Updates values for 1 set."). It starts off; switching it on saves the workout into the template (everything when the structure changed, otherwise the values only), with Undo in the toast; switching it off puts the template back. The separate "Update values only" choice for a changed structure is gone in the app. The same rules decide whether the row shows. The web app keeps the dialog.
+- **The store app works differently since 4 Nov 2026 (Laurin's decisions on PR #10): progressive overload.** Increment is about lifting more over time, so finishing a workout from a routine raises the routine's numbers by itself, and they only ever go up:
+  - Per set, paired as above, the routine takes the done set's numbers only when they're better (`compareSets` in `core/templates.js`): more weight, or the same weight and more reps; for assisted exercises less assistance (then more reps); for timed exercises more time; for cardio more distance, then more time. Equal or worse sets keep the routine's numbers; skipped sets and exercises keep theirs. The routine's own set types and RPE targets stay.
+  - If the layout changed too (a set more or fewer, an exercise added, removed, swapped or moved, set types or supersets), a small popup asks once, right after Finish, over the summary: "Update Push A?" with one line ("1 set fewer. Adds Cable Fly."), **Update routine** (the routine takes the workout's exercises and sets; paired sets still only go up, new ones take what was done; the routine's own exercise notes stay) or **Keep routine** (the layout stays; the better numbers are saved either way).
+  - Only numbers changed: no popup; the summary says "New numbers for 4 sets in Push A". The toast offers Undo after either case; Undo puts the routine back as it was before the workout.
+  - This replaced the summary's switch row (phase 4) and the choice to keep the routine's numbers as they were. Nothing happens for example routines, "Do this workout again" or empty workouts.
+  - Settings → "Update routines after workouts" (was "Ask to update templates"; same setting, `askTemplateUpdate`, on by default): off means routines only change in the editor.
+  - New texts say "routine" (Laurin chose "Routines" over "Templates"; German "Routine"); the rest of the app is renamed in its own pull request.
+  - The web app keeps its "Update template" dialog.
 
 ## Done
+
+- **The routine after a workout** (4 Nov 2026, `claude/summary-routine`, Laurin's decisions on PR #10): better numbers go into the routine by themselves at Finish, only ever up; a changed layout asks once over the summary (Update routine / Keep routine); Undo restores the routine; Settings → "Update routines after workouts". Core `compareSets` and `progressTemplate` (unit tests for weight, reps, assisted, time, distance, warm-ups, skipped sets and the layout mode); `templateChanges` also lists the exercises added and removed. Suite `app-logging`: 22 checks (better numbers saved without asking, worse ones not, the popup and both buttons, Undo, the setting off). Details under "How finishing a workout that differs from its template works" above.
 
 - **The session's follow-ups** (4 Nov 2026, `claude/session-followups`), with Laurin's answers to the open points in #11:
   - **Reps left: 0 · 1 · 2+.** Asked in the rest bar after each logged set, the same three in the set menu. 1 sits in the middle: it's the target. 0 is failure: rating 0 shows the set as a failure set, and choosing Failure sets reps left to 0, so the two never disagree. 2+ is a lighter set. Nothing above 2 on purpose: no one should have more than 2 left in the tank. Core: `rir` 0–2 (2 = "2 or more"), older sets with 3 read as 2+; RPE maps 10 → 0, 9 and 9.5 → 1, 8.5 and below → 2+; Strong's CSV gets RPE `10 − rir` (2+ → 8).

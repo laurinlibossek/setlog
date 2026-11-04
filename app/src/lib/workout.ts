@@ -1,17 +1,23 @@
 // Starting and finishing a workout: the questions on the way (a workout is
-// already running, unchecked sets), where the app goes next, and saving a
-// finished workout into its template (the summary's switch row). The rules
-// are the shared core's (core/workout.js, templates.js).
+// already running, unchecked sets), where the app goes next, and what a
+// finished workout does to its routine: better numbers go in by themselves,
+// a changed layout is asked about once over the summary. The rules are the
+// shared core's (core/workout.js, templates.js).
+import { useSyncExternalStore } from 'react';
 import { router } from 'expo-router';
-import { progressOf, workoutNameKey, pendingSets, templateChanges } from '@setlog/core';
+import {
+  progressOf, workoutNameKey, pendingSets, templateChanges, progressTemplate,
+} from '@setlog/core';
 
 import {
-  discardActive, editActive, finishActive, getState, previousSets, restoreTemplateExercises, startWorkout, updateTemplateFromWorkout,
+  discardActive, editActive, finishActive, getState, previousSets, restoreTemplateExercises, saveTemplate, startWorkout,
 } from '@/data/store';
 import type {
   ActiveWorkout, Template, TemplateEntry, Workout,
 } from '@/data/types';
-import { actionSheet, ask, toast } from '@/ui/overlay';
+import {
+  actionSheet, ask, choose, toast,
+} from '@/ui/overlay';
 import type { Format } from './format';
 import type { Tr } from './i18n';
 
@@ -96,67 +102,137 @@ export async function finishFlow(f: F) {
     if (!ok) return;
   }
   const result = await finishActive('done', tr(workoutNameKey(a.startedAt)));
-  if (result) router.replace({ pathname: '/summary/[id]', params: { id: result.workout.id } });
+  if (!result) return;
+  await progressRoutine(result.workout);
+  router.replace({ pathname: '/summary/[id]', params: { id: result.workout.id } });
 }
 
-/** What a finished workout changed in its template (core templateChanges). */
+/** What a finished workout changed in its routine (core templateChanges). */
 export interface TemplateDiff {
   addedExercises: number; removedExercises: number; reordered: boolean; addedSets: number; removedSets: number;
   typesChanged: boolean; supersetsChanged: boolean; valueSets: number; structure: boolean;
+  added: string[]; removed: string[];
 }
 
 /**
- * The summary's template question: the template a finished workout came from
- * and what saving the workout into it would change, or null when there is
- * nothing to ask (no template, an example or a repeated workout, nothing
- * changed, or Settings → Ask to update templates is off). Ask it once, when
- * the summary opens: after saving, the template no longer differs.
+ * What finishing a workout did to its routine, for the summary. The better
+ * numbers are saved at Finish; when the layout changed too, `answer` is
+ * 'pending' until the summary has asked "Update Push A?".
  */
-export function templateQuestion(workout: Workout): { templateId: string; diff: TemplateDiff } | null {
-  const s = getState();
-  if (s.settings.askTemplateUpdate === false || !workout.templateId) return null;
-  const t = s.templates.find((x) => x.id === workout.templateId);
-  if (!t) return null;
-  const diff = templateChanges(t, workout) as TemplateDiff;
-  if (!diff.structure && !diff.valueSets) return null;
-  return { templateId: t.id, diff };
+export interface RoutineResult {
+  templateId: string;
+  /** The routine's exercises before the workout, for Undo. */
+  before: TemplateEntry[];
+  /** Sets whose numbers went up. */
+  raised: number;
+  /** The layout changes, when there are any. */
+  diff: TemplateDiff | null;
+  answer: 'pending' | 'updated' | 'kept' | null;
+  undone: boolean;
+  announced: boolean;
+}
+const results = new Map<string, RoutineResult>();
+const routineListeners = new Set<() => void>();
+function setResult(workoutId: string, patch: Partial<RoutineResult>) {
+  const r = results.get(workoutId);
+  if (!r) return;
+  results.set(workoutId, { ...r, ...patch });
+  routineListeners.forEach((l) => l());
+}
+const subscribeRoutine = (l: () => void) => { routineListeners.add(l); return () => { routineListeners.delete(l); }; };
+/** The routine result of a workout finished in this session (or null), kept current for the summary. */
+export function useRoutineResult(workoutId: string | undefined) {
+  const get = () => (workoutId ? results.get(workoutId) || null : null);
+  return useSyncExternalStore(subscribeRoutine, get, get);
 }
 
-/** One line of what saving into the template changes: "Removes 2 exercises. Updates values for 1 set." */
-export function describeTemplateDiff(d: TemplateDiff, f: F) {
+const categoryOf = (exerciseId: string) => getState().exercises.get(exerciseId)?.category || 'barbell';
+const routineOf = (templateId: string) => getState().templates.find((x) => x.id === templateId) || null;
+
+/**
+ * Progressive overload, right after Finish: a workout from a routine raises
+ * the routine's numbers where the done sets were better (core progressTemplate);
+ * equal or worse sets and anything skipped keep theirs. Nothing happens for
+ * examples, "Do this workout again" or empty workouts (no templateId), or with
+ * Settings → Update routines after workouts off. The summary then announces
+ * it, and asks about the layout when that changed too.
+ */
+export async function progressRoutine(workout: Workout) {
+  const s = getState();
+  if (s.settings.askTemplateUpdate === false || !workout.templateId) return null;
+  const t = routineOf(workout.templateId);
+  if (!t || t.example) return null;
+  const diff = templateChanges(t, workout) as TemplateDiff;
+  const { exercises, raised } = progressTemplate(t.exercises, workout, categoryOf) as { exercises: TemplateEntry[]; raised: number };
+  if (!raised && !diff.structure) return null;
+  const before = JSON.parse(JSON.stringify(t.exercises)) as TemplateEntry[];
+  if (raised) await saveTemplate({ ...t, exercises });
+  const r: RoutineResult = {
+    templateId: t.id, before, raised, diff: diff.structure ? diff : null, answer: diff.structure ? 'pending' : null, undone: false, announced: false,
+  };
+  results.set(workout.id, r);
+  return r;
+}
+
+/** One line of what's different in the layout: "1 set fewer. Adds Cable Fly." */
+export function describeLayout(d: TemplateDiff, f: F) {
   const { tr } = f;
+  const names = (ids: string[]) => ids.map((id) => f.exName(getState().exercises.get(id)) || tr('Unknown exercise')).join(', ');
+  const swap = d.added.length === 1 && d.removed.length === 1;
   return [
-    d.addedExercises ? tr('Adds {n}.', { n: f.plural(d.addedExercises, 'exercise') }) : '',
-    d.removedExercises ? tr('Removes {n}.', { n: f.plural(d.removedExercises, 'exercise') }) : '',
+    d.addedSets ? (d.addedSets === 1 ? tr('1 set more.') : tr('{n} sets more.', { n: d.addedSets })) : '',
+    d.removedSets ? (d.removedSets === 1 ? tr('1 set fewer.') : tr('{n} sets fewer.', { n: d.removedSets })) : '',
+    swap ? tr('Swaps {from} for {to}.', { from: names(d.removed), to: names(d.added) }) : '',
+    !swap && d.added.length ? tr('Adds {names}.', { names: names(d.added) }) : '',
+    !swap && d.removed.length ? tr('Removes {names}.', { names: names(d.removed) }) : '',
     d.reordered ? tr('Reorders exercises.') : '',
-    d.addedSets ? tr('Adds {n}.', { n: f.plural(d.addedSets, 'set') }) : '',
-    d.removedSets ? tr('Removes {n}.', { n: f.plural(d.removedSets, 'set') }) : '',
     d.typesChanged ? tr('Changes set types.') : '',
     d.supersetsChanged ? tr('Changes supersets.') : '',
-    d.valueSets ? tr('Updates values for {n}.', { n: f.plural(d.valueSets, 'set') }) : '',
   ].filter(Boolean).join(' ');
 }
 
-/**
- * Save a finished workout into its template (the summary's switch turned on):
- * its exercises, sets and numbers, or only the numbers when nothing else
- * changed. Toasts with Undo; `onUndo` runs after Undo put the template back.
- * Returns the template's previous exercises, for switching it off again.
- */
-export async function saveIntoTemplate(templateId: string, workout: Workout, d: TemplateDiff, f: F, onUndo?: () => void) {
-  const { tr } = f;
-  const valuesOnly = !d.structure;
-  const before = await updateTemplateFromWorkout(templateId, workout, valuesOnly);
-  if (!before) return null;
-  toast(valuesOnly ? tr('Template values updated') : tr('Template updated'), {
-    label: tr('Undo'),
-    fn: () => { restoreTemplateExercises(templateId, before).then(() => { onUndo?.(); toast(tr('Template change undone')); }); },
-  });
-  return before;
+/** The summary's line about the routine, or '' when there's nothing to say (yet). */
+export function routineLine(r: RoutineResult | null, f: F) {
+  if (!r || r.undone || r.answer === 'pending') return '';
+  const name = routineOf(r.templateId)?.name || '';
+  if (r.answer === 'updated') return f.tr('{name} now has this workout’s exercises and sets', { name });
+  return r.raised ? f.tr('New numbers for {n} in {name}', { n: f.plural(r.raised, 'set'), name }) : '';
 }
 
-/** Put a template back as it was before saveIntoTemplate (the switch turned off). */
-export async function restoreTemplate(templateId: string, before: TemplateEntry[], f: F) {
-  await restoreTemplateExercises(templateId, before);
-  toast(f.tr('Template change undone'));
+/**
+ * Once, when the summary of a just-finished workout opens: ask about the
+ * layout if it changed ("Update routine" or "Keep routine"; the better numbers
+ * are saved either way), then a toast with Undo, which puts the routine back
+ * as it was before the workout.
+ */
+export async function announceRoutine(workout: Workout, f: F) {
+  const { tr } = f;
+  const r = results.get(workout.id);
+  if (!r || r.announced) return;
+  setResult(workout.id, { announced: true });
+  const name = () => routineOf(r.templateId)?.name || '';
+  const undo = { label: tr('Undo'), fn: () => {
+    restoreTemplateExercises(r.templateId, r.before).then(() => { setResult(workout.id, { undone: true }); toast(tr('Routine change undone')); });
+  } };
+  if (r.answer === 'pending' && r.diff) {
+    const choice = await choose<'update' | 'keep'>({
+      title: tr('Update {name}?', { name: name() }),
+      message: describeLayout(r.diff, f),
+      cancel: false,
+      options: [
+        { label: tr('Update routine'), value: 'update', tone: 'primary', testID: 'routine-update' },
+        { label: tr('Keep routine'), value: 'keep', tone: 'plain', testID: 'routine-keep' },
+      ],
+    });
+    const t = routineOf(r.templateId);
+    if (choice === 'update' && t) {
+      const { exercises, raised } = progressTemplate(r.before, workout, categoryOf, { layout: true }) as { exercises: TemplateEntry[]; raised: number };
+      await saveTemplate({ ...t, exercises });
+      setResult(workout.id, { answer: 'updated', raised });
+      toast(tr('{name} updated', { name: name() }), undo);
+      return;
+    }
+    setResult(workout.id, { answer: 'kept' });
+  }
+  if (r.raised) toast(tr('New numbers for {n} in {name}', { n: f.plural(r.raised, 'set'), name: name() }), undo);
 }

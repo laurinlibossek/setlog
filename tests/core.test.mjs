@@ -232,6 +232,100 @@ test('applyWorkoutToTemplate: values only vs. the new structure; RPE is kept', (
   assert.equal(clean.length, 1);
 });
 
+test('compareSets: more weight, or the same weight and more reps; less assistance; more time and distance', () => {
+  const c = (r, d, cat) => core.compareSets(r, d, cat);
+  // weight first, then reps
+  assert.equal(c({ w: 60, r: 8 }, { w: 62.5, r: 5 }, 'barbell'), 1);
+  assert.equal(c({ w: 60, r: 8 }, { w: 60, r: 9 }, 'dumbbell'), 1);
+  assert.equal(c({ w: 60, r: 8 }, { w: 60, r: 8 }, 'machine'), 0);
+  assert.equal(c({ w: 60, r: 8 }, { w: 60, r: 7 }, 'barbell'), -1);
+  assert.equal(c({ w: 60, r: 8 }, { w: 57.5, r: 12 }, 'barbell'), -1);
+  assert.equal(c({ w: 10, r: 8 }, { w: 12.5, r: 6 }, 'weighted_bw'), 1);
+  // reps only
+  assert.equal(c({ r: 8 }, { r: 10 }, 'reps'), 1);
+  assert.equal(c({ r: 8 }, { r: 8 }, 'reps'), 0);
+  // assisted: less assistance wins, then more reps; more assistance never does
+  assert.equal(c({ w: 20, r: 8 }, { w: 15, r: 6 }, 'assisted_bw'), 1);
+  assert.equal(c({ w: 20, r: 8 }, { r: 5 }, 'assisted_bw'), 1, 'no assistance at all');
+  assert.equal(c({ w: 20, r: 8 }, { w: 20, r: 10 }, 'assisted_bw'), 1);
+  assert.equal(c({ w: 20, r: 8 }, { w: 25, r: 12 }, 'assisted_bw'), -1);
+  // time, and distance then time
+  assert.equal(c({ t: 60 }, { t: 75 }, 'duration'), 1);
+  assert.equal(c({ t: 60 }, { t: 45 }, 'duration'), -1);
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5.2, t: 1700 }, 'cardio'), 1);
+  assert.equal(c({ d: 5, t: 1500 }, { d: 4.8, t: 1800 }, 'cardio'), -1);
+  assert.equal(c({ t: 1200 }, { t: 1500 }, 'cardio'), 1, 'cardio logged by time only');
+  // a routine set without numbers takes any done numbers; an empty done set never wins
+  assert.equal(c({ type: 'normal' }, { w: 40, r: 10 }, 'barbell'), 1);
+  assert.equal(c({ w: 60, r: 8 }, { type: 'normal' }, 'barbell'), -1);
+  assert.equal(c({ w: 60, r: 8 }, { w: 60.0000001, r: 8 }, 'barbell'), 0, 'rounding noise is not progress');
+});
+
+test("progressTemplate: a routine's numbers only go up; skipped sets and exercises keep theirs", () => {
+  const cat = (id) => ({ a: 'barbell', b: 'assisted_bw', c: 'duration' })[id];
+  const tpl = [
+    E('a', [S('warmup', 40, 10), S('normal', 60, 8, { rpe: 8 }), S('normal', 60, 8), S('normal', 60, 6)], { notes: 'Pause reps' }),
+    E('b', [S('normal', 20, 8), S('normal', 20, 8)]),
+    E('c', [{ type: 'normal', t: 60 }]),
+  ];
+  const before = JSON.parse(JSON.stringify(tpl));
+  // the warm-up was skipped, the 1st working set went up, the 2nd stayed, the 3rd went down; b got more assistance; c wasn't done
+  const workout = { exercises: [
+    E('a', [S('normal', 62.5, 8, { rpe: 9, rir: 1 }), S('normal', 60, 8), S('normal', 55, 6)]),
+    E('b', [S('normal', 25, 10), S('normal', 15, 8)]),
+  ] };
+  const { exercises, raised } = core.progressTemplate(tpl, workout, cat);
+  assert.equal(raised, 2);
+  assert.deepEqual(exercises[0].sets, [
+    S('warmup', 40, 10), // skipped warm-up: kept, and the working sets don't shift onto it
+    S('normal', 62.5, 8, { rpe: 8 }), // better: the done numbers, the routine's own RPE target
+    S('normal', 60, 8), // as good: kept
+    S('normal', 60, 6), // worse: kept
+  ]);
+  assert.equal(exercises[0].notes, 'Pause reps');
+  assert.deepEqual(exercises[1].sets, [S('normal', 20, 8), S('normal', 15, 8)], 'less assistance goes in, more stays out');
+  assert.deepEqual(exercises[2], tpl[2], 'a skipped exercise keeps its numbers');
+  assert.deepEqual(tpl, before, 'the routine passed in is left alone');
+  // warm-ups pair with warm-ups: a heavier warm-up goes up on its own
+  const warm = core.progressTemplate([E('a', [S('warmup', 40, 10), S('normal', 60, 8)])], { exercises: [E('a', [S('warmup', 50, 10), S('normal', 60, 8)])] }, cat);
+  assert.deepEqual(warm.exercises[0].sets, [S('warmup', 50, 10), S('normal', 60, 8)]);
+  assert.equal(warm.raised, 1);
+  // nothing better: nothing raised, the same sets
+  const same = core.progressTemplate(tpl, { exercises: [E('a', [S('warmup', 40, 10), S('normal', 60, 8)])] }, cat);
+  assert.equal(same.raised, 0);
+  assert.deepEqual(same.exercises, tpl);
+});
+
+test("progressTemplate with layout: the workout's exercises and sets; paired sets still only go up", () => {
+  const cat = () => 'barbell';
+  const tpl = [
+    E('a', [S('normal', 60, 8), S('normal', 60, 8)], { notes: 'Pause reps', restSec: 120 }),
+    E('b', [S('normal', 40, 10)]),
+    E('c', [S('normal', 30, 12)]),
+  ];
+  // c removed, d added, b moved first, a got a third set and a worse first set
+  const workout = { exercises: [
+    E('b', [S('normal', 42.5, 10)]),
+    E('a', [S('normal', 57.5, 8), S('normal', 62.5, 8), S('failure', 50, 10)], { restSec: 90, supersetId: 'g' }),
+    E('d', [S('normal', 20, 15, { rir: 2 })]),
+  ] };
+  const { exercises, raised } = core.progressTemplate(tpl, workout, cat, { layout: true });
+  assert.deepEqual(exercises.map((e) => e.exerciseId), ['b', 'a', 'd']);
+  assert.deepEqual(exercises[0].sets, [S('normal', 42.5, 10)]);
+  assert.deepEqual(exercises[1].sets, [S('normal', 60, 8), S('normal', 62.5, 8), S('failure', 50, 10)], 'worse kept, better taken, new as done');
+  assert.equal(exercises[1].notes, 'Pause reps');
+  assert.equal(exercises[1].restSec, 90);
+  assert.equal(exercises[1].supersetId, 'g');
+  assert.deepEqual(exercises[2].sets, [S('normal', 20, 15)], 'a new exercise takes what was done, without the rating');
+  assert.equal(raised, 2);
+  // templateChanges names what was added and removed
+  const ch = core.templateChanges({ exercises: tpl }, workout);
+  assert.deepEqual(ch.added, ['d']);
+  assert.deepEqual(ch.removed, ['c']);
+  assert.equal(ch.addedSets, 1);
+  assert.equal(ch.reordered, true);
+});
+
 // ---------- suggestion ----------
 test('suggested workout: rotation, weekday habit, a routine change after about two rounds', () => {
   const now = new Date(2026, 9, 14, 18, 0).getTime(); // a Wednesday

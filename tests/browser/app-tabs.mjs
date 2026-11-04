@@ -2,7 +2,8 @@
 // data (16 weeks of an upper/lower split up to yesterday): Today's Up next
 // card, week strip and sets per muscle against the core's own numbers; Now
 // Lifting with the rest and Skip; Plan's + menu; the Progress hub and its
-// pages; Search focused on open; the Account sheet; German and dark. 7 checks.
+// pages; Search focused on open; the Account sheet; German and dark; routines,
+// not templates, in English and German. 9 checks.
 import assert from 'node:assert/strict';
 import { devices, launch, grantWakeLock, APP as BASE, shots } from './env.mjs';
 import * as core from '../../setlog/js/core/index.js';
@@ -107,7 +108,7 @@ async function discard(page) {
   await id(page, 'workout-name').waitFor();
   assert.match(await id(page, 'workout-name').inputValue(), /Workout$/);
   await discard(page);
-  ok('Plan: the templates as rows; + has Empty workout (starts one), New template and New folder');
+  ok('Plan: the routines as rows; + has Empty workout (starts one), New routine and New folder');
 
   // Progress: last 30 days and the four pages
   await id(page, 'tab-progress').click();
@@ -171,6 +172,68 @@ async function discard(page) {
   for (const s of ['Fortschritt', 'Letzte 30 Tage', 'Trainings', 'Übungen', 'Rekorde', 'Körper', 'Trainings pro Woche']) assert.ok(progress.includes(s), s);
   await page.screenshot({ path: `${OUT}/07-progress-de-dark.png` });
   ok('German: Today and Progress');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+}
+
+// ---------- 3. routines, not templates (Laurin, 4 Nov 2026) ----------
+// The store app calls templates routines; the summary's routine question is checked in app-logging.
+for (const lang of ['en', 'de']) {
+  const { ctx, page, errors, data } = await newPage({ lang });
+  const de = lang === 'de';
+  const old = de ? /vorlage/i : /\btemplates?\b/i;
+  const says = async (where, ...texts) => {
+    const body = await text(page);
+    assert.doesNotMatch(body, old, `${where} still says ${de ? 'Vorlage' : 'template'}`);
+    for (const t of texts) assert.ok(body.includes(t), `${where}: “${t}”`);
+  };
+  const t = data.templates[0];
+  await id(page, 'tab-plan').click();
+  await wait(page);
+  await says('Plan', de ? 'Routinen' : 'Routines');
+  await id(page, 'plan-add').click();
+  await id(page, 'new-template').waitFor();
+  await wait(page, 250);
+  await says('Plan +', de ? 'Neue Routine' : 'New routine');
+  await id(page, 'sheet-cancel').click();
+  await id(page, 'templates-menu').click();
+  await id(page, 'add-shared').waitFor();
+  await wait(page, 250);
+  await says('Routines ⋯', de ? 'Geteilte Routine hinzufügen' : 'Add shared routine');
+  await id(page, 'sheet-cancel').click();
+  await id(page, `template-menu-${t.id}`).click();
+  await id(page, 'tpl-menu-edit').waitFor();
+  await wait(page, 250);
+  await says('a routine’s ⋯', de ? 'Routine bearbeiten' : 'Edit routine', de ? 'Routine löschen' : 'Delete routine');
+  await id(page, 'sheet-cancel').click();
+  await id(page, `template-${t.id}`).click();
+  await id(page, 'start-template').waitFor();
+  await says('the routine', t.name);
+  await page.goBack();
+  await wait(page, 400);
+  await id(page, `template-menu-${t.id}`).click();
+  await id(page, 'tpl-menu-edit').click();
+  await id(page, 'tpl-name').waitFor();
+  assert.equal(await id(page, 'tpl-name').getAttribute('placeholder'), de ? 'Name der Routine' : 'Routine name');
+  await says('the editor', de ? 'Routine' : 'routine');
+  await id(page, 'tpl-cancel').click();
+  await wait(page, 500);
+  await id(page, 'tab-index').click();
+  await id(page, 'open-account').click();
+  await id(page, 'set-ask-template').waitFor();
+  await says('Account', de ? 'Routinen nach dem Training aktualisieren' : 'Update routines after workouts', de ? 'Beispielroutinen' : 'Example routines');
+  await page.goBack();
+  await wait(page, 400);
+  await id(page, 'tab-progress').click();
+  await id(page, 'progress-workouts').click();
+  await page.locator('[data-testid^="workout-"]').first().click();
+  await id(page, 'workout-options').click();
+  await id(page, 'wo-menu-template').waitFor();
+  await wait(page, 250);
+  await says('a workout’s ⋯', de ? 'Als Routine speichern' : 'Save as routine');
+  await page.screenshot({ path: `${OUT}/08-workout-menu-${lang}.png` });
+  await id(page, 'sheet-cancel').click();
+  ok(`${de ? 'German' : 'English'}: routines, not templates, on Plan and its menus, a routine, the editor, Account and a workout’s menu`);
   assert.deepEqual(errors, []);
   await ctx.close();
 }

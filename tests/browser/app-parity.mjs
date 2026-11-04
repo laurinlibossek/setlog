@@ -304,7 +304,7 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   assert.match(text, /These exercises are new to you and will be created: Landmine Press/);
   await page.screenshot({ path: `${OUT}/11-template-link.png` });
   await id(page, 'confirm-add-shared').click();
-  assert.equal(await toastText(page), '“Shared Push” added to your templates');
+  assert.equal(await toastText(page), '“Shared Push” added to your routines');
   await wait(page, 300);
   let data = await store(page);
   const added = data.templates.find((x) => x.name === 'Shared Push');
@@ -324,7 +324,7 @@ function startOfDayOf(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return
   assert.equal(data.templates.filter((x) => x.name === 'Shared Push').length, 1, 'Cancel adds nothing');
   await page.goto('about:blank');
   await page.goto(`${BASE}/?template=AAAAAAAAAAAAAAAA`);
-  assert.equal(await toastText(page), 'That doesn’t look like a Setlog template link');
+  assert.equal(await toastText(page), 'That doesn’t look like a Setlog routine link');
   ok('the #template= form works too; Cancel adds nothing; a broken link says so');
   assert.deepEqual(errors, []);
   await ctx.close();

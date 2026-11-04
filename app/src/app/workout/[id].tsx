@@ -69,7 +69,7 @@ export default function WorkoutDetail() {
       actions: [
         { label: tr('Edit workout'), value: 'edit', icon: 'edit', testID: 'wo-menu-edit' },
         { label: tr('Do this workout again'), value: 'again', icon: 'play' },
-        { label: tr('Save as template'), value: 'template', icon: 'copy', testID: 'wo-menu-template' },
+        { label: tr('Save as routine'), value: 'template', icon: 'copy', testID: 'wo-menu-template' },
         { label: tr('Share as text'), value: 'share', icon: 'share' },
         { label: tr('Delete workout'), value: 'delete', destructive: true, icon: 'trash', testID: 'wo-menu-delete' },
       ],

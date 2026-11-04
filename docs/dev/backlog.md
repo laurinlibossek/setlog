@@ -1,6 +1,6 @@
 # Status and backlog
 
-Last updated 4 Nov 2026 (the session's follow-ups; the routine after a workout). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
+Last updated 4 Nov 2026 (the session's follow-ups; the routine after a workout; routines in the store app). Keep this file current: when a pull request finishes an item, move it to "Done" in the same PR and note any decision Laurin made.
 
 ## Where things are
 
@@ -47,6 +47,8 @@ Reference for anyone touching the summary or templates.
   - The web app keeps its "Update template" dialog.
 
 ## Done
+
+- **Routines, not templates, in the store app** (4 Nov 2026, `claude/routines`; Laurin's answer on #9): every text the app shows that said template(s) says routine(s) now, in German "Routine" / "Routinen" instead of "Vorlage": Plan, its + and ⋯ menus, a routine's page and menu, the editor, Today's empty card, Account (Example routines, Same routine; #15 named the setting "Update routines after workouts"), a workout's "Save as routine", shared links and their messages, the backup and delete questions. Display text only: stored data keeps `templates` and `templateId`, so backups stay compatible both ways, and routes and testIDs keep their names. The web app keeps "Templates": the dictionary is shared, so the app has its own English keys, and only the three keys neither app uses any more were deleted. The summary and its toasts say routine since #15 (rebased on it, no leftovers found); the app's unused `updateTemplateFromWorkout` in `store.ts` is gone (the web app keeps its own). Laurin also kept the backup reminder and the calculators on Progress. Suite `app-tabs` checks both languages for leftovers (9 checks).
 
 - **The routine after a workout** (4 Nov 2026, `claude/summary-routine`, Laurin's decisions on PR #10): better numbers go into the routine by themselves at Finish, only ever up; a changed layout asks once over the summary (Update routine / Keep routine); Undo restores the routine; Settings → "Update routines after workouts". Core `compareSets` and `progressTemplate` (unit tests for weight, reps, assisted, time, distance, warm-ups, skipped sets and the layout mode); `templateChanges` also lists the exercises added and removed. Suite `app-logging`: 22 checks (better numbers saved without asking, worse ones not, the popup and both buttons, Undo, the setting off). Details under "How finishing a workout that differs from its template works" above.
 

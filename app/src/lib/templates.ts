@@ -36,7 +36,7 @@ export async function shareText(message: string, title?: string): Promise<boolea
 export function templateShareText(t: Template, f: F) {
   const { tr } = f;
   const s = getState();
-  const lines = [tr('{name} (Setlog template)', { name: t.name })];
+  const lines = [tr('{name} (Setlog routine)', { name: t.name })];
   if (t.notes) lines.push(t.notes);
   for (const x of t.exercises) {
     const ex = s.exercises.get(x.exerciseId);
@@ -50,7 +50,7 @@ export function templateShareText(t: Template, f: F) {
     }).filter(Boolean);
     lines.push(`• ${f.exName(ex)}: ${f.plural(x.sets.length, 'set')}${sets.length ? ` (${sets.join(', ')})` : ''}`);
   }
-  lines.push('', tr('Add it to Setlog: open this link, or copy it and choose Templates ⋯ → Add shared template in the app.'),
+  lines.push('', tr('Add it to Setlog: open this link, or copy it and choose Routines ⋯ → Add shared routine in the app.'),
     `${WEB_APP_URL}#template=${encodeTemplate(t, s.exercises)}`);
   return lines.join('\n');
 }
@@ -81,36 +81,36 @@ export async function templateMenu(t: Template, f: F): Promise<string | undefine
   const c = await actionSheet<string>({
     title: t.name,
     actions: [
-      { label: tr('Edit template'), value: 'edit', icon: 'edit', testID: 'tpl-menu-edit' },
+      { label: tr('Edit routine'), value: 'edit', icon: 'edit', testID: 'tpl-menu-edit' },
       { label: tr('Rename'), value: 'rename', icon: 'edit', testID: 'tpl-menu-rename' },
       { label: tr('Duplicate'), value: 'dup', icon: 'copy', testID: 'tpl-menu-dup' },
       { label: tr('Move to folder'), value: 'folder', icon: 'folder', testID: 'tpl-menu-folder' },
       { label: t.archived ? tr('Unarchive') : tr('Archive'), value: 'archive', icon: 'archive', testID: 'tpl-menu-archive' },
       { label: tr('Share'), value: 'share', icon: 'share' },
-      { label: tr('Delete template'), value: 'delete', destructive: true, icon: 'trash', testID: 'tpl-menu-delete' },
+      { label: tr('Delete routine'), value: 'delete', destructive: true, icon: 'trash', testID: 'tpl-menu-delete' },
     ],
   });
   if (c === 'edit') openTemplateEditor({ id: t.id });
   if (c === 'rename') {
-    const v = await prompt({ title: tr('Rename template'), value: t.name });
+    const v = await prompt({ title: tr('Rename routine'), value: t.name });
     if (v && v.trim()) await patchTemplate(t.id, { name: v.trim() });
   }
-  if (c === 'dup') { await copyTemplate(t, { name: tr('{name} (copy)', { name: t.name }) }); toast(tr('Template duplicated')); }
+  if (c === 'dup') { await copyTemplate(t, { name: tr('{name} (copy)', { name: t.name }) }); toast(tr('Routine duplicated')); }
   if (c === 'folder') await moveToFolder(t, f);
   if (c === 'archive') {
     const archived = !t.archived;
     await patchTemplate(t.id, { archived });
-    toast(archived ? tr('“{name}” archived', { name: t.name }) : tr('“{name}” is back in your templates', { name: t.name }),
+    toast(archived ? tr('“{name}” archived', { name: t.name }) : tr('“{name}” is back in your routines', { name: t.name }),
       archived ? { label: tr('Undo'), fn: () => { patchTemplate(t.id, { archived: false }); } } : undefined);
   }
-  if (c === 'share' && !(await shareText(templateShareText(t, f), t.name))) toast(tr('Couldn’t share the template'));
+  if (c === 'share' && !(await shareText(templateShareText(t, f), t.name))) toast(tr('Couldn’t share the routine'));
   if (c === 'delete') {
     const ok = await ask({
       title: tr('Delete “{name}”?', { name: t.name }), message: tr('Past workouts stay in your history.'), ok: tr('Delete'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete',
     });
     if (!ok) return undefined;
     const gone = await deleteTemplate(t.id);
-    if (gone) toast(tr('Template deleted'), { label: tr('Undo'), fn: () => { saveTemplate(gone); } });
+    if (gone) toast(tr('Routine deleted'), { label: tr('Undo'), fn: () => { saveTemplate(gone); } });
     return 'deleted';
   }
   return c;
@@ -121,7 +121,7 @@ export async function newFolder(f: F) {
   const v = ((await prompt({ title: tr('New folder'), placeholder: tr('e.g. Upper / Lower'), ok: tr('Create') })) || '').trim();
   if (!v) return;
   if (!(await addFolder(v))) { toast(tr('A folder with that name already exists')); return; }
-  toast(tr('Folder “{name}” created — use ⋯ → Move to folder on a template', { name: v }));
+  toast(tr('Folder “{name}” created — use ⋯ → Move to folder on a routine', { name: v }));
 }
 
 export async function folderMenu(name: string, count: number, f: F) {
@@ -143,7 +143,7 @@ export async function folderMenu(name: string, count: number, f: F) {
   if (c === 'remove') {
     const ok = !count || await ask({
       title: tr('Remove “{name}”?', { name }),
-      message: count === 1 ? tr('Its template moves to My templates. Nothing is deleted.') : tr('Its {n} templates move to My templates. Nothing is deleted.', { n: count }),
+      message: count === 1 ? tr('Its routine moves to My routines. Nothing is deleted.') : tr('Its {n} routines move to My routines. Nothing is deleted.', { n: count }),
       ok: tr('Remove folder'), cancel: tr('Cancel'),
     });
     if (ok) await removeFolder(name);
@@ -157,12 +157,12 @@ export async function templatesMenu(f: F) {
   const sort = s.settings.templateSort || 'name';
   const showExamples = s.settings.showExamples !== false;
   const c = await actionSheet<string>({
-    title: tr('Templates'),
+    title: tr('Routines'),
     actions: [
       { label: tr('Sort by name'), value: 'sort-name', checked: sort === 'name' },
       { label: tr('Sort by last used'), value: 'sort-recent', checked: sort === 'recent', testID: 'sort-recent' },
       { label: tr('New folder'), value: 'folder', icon: 'folder' },
-      { label: tr('Add shared template'), value: 'shared', icon: 'download', testID: 'add-shared' },
+      { label: tr('Add shared routine'), value: 'shared', icon: 'download', testID: 'add-shared' },
       { label: showExamples ? tr('Hide examples') : tr('Show examples'), value: 'examples', icon: showExamples ? 'eyeOff' : 'eye' },
     ],
   });
@@ -172,10 +172,10 @@ export async function templatesMenu(f: F) {
   if (c === 'examples') setSetting('showExamples', !showExamples);
   if (c === 'shared') {
     const v = await prompt({
-      title: tr('Add a shared template'), message: tr('Paste the link someone sent you.'), placeholder: 'https://…#template=…', multiline: true, ok: tr('Add'),
+      title: tr('Add a shared routine'), message: tr('Paste the link someone sent you.'), placeholder: 'https://…#template=…', multiline: true, ok: tr('Add'),
     });
     if (v === null) return;
-    if (!(await offerSharedTemplate(v, f))) toast(tr('That doesn’t look like a Setlog template link'));
+    if (!(await offerSharedTemplate(v, f))) toast(tr('That doesn’t look like a Setlog routine link'));
   }
 }
 
@@ -196,9 +196,9 @@ export async function offerSharedTemplate(text: string, f: F): Promise<boolean> 
   const fresh = [...new Set(p.exercises.filter((x) => !known(x)).map((x) => x.name))];
   const ok = await ask({
     title: tr('Add “{name}”?', { name: p.name }),
-    message: tr('A template with {n}.', { n: f.plural(p.exercises.length, 'exercise') })
+    message: tr('A routine with {n}.', { n: f.plural(p.exercises.length, 'exercise') })
       + (fresh.length ? ` ${tr('These exercises are new to you and will be created: {list}.', { list: fresh.join(', ') })}` : ''),
-    ok: tr('Add template'), cancel: tr('Cancel'), testID: 'confirm-add-shared',
+    ok: tr('Add routine'), cancel: tr('Cancel'), testID: 'confirm-add-shared',
   });
   if (!ok) return true;
   const exercises: TemplateEntry[] = [];
@@ -213,6 +213,6 @@ export async function offerSharedTemplate(text: string, f: F): Promise<boolean> 
     exercises.push(e);
   }
   const t = await copyTemplate({ id: '', name: p.name, notes: p.notes, exercises });
-  toast(tr('“{name}” added to your templates', { name: t.name }));
+  toast(tr('“{name}” added to your routines', { name: t.name }));
   return true;
 }

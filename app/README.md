@@ -4,17 +4,17 @@ The store version of Setlog, built with [Expo](https://expo.dev) (React Native).
 
 **Status:** nearly everything the web app does, plus a rest timer that alerts you with the phone locked.
 
-- **Logging:** start a workout empty, from a template or again from History. One exercise at a time, last time's numbers in ghost ink; the button at the bottom logs the next set with them (or tap its stroke), then counts down the rest and asks how many reps were left, and after the last set says "Finish workout". Numbers are typed on the app's own keypad, with the exercise's step and plates per side. The other exercises wait under "Up next" (tap to switch, press and hold to drag). Set types, reps in reserve, supersets, warm-up sets, focus metric, plate calculator, reordering, a start time you can move, and Finish with records and the "update the template?" question. Pull the workout down and it waits above the tab bar (Now Lifting: the exercise and set, the rest and Skip); it survives closing the app.
+- **Logging:** start a workout empty, from a routine or again from History. One exercise at a time, last time's numbers in ghost ink; the button at the bottom logs the next set with them (or tap its stroke), then counts down the rest and asks how many reps were left, and after the last set says "Finish workout". Numbers are typed on the app's own keypad, with the exercise's step and plates per side. The other exercises wait under "Up next" (tap to switch, press and hold to drag). Set types, reps in reserve, supersets, warm-up sets, focus metric, plate calculator, reordering, a start time you can move, and Finish with records and the switch to save changes to the routine. Pull the workout down and it waits above the tab bar (Now Lifting: the exercise and set, the rest and Skip); it survives closing the app.
 - **Rest timer alerts:** when rest is over and the app isn't open (phone locked, another app), a notification arrives. The first rest timer asks for permission. Settings → Rest timer alerts turns it off.
-- **Templates:** create and edit them (or make one from a finished workout), with ⋯ to rename, duplicate, move to a folder, archive, share as a link and delete (with undo). Templates ⋯ sorts, makes folders and adds a template someone shared with you.
-- **History:** a list by month or a calendar; edit a finished workout (sets, name, start, duration), save it as a template, share it as text, delete it with undo.
+- **Routines** (templates in the code and in the web app): create and edit them (or make one from a finished workout), with ⋯ to rename, duplicate, move to a folder, archive, share as a link and delete (with undo). Routines ⋯ sorts, makes folders and adds a routine someone shared with you.
+- **History:** a list by month or a calendar; edit a finished workout (sets, name, start, duration), save it as a routine, share it as text, delete it with undo.
 - **Exercises:** create your own (also right from the picker), edit, pin a note, merge into another, hide or delete; charts and records per exercise.
 - **Measure:** log body weight and measurements, with a chart per measurement.
 - **Today:** the routine that's up next with Start (or the running workout), this week's sessions and sets per muscle for the last 7 days. The avatar opens Account: your name and every setting.
 - **Progress:** the last 30 days, Workouts (History), Lifts, Records and Body (Measure), workouts per week, a reminder to back up, plate and 1RM calculators.
 - **Your data:** Back up now (Save to Files, iCloud Drive, AirDrop…), restore, Strong import, CSV export, Delete all data. Backups are the same file as the web app's, in both directions.
 
-Everything the web app does is in the app now. What's left before the store release: template links that open the app straight from the web address (a universal link; until then the app opens `increment://` links, and web app links are pasted under Templates ⋯ → Add shared template).
+Everything the web app does is in the app now. What's left before the store release: template links that open the app straight from the web address (a universal link; until then the app opens `increment://` links, and web app links are pasted under Plan → Routines ⋯ → Add shared routine).
 
 ## Try it on your iPhone (free, no Apple Developer account)
 

@@ -55,7 +55,7 @@ export default function PlanTab() {
     const c = await actionSheet<string>({
       actions: [
         { label: tr('Empty workout'), value: 'empty', icon: 'play', testID: 'start-empty' },
-        { label: tr('New template'), value: 'template', icon: 'plus', testID: 'new-template' },
+        { label: tr('New routine'), value: 'template', icon: 'plus', testID: 'new-template' },
         { label: tr('New folder'), value: 'folder', icon: 'folder', testID: 'new-folder' },
       ],
     });
@@ -91,7 +91,7 @@ export default function PlanTab() {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minHeight: CONTROL.hitMin }}>
         <View style={{ transform: [{ rotate: closed[key] ? '-90deg' : '0deg' }] }}><SymbolIcon name="chevron.down" size={13} color={t.ink2} /></View>
         <Text style={[TYPE.headline, { color: t.ink2 }]} numberOfLines={1}>
-          {key === '__archived' ? tr('Archived') : key || tr('My templates')}
+          {key === '__archived' ? tr('Archived') : key || tr('My routines')}
           <Text style={[TYPE.footnote, { color: t.ink3 }]}>{` ${count}`}</Text>
         </Text>
       </Pressable>
@@ -116,8 +116,8 @@ export default function PlanTab() {
 
   return (
     <TabRoot title={tr('Plan')} right={plus}>
-      <SectionHeader first title={tr('Templates')} action={{ symbol: 'ellipsis', label: tr('Template options'), onPress: () => templatesMenu(f), testID: 'templates-menu' }} />
-      {!live.length && !folders.size && note(tr('Save the workouts you repeat as templates: tap + and New template, or open a finished workout and save it as a template.'))}
+      <SectionHeader first title={tr('Routines')} action={{ symbol: 'ellipsis', label: tr('Routine options'), onPress: () => templatesMenu(f), testID: 'templates-menu' }} />
+      {!live.length && !folders.size && note(tr('Save the workouts you repeat as routines: tap + and New routine, or open a finished workout and save it as a routine.'))}
       {order.map((key) => {
         const list = folders.get(key)!;
         const inArchive = archivedIn(key);
@@ -125,8 +125,8 @@ export default function PlanTab() {
           <View key={'f' + key}>
             {(key || order.length > 1 || archived.length > 0) && folderHead(key, list.length, `folder-${key || 'mine'}`)}
             {!closed[key] && (list.length ? list.map(row) : note(
-              inArchive ? (inArchive === 1 ? tr('Its template is archived. Find it under Archived below.') : tr('Its {n} templates are archived. Find them under Archived below.', { n: inArchive }))
-                : tr('Empty. Use ⋯ → Move to folder on a template to put it here.'),
+              inArchive ? (inArchive === 1 ? tr('Its routine is archived. Find it under Archived below.') : tr('Its {n} routines are archived. Find them under Archived below.', { n: inArchive }))
+                : tr('Empty. Use ⋯ → Move to folder on a routine to put it here.'),
             ))}
           </View>
         );

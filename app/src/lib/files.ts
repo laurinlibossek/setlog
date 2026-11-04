@@ -32,7 +32,7 @@ export async function saveTextFile(name: string, text: string, mime: string, uti
     const file = new File(Paths.cache, name);
     if (file.exists) file.delete();
     file.create();
-    file.write(text);
+    await file.write(text);
     if (!(await Sharing.isAvailableAsync())) return 'failed';
     await Sharing.shareAsync(file.uri, { mimeType: mime, UTI: uti, dialogTitle });
     return 'shared';

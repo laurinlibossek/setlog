@@ -81,7 +81,7 @@ export default function HistoryTab() {
         : <View style={{ paddingHorizontal: 16, marginBottom: 10 }}><WorkoutCard w={item.w} s={s} f={f} /></View>)}
       ListFooterComponent={s.workouts.length > limit
         ? <View style={{ paddingHorizontal: 16 }}><Button kind="tinted" title={tr('Show older workouts')} onPress={() => setLimit(limit + 60)} /></View>
-        : null}
+        : undefined}
       initialNumToRender={12}
       windowSize={7}
     />

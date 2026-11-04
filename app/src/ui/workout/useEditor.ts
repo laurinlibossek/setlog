@@ -2,8 +2,8 @@
 // store while they are open, so the shared exercise blocks, the exercise
 // picker and the reorder screen work on it like on the running workout.
 // Leaving with unsaved changes asks first (Cancel, back gesture, Android back).
-import { useLayoutEffect, useRef, useState } from 'react';
-import { router, useNavigation } from 'expo-router';
+import { useLayoutEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 
 import { closeEdit, openEdit, useAppSelector } from '@/data/store';
@@ -20,20 +20,20 @@ export function useEditor<D extends EditDraft>(make: () => D | null) {
   }, [init]);
   const cur = useAppSelector((s) => s.edit);
   const draft = (cur && init && cur.id === init.id ? cur : init) as D | null;
-  const navigation = useNavigation();
-  const leaving = useRef(false);
+  const [leaving, setLeaving] = useState(false);
   const { tr } = useLang();
-  usePreventRemove(!!draft?.dirty, ({ data }) => {
-    if (leaving.current) { navigation.dispatch(data.action); return; }
+  // SDK 58: re-dispatching the blocked action while prevention is still on loops
+  // (React error #185), so switch it off first, then repeat() the action.
+  const disablePrevention = usePreventRemove(!!draft?.dirty && !leaving, ({ repeat }) => {
     ask({
       title: tr('Discard changes?'), ok: tr('Discard'), cancel: tr('Keep editing'), destructive: true, testID: 'confirm-discard-changes',
     }).then((ok) => {
       if (!ok) return;
-      leaving.current = true;
-      navigation.dispatch(data.action);
+      setLeaving(true);
+      repeat();
     });
   });
   /** Close the screen without asking (after Save). */
-  const leave = () => { leaving.current = true; router.back(); };
+  const leave = () => { setLeaving(true); disablePrevention(); router.back(); };
   return { draft, leave };
 }

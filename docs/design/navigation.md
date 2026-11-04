@@ -12,7 +12,7 @@ Strong organises the app by object (Profile, History, Workout, Exercises, Measur
 | Search | `magnifyingglass` | The system search tab (iOS 26 puts it apart at the trailing end). Exercises, routines and past workouts in one list. | Exercise search |
 
 - Three tabs plus Search, in this order, with Today first and selected on launch.
-- On iOS use native tabs (`NativeTabs` from `expo-router/unstable-native-tabs`): the system glass bar, `role="search"` for Search, minimize on scroll down. On Android the same API gives the Material bottom bar.
+- On iOS use native tabs (`NativeTabs` from `expo-router/native-tabs`): the system glass bar, `role="search"` for Search, minimize on scroll down. On Android the same API gives the Material bottom bar.
 - Account (name, units, appearance, rest timer, backups, import, Pro, privacy policy) is a sheet from the avatar, not a tab.
 
 ## The session

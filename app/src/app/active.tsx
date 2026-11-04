@@ -7,6 +7,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  type ScrollViewInstance, type TextInputInstance, type ViewInstance,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -57,8 +58,8 @@ export default function ActiveWorkoutScreen() {
   const { colors: t } = useTally();
   const insets = useSafeAreaInsets();
   // the field the keypad types into, so the list keeps it in view
-  const reveal = useRef<(ref: TextInput | null) => void>(() => {});
-  const onTarget = useCallback((ref: TextInput | null) => reveal.current(ref), []);
+  const reveal = useRef<(ref: TextInputInstance | null) => void>(() => {});
+  const onTarget = useCallback((ref: TextInputInstance | null) => reveal.current(ref), []);
 
   if (!a) {
     return (
@@ -75,19 +76,19 @@ export default function ActiveWorkoutScreen() {
   );
 }
 
-function Running({ a, reveal }: { a: ActiveWorkout; reveal: { current: (ref: TextInput | null) => void } }) {
+function Running({ a, reveal }: { a: ActiveWorkout; reveal: { current: (ref: TextInputInstance | null) => void } }) {
   const settings = useSettings();
   const f = useFormat();
   const { tr } = f;
   const { colors: t } = useTally();
   const insets = useSafeAreaInsets();
   const session = useSession()!;
-  const nameRef = useRef<TextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
+  const nameRef = useRef<TextInputInstance>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
   const scrollY = useRef(0);
   const viewH = useRef(0);
-  const targetRef = useRef<TextInput | null>(null);
+  const targetRef = useRef<TextInputInstance | null>(null);
   const unitY = useRef(0);
   const scrollToUnit = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -102,7 +103,7 @@ function Running({ a, reveal }: { a: ActiveWorkout; reveal: { current: (ref: Tex
   const blockProps = useBlockProps('active', a);
 
   // ---------- keeping the keypad's field in view ----------
-  const show = (ref: TextInput | null) => {
+  const show = (ref: TextInputInstance | null) => {
     targetRef.current = ref;
     if (!ref || !contentRef.current) return;
     ref.measureLayout(contentRef.current, (_x, y, _w, h) => {

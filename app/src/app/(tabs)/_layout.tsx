@@ -1,4 +1,4 @@
-// The tabs on iPhone and Android: the system's own tab bar (NativeTabs, SDK 57;
+// The tabs on iPhone and Android: the system's own tab bar (NativeTabs, stable since SDK 58;
 // works in Expo Go). Today, Plan, Progress, then Search, which iOS 26 sets
 // apart at the trailing end. The bar minimizes when the content scrolls down.
 // While a workout runs, iOS 26 shows it in the bottom accessory above the bar
@@ -6,7 +6,7 @@
 // get NowLiftingDock in each tab instead (src/ui/workout/MiniBar.tsx).
 // The web build uses _layout.web.tsx.
 import { Platform } from 'react-native';
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/native-tabs';
 
 import { useAppSelector } from '@/data/store';
 import { useLang } from '@/lib/i18n';

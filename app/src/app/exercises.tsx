@@ -42,7 +42,7 @@ export default function LiftsScreen() {
             accessibilityLabel={tr('Search')} autoCorrect={false} autoCapitalize="none" clearButtonMode="while-editing"
             style={[TYPE.body, { flex: 1, minWidth: 0, color: t.ink, paddingVertical: 10, outlineWidth: 0 }]} />
         </View>
-      ) : null}
+      ) : undefined}
       renderItem={({ item, index }) => (
         <ListRow first={index === 0} title={f.exName(item.ex)} testID={`lift-${item.ex.id}`} chevron
           subtitle={`${partLabel(item.ex.bodyPart)} · ${f.plural(item.n, 'time')} · ${f.relDayLower(item.last)}`}

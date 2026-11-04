@@ -210,7 +210,7 @@ Three tabs and a separate Search button, floating over the content.
 - Content scrolls under it; it minimizes on scroll down and the Now Lifting accessory moves inline.
 - This preview is a web stand-in. In the app it is the system bar.
 
-**Native**: `NativeTabs` (`expo-router/unstable-native-tabs`) with `sf` / `md` icons, `role="search"` on the Search trigger and `minimizeBehavior="onScrollDown"`.
+**Native**: `NativeTabs` (`expo-router/native-tabs`) with `sf` / `md` icons, `role="search"` on the Search trigger and `minimizeBehavior="onScrollDown"`.
 
 ## Tally
 

@@ -3,7 +3,7 @@
 // join this list later; docs/design/navigation.md.)
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  FlatList, Pressable, ScrollView, Text, TextInput, View,
+  FlatList, Pressable, ScrollView, Text, TextInput, type TextInputInstance, View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { BODY_PARTS, matchExercise } from '@setlog/core';
@@ -26,7 +26,7 @@ export default function SearchTab() {
   const pad = useTabPadding();
   const [q, setQ] = useState('');
   const [part, setPart] = useState('all');
-  const input = useRef<TextInput>(null);
+  const input = useRef<TextInputInstance>(null);
   const sessions = allSessions(s);
   // focused on open, like the system's search tab
   useFocusEffect(useCallback(() => {

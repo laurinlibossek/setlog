@@ -4,7 +4,7 @@
 // field. Pending sets show last time's numbers in ghost ink; only the set
 // being logged, or the field the keypad types into, draws a field box.
 import { memo, useEffect, useRef } from 'react';
-import { Platform, TextInput } from 'react-native';
+import { Platform, TextInput, type TextInputInstance } from 'react-native';
 import { fmtDigits } from '@setlog/core';
 
 import { RADIUS, TYPE } from '@/design/tally';
@@ -40,14 +40,14 @@ type Props = {
   /** running workout: the keypad opens instead of the phone's keyboard */
   onKeypad?: () => void;
   /** registers the field so the keypad can focus it and scroll it into view */
-  register?: (ref: TextInput | null) => void;
+  register?: (ref: TextInputInstance | null) => void;
 };
 
 export const SetField = memo(function SetField({
   field, value, ghost, single, boxed, editing, label, testID, onChange, onKeypad, register,
 }: Props) {
   const { colors: t } = useTally();
-  const ref = useRef<TextInput>(null);
+  const ref = useRef<TextInputInstance>(null);
   useEffect(() => {
     register?.(ref.current);
     return () => register?.(null);

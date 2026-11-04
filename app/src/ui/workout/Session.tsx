@@ -7,7 +7,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
 import {
-  Animated, PanResponder, Pressable, StyleSheet, Text, View, type TextInput,
+  Animated, PanResponder, Pressable, StyleSheet, Text, View, type TextInputInstance,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
@@ -39,7 +39,7 @@ type Session = {
   /** log a set: fills it from the ghost values, starts the rest. False (and a shake) when it can't be logged yet. */
   logSet: (entryId: string, setId: string) => boolean;
   shake: { id: string; n: number } | null;
-  register: (key: string, ref: TextInput | null) => void;
+  register: (key: string, ref: TextInputInstance | null) => void;
 };
 
 const SessionContext = createContext<Session | null>(null);
@@ -48,16 +48,16 @@ export const useSession = () => useContext(SessionContext);
 
 const fieldsOf = (cat: Category) => loggedFields(cat) as Field[];
 
-export function SessionProvider({ children, onTarget }: { children: ReactNode; onTarget?: (ref: TextInput | null) => void }) {
+export function SessionProvider({ children, onTarget }: { children: ReactNode; onTarget?: (ref: TextInputInstance | null) => void }) {
   const f = useFormat();
   const { tr } = f;
   const [target, setTarget] = useState<KeypadTarget | null>(null);
   const [shake, setShake] = useState<{ id: string; n: number } | null>(null);
-  const refs = useRef(new Map<string, TextInput>());
+  const refs = useRef(new Map<string, TextInputInstance>());
   const targetRef = useRef(target);
   targetRef.current = target;
 
-  const register = useCallback((key: string, ref: TextInput | null) => {
+  const register = useCallback((key: string, ref: TextInputInstance | null) => {
     if (ref) refs.current.set(key, ref);
     else refs.current.delete(key);
   }, []);

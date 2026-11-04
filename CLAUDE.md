@@ -3,7 +3,7 @@
 Setlog is a free, open-source workout tracker (MIT), built by Laurin Libossek (GitHub `laurinlibossek`) to replace the paid Strong app. He's the only maintainer and reviews everything. Two apps share one core:
 
 - **Web app** (`setlog/`): an installable PWA. Plain ES modules with Preact + htm vendored, no build step, no dependencies. Live at https://laurinlibossek.github.io/setlog/, deployed by `.github/workflows/pages.yml` on every push to `main`.
-- **Store app "Increment"** (`app/`): Expo / React Native (SDK 57, Expo Router, TypeScript), not released yet. Laurin runs it in Expo Go.
+- **Store app "Increment"** (`app/`): Expo / React Native (SDK 58, Expo Router, TypeScript), not released yet. Laurin runs it in Expo Go, which only runs the latest SDK: when Expo Go updates on his phone, the app has to follow.
 - **Shared core** (`setlog/js/core/`): the logic without DOM, storage or UI framework. The app imports it as `@setlog/core`.
 
 Read next, in this order:

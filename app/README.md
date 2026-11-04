@@ -77,4 +77,4 @@ src/ui/workout/       the session (Session.tsx), exercise blocks (running workou
 - Texts are English and go through `tr()`. Add the German to `../setlog/js/core/i18n-de.js`; the tests fail when a text has none.
 - Colours come from `../setlog/js/core/themes.js` (generated from the web app's CSS). Use `useColors()`, never hard-coded colours.
 - Before pushing: `npx tsc --noEmit` and `npm run bundle` (CI runs both).
-- Expo changes with every SDK. Check the docs for the SDK in `package.json` (`https://docs.expo.dev/versions/v57.0.0/`) rather than memory; see `AGENTS.md`.
+- Expo changes with every SDK. Check the docs for the SDK in `package.json` (`https://docs.expo.dev/versions/v58.0.0/`) rather than memory; see `AGENTS.md`.

@@ -23,7 +23,7 @@ const ICON: Record<string, [SymbolName, SymbolName]> = {
 };
 const BAR_H = 62;
 
-function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function TabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
   const { colors: t, scheme } = useTally();
   const insets = useSafeAreaInsets();
   const float = {
@@ -35,8 +35,8 @@ function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const { options } = descriptors[route.key];
     const label = String(options.title ?? route.name);
     const press = () => {
-      const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-      if (!focused && !e.defaultPrevented) navigation.navigate(route.name, route.params);
+      const e = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+      if (!focused && !e.defaultPrevented) navigateToTab(route.key);
     };
     const search = route.name === 'search';
     const [icon, selected] = ICON[route.name] ?? ['ellipsis', 'ellipsis'];
@@ -70,7 +70,7 @@ export default function TabLayout() {
   const { tr } = useLang();
   const { colors: t } = useTally();
   return (
-    <Tabs initialRouteName="index" tabBar={(props) => <TabBar {...props} />}
+    <Tabs tabBar={(props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.paper } }}>
       <Tabs.Screen name="index" options={{ title: tr('Today') }} />
       <Tabs.Screen name="plan" options={{ title: tr('Plan') }} />

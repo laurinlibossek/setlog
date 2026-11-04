@@ -3,9 +3,10 @@
 // the field boxes, the rest bar with "Reps left?" (0 · 1 · 2+, 0 is failure),
 // set types and the set's ⋯, undo, the keypad, supersets, minimize and
 // reload, reordering, Up next (switch and drag), finishing early with unlogged
-// sets, a template workout with last time's values, the Log button, records
-// and the summary’s template switch (German), "already running", and
-// discarding. 19 checks.
+// sets, a template workout with last time's values, the Log button, records,
+// what a finished workout does to its routine (better numbers go in by
+// themselves, a changed layout asks once, Undo; German and English), "already
+// running", and discarding. 22 checks.
 import assert from 'node:assert/strict';
 import { devices, launch, grantWakeLock, APP as BASE, BACKUP, shots } from './env.mjs';
 
@@ -43,6 +44,9 @@ const toastText = async (page) => { await id(page, 'toast').waitFor(); return id
 const checked = async (loc) => (await loc.getAttribute('aria-checked')) === 'true';
 const wait = (page, ms = 300) => page.waitForTimeout(ms);
 const sec = (t) => t.split(':').map(Number).reduce((a, b) => a * 60 + b, 0);
+const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')));
+const routine = async (page, name = 'Pull') => (await store(page)).templates.find((x) => x.name === name);
+const sets = (t, ex) => t.exercises.find((e) => e.exerciseId === ex).sets.map((x) => [x.type, x.w ?? null, x.r ?? null]);
 /** Finishing before every set is logged: ⋯ → Finish early ("Finish workout" is in the Action bar after the last set). */
 async function finishEarly(page) {
   await id(page, 'workout-menu').click();
@@ -287,7 +291,8 @@ async function pick(page, names) {
   assert.deepEqual(groups, [1, 3], 'Pull Up 1 set, Bench Press 3');
   assert.equal(await id(page, 'summary-tally').getAttribute('aria-label'), '4 sets · workout #1');
   assert.equal(await page.locator('[data-testid^="pr-"]').count(), 0);
-  assert.equal(await id(page, 'tpl-save').count(), 0, 'no template question for an empty workout');
+  await wait(page, 700);
+  assert.equal(await id(page, 'routine-line').count() + await id(page, 'routine-update').count(), 0, 'nothing about a routine after an empty workout');
   const saved = (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).workouts[0];
   assert.deepEqual(saved.exercises.find((e) => e.exerciseId === PULLUP).sets.map((x) => x.r), [10]);
   assert.equal(saved.exercises.find((e) => e.exerciseId === BENCH).sets.length, 3);
@@ -374,12 +379,14 @@ async function pick(page, names) {
   await id(page, `jump-${LAT}`).click();
   await wait(page, 300);
   await inputs(page, LAT, 'w').nth(1).fill('62,5');
+  await inputs(page, LAT, 'w').nth(2).fill('55');
   for (let i = 0; i < 3; i++) await checks(page, LAT).nth(i).click();
   await wait(page, 300);
   assert.doesNotMatch(await labels(page, LAT).nth(1).innerText(), /Rekord/, 'no record without history');
   ok(`Squat shows last time (${sqLast}); "Log" logs it; 250 kg × 10 gets the Record chip`);
 
   // finish: everything typed is logged, so it just asks
+  const tplBefore = await routine(page);
   await finishEarly(page);
   await id(page, 'confirm-finish').waitFor();
   assert.match(await page.locator('body').innerText(), /Training beenden\?/);
@@ -390,38 +397,33 @@ async function pick(page, names) {
   await id(page, `pr-${SQUAT}`).waitFor();
   assert.match(await id(page, `pr-${SQUAT}`).innerText(), /Kniebeuge[\s\S]*250 kg × 10[\s\S]*Gesch\. 1RM/);
   assert.match(await id(page, 'summary-tally').getAttribute('aria-label'), /Rekord/);
-  // the template question is a switch row, not a dialog, and nothing changes until it's switched on
-  await wait(page, 600);
-  assert.equal(await id(page, 'dialog-ok').count() + await page.locator('[data-testid^="tpl-update-"]').count(), 0, 'no dialog');
-  const sum = await page.locator('body').innerText();
-  await page.screenshot({ path: `${OUT}/06-summary-template-de.png` });
-  assert.match(sum, /Änderungen in Pull übernehmen/);
-  assert.match(await id(page, 'tpl-changes').innerText(), /^Fügt 1 Übung hinzu\. Entfernt 2 Übungen\. .*Aktualisiert die Werte für 1 Satz\.$/);
-  const tplBefore = (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).templates.find((x) => x.name === 'Pull');
-  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), false);
-  ok('the summary shows the workout name, the record and the template question as a switch row (German)');
+  // the better Lat Pulldown set is already in the routine; the worse one isn't; the layout waits for the answer
+  let tpl = await routine(page);
+  assert.deepEqual(sets(tpl, LAT), [['warmup', 40, 10], ['normal', 62.5, 10], ['normal', 60, 9]]);
+  assert.deepEqual(tpl.exercises.map((e) => e.exerciseId), tplBefore.exercises.map((e) => e.exerciseId));
+  // the layout changed (Squat added, two exercises skipped): it asks once, over the summary
+  await id(page, 'routine-update').waitFor({ timeout: 5000 });
+  const dlg = await page.locator('body').innerText();
+  await page.screenshot({ path: `${OUT}/06-summary-routine-de.png` });
+  assert.match(dlg, /Pull aktualisieren\?/);
+  assert.match(dlg, /Fügt Kniebeugen \(Langhantel\) hinzu\. Entfernt [^,\n]+, [^.\n]+\./);
+  assert.equal(await id(page, 'routine-keep').count(), 1);
+  ok('Finish puts the better numbers into the routine right away (not the worse ones); a changed layout asks “Pull aktualisieren?” over the summary');
 
-  // on: the workout's exercises and numbers go into the template, with Undo
-  const tplNow = async () => (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')))).templates.find((x) => x.id === tplBefore.id);
-  await id(page, 'tpl-save').click();
-  assert.match(await toastText(page), /Vorlage aktualisiert/);
-  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), true);
-  let tpl = await tplNow();
-  assert.ok(tpl.exercises.some((e) => e.exerciseId === SQUAT), 'Squat added to the template');
-  assert.notDeepEqual(tpl.exercises, tplBefore.exercises);
+  // Update routine: the workout's exercises and sets, paired sets still only go up; Undo puts it back
+  await id(page, 'routine-update').click();
+  assert.match(await toastText(page), /Pull aktualisiert/);
+  tpl = await routine(page);
+  assert.deepEqual(tpl.exercises.map((e) => e.exerciseId), [LAT, SQUAT]);
+  assert.deepEqual(sets(tpl, LAT), [['warmup', 40, 10], ['normal', 62.5, 10], ['normal', 60, 9]], '55 kg stays out');
+  assert.ok(sets(tpl, SQUAT).some(([, w, r]) => w === 250 && r === 10));
+  assert.match(await id(page, 'routine-line').innerText(), /Pull hat jetzt die Übungen und Sätze dieses Trainings/);
   await id(page, 'toast-action').click();
   assert.match(await toastText(page), /rückgängig/);
   await wait(page, 200);
-  assert.equal(await id(page, 'tpl-save').locator('input').isChecked(), false, 'Undo switches it off');
-  assert.deepEqual((await tplNow()).exercises, tplBefore.exercises);
-  // on again, then off: the template is back as it was
-  await id(page, 'tpl-save').click();
-  await wait(page, 300);
-  assert.ok((await tplNow()).exercises.some((e) => e.exerciseId === SQUAT));
-  await id(page, 'tpl-save').click();
-  assert.match(await toastText(page), /rückgängig/);
-  assert.deepEqual((await tplNow()).exercises, tplBefore.exercises);
-  ok('"Änderungen in Pull übernehmen" saves into the template, Undo and switching off restore it');
+  assert.deepEqual((await routine(page)).exercises, tplBefore.exercises, 'Undo: the routine as it was before the workout');
+  assert.equal(await id(page, 'routine-line').count(), 0);
+  ok('“Routine aktualisieren” takes the workout’s exercises and sets, numbers only up; Undo restores the routine');
 
   await id(page, 'summary-done').click();
   await wait(page, 500);
@@ -469,6 +471,110 @@ async function pick(page, names) {
   await wait(page, 700);
   assert.equal(await id(page, 'mini-bar').count(), 0);
   ok('"Do this workout again" from History; discarding asks first');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+}
+
+// ---------- 3. the routine after a workout: better numbers by themselves, Keep routine, the setting ----------
+{
+  const { ctx, page, errors, dialogs } = await newPage();
+  await id(page, 'open-account').click();
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), id(page, 'restore').click()]);
+  await chooser.setFiles(BACKUP);
+  for (let i = 0; i < 50 && dialogs.length < 2; i++) await wait(page, 100);
+  await id(page, 'language-en').click(); // the backup is German
+  await wait(page, 300);
+  assert.match(await page.locator('body').innerText(), /Update routines after workouts/);
+  assert.equal(await id(page, 'set-ask-template').locator('input').isChecked(), true);
+  await page.goBack();
+  const ROW = 'x-seated-row-cable';
+  const original = await routine(page);
+  async function startPull() {
+    await id(page, 'tab-plan').click();
+    await wait(page, 300);
+    await page.locator('[data-testid^="template-"]', { hasText: 'Pull' }).first().click();
+    await id(page, 'start-template').click();
+    await id(page, 'workout-name').waitFor();
+    await wait(page, 400);
+  }
+  /** Bring an exercise up (Up next), type some values (index → [w, r]), then log every set. */
+  async function logAll(ex, typed = {}) {
+    if (await id(page, `jump-${ex}`).count()) { await id(page, `jump-${ex}`).click(); await wait(page, 300); }
+    await block(page, ex).waitFor();
+    for (const [i, [w, r]] of Object.entries(typed)) {
+      if (w !== undefined) await inputs(page, ex, 'w').nth(Number(i)).fill(w);
+      if (r !== undefined) await inputs(page, ex, 'r').nth(Number(i)).fill(r);
+    }
+    const n = await checks(page, ex).count();
+    for (let i = 0; i < n; i++) if (!(await checked(checks(page, ex).nth(i)))) await checks(page, ex).nth(i).click();
+    await wait(page, 200);
+  }
+  async function finish() {
+    await finishEarly(page);
+    await id(page, 'confirm-finish').click();
+    await id(page, 'summary-title').waitFor();
+    await wait(page, 900); // the summary asks or toasts after it slid in
+  }
+  async function done() {
+    await id(page, 'summary-done').click();
+    await wait(page, 500);
+    if (await id(page, 'start-template').isVisible()) { await page.goBack(); await wait(page, 300); } // the routine's preview
+  }
+
+  // the same layout: a heavier Lat Pulldown set and one more pull-up go in, a lighter set doesn't; no question
+  await startPull();
+  await logAll(LAT, { 0: ['40', '10'], 1: ['65', '10'], 2: ['55', '9'] });
+  await logAll(ROW, { 0: ['55', '12'], 1: ['55', '12'] });
+  await logAll(PULLUP, { 0: [undefined, '10'], 1: [undefined, '8'] });
+  await finish();
+  assert.equal(await id(page, 'routine-update').count(), 0, 'no question when only numbers changed');
+  assert.match(await toastText(page), /^New numbers for 2 sets in Pull/);
+  assert.equal(await id(page, 'routine-line').innerText(), 'New numbers for 2 sets in Pull');
+  await page.screenshot({ path: `${OUT}/07-summary-numbers.png` });
+  let tpl = await routine(page);
+  assert.deepEqual(sets(tpl, LAT), [['warmup', 40, 10], ['normal', 65, 10], ['normal', 60, 9]]);
+  assert.deepEqual(sets(tpl, ROW), sets(original, ROW), 'as good: unchanged');
+  assert.deepEqual(sets(tpl, PULLUP), [['normal', null, 10], ['normal', null, 8]]);
+  assert.equal(tpl.notes, original.notes);
+  await id(page, 'toast-action').click();
+  assert.match(await toastText(page), /Routine change undone/);
+  await wait(page, 200);
+  assert.deepEqual((await routine(page)).exercises, original.exercises);
+  assert.equal(await id(page, 'routine-line').count(), 0);
+  ok('only better numbers: they go into the routine without a question (worse and equal sets don’t), with Undo');
+
+  // a skipped exercise changes the layout: Keep routine keeps it, the better numbers stay saved
+  await done();
+  await startPull();
+  await logAll(LAT, { 0: ['40', '10'], 1: ['67.5', '10'], 2: ['57.5', '9'] });
+  await finish();
+  await id(page, 'routine-keep').waitFor();
+  assert.match(await page.locator('body').innerText(), /Update Pull\?[\s\S]*Removes Seated Row \(Cable\), Pull Up\./);
+  await id(page, 'routine-keep').click();
+  assert.match(await toastText(page), /^New numbers for 1 set in Pull/);
+  tpl = await routine(page);
+  assert.deepEqual(tpl.exercises.map((e) => e.exerciseId), original.exercises.map((e) => e.exerciseId), 'the layout stays');
+  assert.deepEqual(sets(tpl, LAT), [['warmup', 40, 10], ['normal', 67.5, 10], ['normal', 60, 9]]);
+  assert.deepEqual(sets(tpl, ROW), sets(original, ROW));
+  assert.equal(await id(page, 'routine-line').innerText(), 'New numbers for 1 set in Pull');
+  await id(page, 'toast-action').click();
+  await wait(page, 300);
+  assert.deepEqual((await routine(page)).exercises, original.exercises);
+  ok('“Keep routine” keeps the layout and the better numbers; Undo restores the routine');
+
+  // Settings → Update routines after workouts off: the routine only changes in the editor
+  await done();
+  await id(page, 'tab-index').click();
+  await id(page, 'open-account').click();
+  await id(page, 'set-ask-template').click();
+  assert.equal((await store(page)).kv.settings.askTemplateUpdate, false);
+  await page.goBack();
+  await startPull();
+  await logAll(LAT, { 0: ['40', '10'], 1: ['70', '10'], 2: ['60', '9'] });
+  await finish();
+  assert.equal(await id(page, 'routine-update').count() + await id(page, 'routine-line').count(), 0);
+  assert.deepEqual((await routine(page)).exercises, original.exercises);
+  ok('with “Update routines after workouts” off, finishing leaves the routine alone');
   assert.deepEqual(errors, []);
   await ctx.close();
 }

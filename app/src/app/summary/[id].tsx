@@ -1,25 +1,24 @@
 // After Finish (docs/design/navigation.md, Summary): Done at the top, the date,
 // the workout's name, Time · Volume · Sets, the hero tally (one stroke per set,
 // records in signal), the records with their highlight, the workout's notes,
-// and for a workout from a template that changed, a switch that saves the
-// changes into the template (with Undo), instead of a dialog.
-import { useMemo, useRef, useState } from 'react';
+// and for a workout from a routine, one line of what it did to the routine:
+// the better numbers went in at Finish, and a changed layout is asked about
+// once over this screen (lib/workout.ts, announceRoutine), with Undo.
+import { useEffect, useMemo } from 'react';
 import {
-  Platform, Pressable, ScrollView, Switch, Text, View,
+  Platform, Pressable, ScrollView, Text, View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { kgTo, PR_LABEL, workoutVolume } from '@setlog/core';
 
 import { finishResult, stats, useAppSelector } from '@/data/store';
-import type { Category, TemplateEntry, WorkSet } from '@/data/types';
+import type { Category, WorkSet } from '@/data/types';
 import { SPACE, TYPE } from '@/design/tally';
 import { useFormat } from '@/lib/format';
 import { useLang } from '@/lib/i18n';
 import { useTally } from '@/lib/theme';
-import {
-  describeTemplateDiff, restoreTemplate, saveIntoTemplate, templateQuestion,
-} from '@/lib/workout';
+import { announceRoutine, routineLine, useRoutineResult } from '@/lib/workout';
 import {
   hm, Mark, MARGIN, Row, SectionHead, StatStrip, workoutStrokes, WorkoutTally,
 } from '@/ui/facts';
@@ -34,18 +33,19 @@ export default function Summary() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workouts = useAppSelector((s) => s.workouts);
   const exercises = useAppSelector((s) => s.exercises);
-  const templates = useAppSelector((s) => s.templates);
   const f = useFormat();
   const { tr } = f;
   const { locale } = useLang();
   const { colors: t } = useTally();
   const insets = useSafeAreaInsets();
   const w = workouts.find((x) => x.id === id);
-  // asked once, when the summary opens: once saved, the template matches the workout
-  const [question] = useState(() => (w ? templateQuestion(w) : null));
-  const [saved, setSaved] = useState(false);
-  const before = useRef<TemplateEntry[] | null>(null);
-  const busy = useRef(false);
+  const routine = useRoutineResult(w?.id);
+  useEffect(() => {
+    if (!w) return undefined;
+    // let the summary slide in first; it asks and toasts once per workout
+    const timer = setTimeout(() => { announceRoutine(w, f); }, 450);
+    return () => clearTimeout(timer);
+  }, [w?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const eyebrow = useMemo(() => {
     if (!w) return '';
     const sameYear = new Date(w.startedAt).getFullYear() === new Date().getFullYear();
@@ -94,29 +94,12 @@ export default function Summary() {
   const kgShown = kgTo(volume || 0, f.unit);
   const strokes = workoutStrokes(w, recordSets);
   const tallyLine = [f.plural(sets, 'set'), recordSets.size ? f.plural(recordSets.size, 'record') : '', tr('workout #{n}', { n: number })].filter(Boolean).join(' · ');
-  const template = question ? templates.find((x) => x.id === question.templateId) : null;
+  const routineText = routineLine(routine, f);
 
   const viewInHistory = () => {
     close();
     setTimeout(() => router.push({ pathname: '/workout/[id]', params: { id: w.id } }), Platform.OS === 'web' ? 50 : 450);
   };
-  const toggle = async (on: boolean) => {
-    if (!question || busy.current) return;
-    busy.current = true;
-    setSaved(on);
-    try {
-      if (on) {
-        before.current = await saveIntoTemplate(question.templateId, w, question.diff, f, () => { before.current = null; setSaved(false); });
-        if (!before.current) setSaved(false);
-      } else if (before.current) {
-        await restoreTemplate(question.templateId, before.current, f);
-        before.current = null;
-      }
-    } finally {
-      busy.current = false;
-    }
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: t.paper }}>
       {bar}
@@ -163,18 +146,10 @@ export default function Summary() {
           </>
         )}
 
-        {question && template && (
+        {!!routineText && (
           <>
-            <SectionHead title={tr('Template')} />
-            <Row first align="flex-start"
-              title={<Text style={{ ...TYPE.body, color: t.ink }}>{tr('Save changes to {name}', { name: template.name })}</Text>}
-              subtitle={<Text style={{ ...TYPE.footnote, color: t.ink2 }} testID="tpl-changes">{describeTemplateDiff(question.diff, f)}</Text>}
-              trailing={(
-                <Switch value={saved} onValueChange={toggle} testID="tpl-save"
-                  accessibilityLabel={tr('Save changes to {name}', { name: template.name })}
-                  trackColor={{ true: t.ink, false: t.paper3 }} thumbColor={saved ? t.paper : '#ffffff'} ios_backgroundColor={t.paper3}
-                  {...({ activeThumbColor: t.paper, activeTrackColor: t.ink } as object)} />
-              )} />
+            <SectionHead title={tr('Routine')} />
+            <Text style={{ ...TYPE.subhead, color: t.ink, paddingHorizontal: MARGIN }} testID="routine-line">{routineText}</Text>
           </>
         )}
 

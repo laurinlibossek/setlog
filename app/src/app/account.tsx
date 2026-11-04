@@ -203,7 +203,7 @@ export default function AccountSheet() {
         <Cell title={tr('Previous values')} value={st.prevSource === 'template' ? tr('Same template') : tr('Any workout')}
           onPress={() => pick(tr('Previous values'), [{ value: 'any', label: tr('Any workout') }, { value: 'template', label: tr('Same template') }], st.prevSource, (v) => set('prevSource', v as Settings['prevSource']))} />
         <Cell title={tr('Warm-up sets')} value={warmupText} onPress={() => router.push('/warmup')} testID="set-warmup" />
-        <SwitchCell title={tr('Ask to update templates')} sub={tr('When a finished workout differs from its template')} value={st.askTemplateUpdate !== false}
+        <SwitchCell title={tr('Update routines after workouts')} sub={tr('Better numbers go in by themselves; you’re asked when exercises or sets changed')} value={st.askTemplateUpdate !== false}
           onChange={(v) => set('askTemplateUpdate', v)} testID="set-ask-template" />
         <SwitchCell title={tr('Example templates')} value={st.showExamples !== false} onChange={(v) => set('showExamples', v)} testID="set-examples" />
         <Cell title={tr('Weekly goal')} value={tr('{n} per week', { n: st.weeklyGoal || 3 })}

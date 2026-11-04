@@ -753,7 +753,7 @@ export default {
   'Reps left?': 'Wdh. übrig?',
   'Reps left': 'Wdh. übrig',
   '{n} left': '{n} übrig',
-  '3+ left': '3+ übrig',
+  '2+ left': '2+ übrig',
   'How many more reps you could have done.': 'Wie viele Wiederholungen du noch geschafft hättest.',
   Clear: 'Entfernen',
   '1 record': '1 Rekord',

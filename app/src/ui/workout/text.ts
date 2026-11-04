@@ -7,8 +7,8 @@ import type { Format } from '@/lib/format';
 import type { Tr } from '@/lib/i18n';
 import type { Field } from './SetRow';
 
-/** "2 left", "3+ left" */
-export const effortText = (rir: number, tr: Tr) => (rir >= 3 ? tr('3+ left') : tr('{n} left', { n: rir }));
+/** "0 left", "1 left", "2+ left" */
+export const effortText = (rir: number, tr: Tr) => (rir >= 2 ? tr('2+ left') : tr('{n} left', { n: rir }));
 
 /** Last time's working sets in one line: "80 × 8, 8, 7", "80 × 8 · 82.5 × 6", "12, 10, 8 reps". */
 export function lastTimeText(prev: WorkSet[] | null, cat: Category, f: Format, tr: Tr) {

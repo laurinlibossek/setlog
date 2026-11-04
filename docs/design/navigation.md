@@ -25,7 +25,7 @@ The running workout is a full-height sheet, like Now Playing in a music app.
 - **Up next**: the remaining exercises as list rows, each with its own small tally. Drag to reorder; tap to jump.
 - **Action bar**, bottom, three states:
   1. *Logging*: one primary button, "Log 82.5 × 8". Tapping it logs the set, turns its stroke into a stem with a light haptic, and starts the rest.
-  2. *Resting*: the countdown in `t-number-l`, −15, +15 and Skip, the drain bar, and "Reps left?" with 0 · 1 · 2 · 3+ to rate the set just done. Rating is optional and one tap.
+  2. *Resting*: the countdown in `t-number-l`, −15, +15 and Skip, the drain bar, and "Reps left?" with 0 · 1 · 2+ to rate the set just done (0 is failure, 1 the target). Rating is optional and one tap.
   3. *Done*: after the last set the button becomes "Finish workout". Finishing is never a button in the top corner.
 
 ## Screen templates

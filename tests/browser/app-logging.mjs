@@ -1,6 +1,7 @@
 // Logging a workout in the Expo app (web build) on an emulated iPhone, in the
-// Tally session: empty workout, check-off rules, ghost values, the rest bar
-// with "Reps left?", set types, undo, the keypad, supersets, minimize and
+// Tally session: empty workout, check-off rules, ghost values, the captions in
+// the field boxes, the rest bar with "Reps left?" (0 · 1 · 2+, 0 is failure),
+// set types and the set's ⋯, undo, the keypad, supersets, minimize and
 // reload, reordering, Up next (switch and drag), finishing early with unlogged
 // sets, a template workout with last time's values, the Log button, records
 // and the summary’s template switch (German), "already running", and
@@ -104,12 +105,17 @@ async function pick(page, names) {
   await wait(page, 200);
   assert.equal(await inputs(page, BENCH, 'w').nth(1).getAttribute('placeholder'), '80');
   assert.equal(await inputs(page, BENCH, 'r').nth(1).getAttribute('placeholder'), '5');
+  // the set being logged says what its boxes hold; last time's value stays the placeholder under the caption
+  const live = (await checks(page, BENCH).nth(1).getAttribute('data-testid')).replace(/^check-/, '');
+  assert.deepEqual([await id(page, `cap-w-${live}`).innerText(), await id(page, `cap-r-${live}`).innerText()], ['Weight', 'Reps']);
+  const logged = (await checks(page, BENCH).nth(0).getAttribute('data-testid')).replace(/^check-/, '');
+  assert.equal(await id(page, `cap-w-${logged}`).count(), 0, 'a logged set has no boxes');
   await checks(page, BENCH).nth(1).click();
   await wait(page, 200);
   assert.equal(await inputs(page, BENCH, 'w').nth(1).inputValue(), '80');
   assert.equal(await checked(checks(page, BENCH).nth(1)), true);
   assert.match(await id(page, 'session-count').innerText(), /^2 of 3 sets/);
-  ok('a new set shows the row above as ghost values; logging it saves them (2 of 3 sets under the hero tally)');
+  ok('a new set shows the row above as ghost values under “Weight” and “Reps”; logging it saves them (2 of 3 sets under the hero tally)');
 
   // the rest bar: ±15 s, "Reps left?" for the set just logged, Skip
   const before = await id(page, 'rest-left').innerText();
@@ -120,10 +126,22 @@ async function pick(page, names) {
   await id(page, 'rest-minus').click();
   await wait(page, 300);
   assert.ok(sec(after) - sec(await id(page, 'rest-left').innerText()) >= 13, 'minus 15 s');
+  // three choices, 1 in the middle: 0 · 1 · 2+
+  assert.deepEqual(await page.locator('[data-testid^="effort-"]').evaluateAll((els) => els.filter((e) => /^effort-\d$/.test(e.dataset.testid)).map((e) => e.innerText.trim())), ['0', '1', '2+']);
   await id(page, 'effort-2').click();
   await wait(page, 300);
   assert.equal(await id(page, 'effort-2').getAttribute('aria-pressed'), 'true');
-  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '2 left');
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '2+ left');
+  // 0 left is a failure set; another rating makes it a working set again
+  await id(page, 'effort-0').click();
+  await wait(page, 300);
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), 'Failure');
+  const activeSet = async (n) => (await page.evaluate(() => JSON.parse(localStorage.getItem('increment.data')).kv.active)).exercises[0].sets[n];
+  await wait(page, 300);
+  assert.deepEqual([(await activeSet(1)).type, (await activeSet(1)).rir], ['failure', 0]);
+  await id(page, 'effort-2').click();
+  await wait(page, 300);
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '2+ left');
   await page.screenshot({ path: `${OUT}/01-rest-bar.png` });
   await id(page, 'rest-skip').click();
   await wait(page, 300);
@@ -131,7 +149,7 @@ async function pick(page, names) {
   // Bench is done: Pull Up is next, and the Action bar logs its set
   assert.equal(await block(page, PULLUP).count(), 1);
   assert.equal(await id(page, 'log-set').innerText(), 'Log set');
-  ok('the rest bar adds and takes 15 s, rates the set just logged (2 left) and skips; Pull Up comes up next');
+  ok('the rest bar adds and takes 15 s, rates the set just logged (0 · 1 · 2+; 0 makes it a failure set) and skips; Pull Up comes up next');
 
   // back to Bench: set types and reps left from the set menu, delete with undo
   await id(page, `jump-${BENCH}`).click();
@@ -139,15 +157,26 @@ async function pick(page, names) {
   await id(page, `add-set-${BENCH}`).click();
   await wait(page, 200);
   assert.equal(await id(page, 'log-set').innerText(), 'Log 80 × 5');
-  await labels(page, BENCH).nth(2).click();
+  // a plain working set has a ⋯ at the end of its row that opens its menu
+  const third = (await checks(page, BENCH).nth(2).getAttribute('data-testid')).replace(/^check-/, '');
+  assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), '', 'no chip on a plain working set');
+  await id(page, `set-menu-${third}`).click();
   await id(page, 'type-drop').click();
   await wait(page, 200);
   assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'Drop');
+  // choosing Failure sets 0 reps left; 1 left makes it a working set again
   await labels(page, BENCH).nth(1).click();
+  await id(page, 'type-failure').click();
+  await wait(page, 300);
+  assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), 'Failure');
+  await labels(page, BENCH).nth(1).click();
+  assert.match(await id(page, 'set-rir').innerText(), /Reps left · 0 left/);
   await id(page, 'set-rir').click();
+  assert.deepEqual(await page.locator('[data-testid^="rir-"]').evaluateAll((els) => els.map((e) => e.dataset.testid)), ['rir-0', 'rir-1', 'rir-2', 'rir-clear']);
   await id(page, 'rir-1').click();
-  await wait(page, 200);
+  await wait(page, 300);
   assert.equal((await labels(page, BENCH).nth(1).innerText()).trim(), '1 left');
+  assert.deepEqual([(await activeSet(1)).type, (await activeSet(1)).rir], ['normal', 1]);
   await labels(page, BENCH).nth(2).click();
   await id(page, 'set-delete').click();
   await wait(page, 200);
@@ -157,7 +186,7 @@ async function pick(page, names) {
   await wait(page, 200);
   assert.equal(await checks(page, BENCH).count(), 3);
   assert.equal((await labels(page, BENCH).nth(2).innerText()).trim(), 'Drop');
-  ok('switching back to Bench from its row; set menu: drop set, 1 rep left, delete and undo');
+  ok('switching back to Bench from its row; the set menu from ⋯ and the chips: drop set, Failure = 0 left and back to 1 left, delete and undo');
 
   // the keypad: typing replaces the ghost value, −2.5 with plates per side, Next → reps → logged
   const drop = await checks(page, BENCH).nth(2).getAttribute('data-testid');
@@ -303,10 +332,13 @@ async function pick(page, names) {
   assert.equal(latW.length, 3);
   assert.equal(latW[0], '40');
   assert.equal(await page.locator('[data-testid^="jump-"]').count(), 2, 'the other two exercises are under Up next');
+  // the set being logged says what its boxes hold, in German
+  const latLive = (await checks(page, LAT).nth(0).getAttribute('data-testid')).replace(/^check-/, '');
+  assert.deepEqual([await id(page, `cap-w-${latLive}`).innerText(), await id(page, `cap-r-${latLive}`).innerText()], ['Gewicht', 'Wdh.']);
   await page.screenshot({ path: `${OUT}/05-template-workout-de.png` });
   // the web app's backup has its own "Keep screen on" (on); the app's stays off
   assert.equal(await page.evaluate(() => window.__wakeLocks), 0);
-  ok(`a template starts with its sets as ghost values (Lat Pulldown: ${latW.join(' / ')}); a web backup doesn’t keep the screen on`);
+  ok(`a template starts with its sets as ghost values (Lat Pulldown: ${latW.join(' / ')}) under “Gewicht” and “Wdh.”; a web backup doesn’t keep the screen on`);
 
   // Up next: press and hold a row and drag it to the top
   const SQUAT = 'x-squat-barbell';

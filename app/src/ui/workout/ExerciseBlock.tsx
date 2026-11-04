@@ -11,7 +11,7 @@ import {
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
-  placeholders, restFor, addSet, joinSuperset, leaveSuperset, replaceExercise, addWarmups, rateSet, setRir,
+  placeholders, restFor, addSet, joinSuperset, leaveSuperset, replaceExercise, addWarmups, rateSet, setRir, setSetType,
   isLiveRecord, loggedFields, usesWeight, numToInput, parseNum, focusOptions, focusValues,
   REST_CHOICES, RPE_CHOICES, RIR_CHOICES, SET_TYPES, FOCUS_LABEL, BODY_PART_LABEL,
 } from '@setlog/core';
@@ -30,7 +30,7 @@ import { Icon } from '@/ui/kit';
 import { actionSheet, prompt, toast } from '@/ui/overlay';
 import { SetRow, Times, type Chip } from '@/ui/tally/SetRow';
 import type { StrokeState } from '@/ui/tally/Tally';
-import { SetField, type Field } from './SetRow';
+import { CAPTION_H, SetField, type Field } from './SetRow';
 import { useSession } from './Session';
 import { effortText, lastTimeText, setValueText } from './text';
 
@@ -125,7 +125,9 @@ export const ExerciseBlock = memo(function ExerciseBlock({
       edit((e) => { e.sets[i].rpe = v === 'clear' ? '' : numToInput(Number(v), 1); });
       return;
     }
-    edit((e) => { e.sets[i].type = choice as SetType; });
+    // a template's Failure is a target; elsewhere a failure set has 0 reps left
+    if (mode === 'template') edit((e) => { e.sets[i].type = choice as SetType; });
+    else edit((e) => { setSetType(e.sets[i], choice as SetType); });
   };
 
   // ---------- the exercise ----------
@@ -250,14 +252,17 @@ export const ExerciseBlock = memo(function ExerciseBlock({
     const chips: Chip[] = [];
     if (set.type !== 'normal') chips.push({ text: tr(SET_TYPE_CHIP[set.type]) });
     const rir = setRir(set) as number | null;
-    if (mode === 'template') { if (set.rpe) chips.push({ text: `RPE ${set.rpe}` }); } else if (rir !== null && (set.done || !active)) chips.push({ text: effortText(rir, tr) });
+    // a failure set's chip already says 0 left
+    if (mode === 'template') { if (set.rpe) chips.push({ text: `RPE ${set.rpe}` }); } else if (rir !== null && set.type !== 'failure' && (set.done || !active)) chips.push({ text: effortText(rir, tr) });
     if (record) chips.push({ text: tr('Record'), record: true });
     const shown = Object.fromEntries(fields.map((k) => [k, set[k] || ph[k] || ''])) as Record<Field, string>;
     const setName = tr('Set {label}', { label: labels[i] });
     const value = setValueText(shown, cat, f, tr);
+    // field boxes (with their captions) on the set being logged, the set the keypad types into, and every set in an editor
+    const boxed = !active || isLive || (!!target && target.setId === set.id);
     const inputs = fields.map((k) => (
       <SetField key={k} field={k} value={set[k]} ghost={ph[k] || ''} single={fields.length === 1}
-        boxed={!active || isLive} editing={!!target && target.setId === set.id && target.field === k}
+        boxed={boxed} caption={fieldNames[k]} editing={!!target && target.setId === set.id && target.field === k}
         label={`${fieldNames[k]}, ${setName}`} testID={`in-${k}-${set.id}`}
         onChange={(v) => edit((e) => { e.sets[i][k] = v; })}
         onKeypad={session ? () => session.open({ entryId: entry.id, setId: set.id, field: k }) : undefined}
@@ -270,10 +275,13 @@ export const ExerciseBlock = memo(function ExerciseBlock({
           label: `${setName}${value ? `, ${value}` : ''}, ${set.done ? tr('logged') : tr('not logged')}`,
         } : undefined}
         lead={active ? undefined : { text: labels[i], label: tr('Set {label}, change type', { label: labels[i] }), onPress: () => setMenu(i) }}
-        meta={{ label: tr('Set {label}, change type', { label: labels[i] }), testID: `label-${set.id}`, onPress: () => setMenu(i) }}
+        meta={{
+          label: tr('Set {label}, change type', { label: labels[i] }), testID: `label-${set.id}`, onPress: () => setMenu(i),
+          more: { label: tr('Options for {name}', { name: setName }), testID: `set-menu-${set.id}` },
+        }}
         deleteLabel={tr('Delete')} onDelete={() => removeSet(i)}
         shake={session?.shake && session.shake.id === set.id ? session.shake.n : 0}>
-        <Times>{inputs.length === 2 ? [inputs[0], inputs[1]] : inputs[0]}</Times>
+        <Times lower={boxed ? CAPTION_H : 0}>{inputs.length === 2 ? [inputs[0], inputs[1]] : inputs[0]}</Times>
       </SetRow>
     );
   };

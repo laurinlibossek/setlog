@@ -69,36 +69,44 @@ export function setIsValid(s, cat) {
 }
 
 // ---------- effort: reps in reserve ----------
-// A set can carry how many more reps were left in the tank (`rir`: 0, 1, 2 or
-// 3, shown "3+"). Older logs and Strong imports have RPE instead; it stays on
-// the set and reads as reps in reserve: 10 → 0, 9 → 1, 8 → 2, 7 and below → 3+.
-// Half points count towards failure (9.5 → 0, 8.5 → 1, 7.5 → 2).
-export const RIR_CHOICES = [0, 1, 2, 3];
+// A set can carry how many more reps were left in the tank (`rir`): 0, 1 or
+// 2, where 2 means "2 or more" (shown "2+"). Nothing above 2 on purpose: no
+// one should have more than 2 left (Laurin, 4 Nov 2026). 1 is the target, 0 is
+// a set to failure (a failure set always has 0 left), 2+ a lighter set. Older
+// sets with rir 3 read as 2+. Older logs and Strong imports have RPE instead;
+// it stays on the set and reads as reps in reserve: 10 → 0, 9 and 9.5 → 1,
+// 8.5 and below → 2+.
+export const RIR_CHOICES = [0, 1, 2];
 const num = (v) => (typeof v === 'number' ? (Number.isFinite(v) ? v : null) : parseNum(v));
 
-/** Reps in reserve as 0–3 (more than 3 is "3+"), or null when there is none. */
+/** Reps in reserve as 0, 1 or 2 (2 or more is "2+"), or null when there is none. */
 export function normRir(v) {
   const n = num(v);
   if (n === null || n < 0) return null;
-  return Math.min(3, Math.round(n));
+  return Math.min(2, Math.round(n));
 }
 
 /** RPE (a number or the text a draft keeps) as reps in reserve, or null. */
 export function rirFromRpe(rpe) {
   const n = num(rpe);
   if (n === null || n <= 0) return null;
-  return Math.max(0, Math.min(3, 10 - Math.ceil(n)));
+  if (n >= 10) return 0;
+  return n >= 9 ? 1 : 2;
 }
 
-/** Reps in reserve as RPE, for places that only know RPE (Strong's CSV): 0 → 10, 3+ → 7. */
+/** Reps in reserve as RPE, for places that only know RPE (Strong's CSV): 0 → 10, 1 → 9, 2+ → 8. */
 export function rpeFromRir(rir) {
   const r = normRir(rir);
   return r === null ? null : 10 - r;
 }
 
-/** A set's reps in reserve: its own, else read from its RPE, else null. Stored sets and drafts alike. */
+/**
+ * A set's reps in reserve: 0 for a failure set, else its own rating, else
+ * read from its RPE, else null. Stored sets and drafts alike.
+ */
 export function setRir(s) {
   if (!s) return null;
+  if (s.type === 'failure') return 0;
   const own = normRir(s.rir);
   return own !== null ? own : rirFromRpe(s.rpe);
 }

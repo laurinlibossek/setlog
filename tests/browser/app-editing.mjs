@@ -78,6 +78,10 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await pickExercises(page, [{ q: 'bench bb', id: BENCH }, { q: 'pull up', id: PULLUP }]);
   assert.equal(await inputs(page, BENCH, 'w').count(), 3, 'templates start with at least 3 sets');
   assert.equal(await checks(page, BENCH).count(), 0, 'no check-off in the template editor');
+  // every set has boxes that say what they hold, and a ⋯ for its menu
+  const captions = (page2, ex) => block(page2, ex).locator('[data-testid^="cap-"]').evaluateAll((els) => [...new Set(els.map((e) => e.innerText))]);
+  assert.deepEqual(await captions(page, BENCH), ['Weight', 'Reps']);
+  assert.equal(await block(page, BENCH).locator('[data-testid^="set-menu-"]').count(), 3);
   await inputs(page, BENCH, 'w').first().fill('80');
   await inputs(page, BENCH, 'r').first().fill('8');
   // the rest timer of an exercise waits for Save
@@ -343,6 +347,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'edit-save').waitFor();
   assert.equal(await id(page, 'edit-name').inputValue(), w.name);
   assert.equal(await page.locator('[data-testid^="check-"]').count(), 0, 'no check-off when editing');
+  assert.deepEqual(await block(page, firstWeighted.exerciseId).locator('[data-testid^="cap-"]').evaluateAll((els) => [...new Set(els.map((e) => e.innerText))]), ['Gewicht', 'Wdh.'], 'the boxes say what they hold, in German');
   await id(page, 'edit-name').fill('Montag schwer');
   await id(page, 'edit-duration').fill('75');
   await inputs(page, firstWeighted.exerciseId, 'w').first().fill('77,5');

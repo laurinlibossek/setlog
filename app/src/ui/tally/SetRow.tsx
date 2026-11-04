@@ -11,6 +11,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 
 import { CONTROL, RADIUS, SPACE, STROKE, TYPE } from '@/design/tally';
 import { useTally } from '@/lib/theme';
+import { Icon } from '@/ui/kit';
 import type { StrokeState } from './Tally';
 import { Highlight } from './Highlight';
 
@@ -51,7 +52,8 @@ type Props = {
   /** the values: fields, joined by × */
   children: ReactNode;
   chips: Chip[];
-  meta: { label: string; testID: string; onPress: () => void };
+  /** the set's menu: from the chips, the ⋯ at the end of the row, or pressing and holding */
+  meta: { label: string; testID: string; onPress: () => void; more: { label: string; testID: string } };
   deleteLabel: string;
   onDelete: () => void;
   /** changes to shake the row (a set that can't be logged yet) */
@@ -110,19 +112,23 @@ export function SetRow({
               </View>
             )))}
         </Pressable>
+        <Pressable onPress={meta.onPress} accessibilityRole="button" accessibilityLabel={meta.more.label} testID={meta.more.testID}
+          hitSlop={{ top: 4, bottom: 4, left: 12 }} style={({ pressed }) => [styles.more, { opacity: pressed ? 0.5 : 1 }]}>
+          <Icon name="more" size={18} color={t.ink3} />
+        </Pressable>
       </RNAnimated.View>
     </View>
   );
 }
 
-/** Two values joined by a light ×, like "82.5 × 8". */
-export function Times({ children }: { children: [ReactNode, ReactNode] | ReactNode }) {
+/** Two values joined by a light ×, like "82.5 × 8"; `lower` moves the × down to numbers under a caption. */
+export function Times({ children, lower = 0 }: { children: [ReactNode, ReactNode] | ReactNode; lower?: number }) {
   const { colors: t } = useTally();
   if (!Array.isArray(children)) return <>{children}</>;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       {children[0]}
-      <Text style={{ ...TYPE.numberM, fontWeight: '400', color: t.ink3, marginHorizontal: 2 }} importantForAccessibility="no">×</Text>
+      <Text style={{ ...TYPE.numberM, fontWeight: '400', color: t.ink3, marginHorizontal: 2, marginTop: lower }} importantForAccessibility="no">×</Text>
       {children[1]}
     </View>
   );
@@ -137,5 +143,7 @@ const styles = StyleSheet.create({
   mark: { width: CONTROL.hitMin, height: CONTROL.hitMin, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.s2 },
   values: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   meta: { flex: 1, minHeight: CONTROL.hitMin, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', alignContent: 'center', justifyContent: 'flex-end', gap: 6, paddingLeft: SPACE.s2 },
+  // a 44-wide touch area whose dots end on the screen margin
+  more: { width: CONTROL.hitMin - 12, minHeight: CONTROL.hitMin, alignItems: 'flex-end', justifyContent: 'center', marginRight: -4 },
   chip: { minHeight: 26, paddingHorizontal: 10, borderRadius: RADIUS.capsule, justifyContent: 'center' },
 });

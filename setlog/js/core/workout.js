@@ -214,14 +214,34 @@ export function finishWorkout(a, { settings, exercises, now = Date.now(), mode =
 }
 
 /**
- * Rate a set by the reps left in reserve (0–3, 3 meaning "3+"), or clear the
- * rating with null. An RPE on the set gives way, so the two never disagree.
+ * Rate a set by the reps left in reserve (0, 1, or 2 for "2+"), or clear the
+ * rating with null. 0 is failure: a working set rated 0 becomes a failure set,
+ * and a failure set rated anything else (or unrated) becomes a working set
+ * again, so the type and the rating never disagree. An RPE on the set gives
+ * way too. Warm-ups and drop sets keep their type.
  */
 export function rateSet(set, rir) {
   const v = normRir(rir);
   if (v === null) delete set.rir;
   else set.rir = v;
   if (set.rpe !== undefined) set.rpe = '';
+  if (v === 0 && (set.type || 'normal') === 'normal') set.type = 'failure';
+  else if (v !== 0 && set.type === 'failure') set.type = 'normal';
+}
+
+/**
+ * Change a set's type the way the set menu does: a failure set has 0 reps
+ * left, and a set that stops being one loses that 0.
+ */
+export function setSetType(set, type) {
+  const was = set.type || 'normal';
+  set.type = type;
+  if (type === 'failure') {
+    set.rir = 0;
+    if (set.rpe !== undefined) set.rpe = '';
+  } else if (was === 'failure' && normRir(set.rir) === 0) {
+    delete set.rir;
+  }
 }
 
 // ---------- the session: what comes next ----------

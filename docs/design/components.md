@@ -51,14 +51,15 @@ One finding from the coach (TrueTrain), with its evidence grade and a Why link t
 
 ## EffortPicker
 
-Four options to rate the set just done by reps left in reserve: 0, 1, 2, 3+.
+Three options to rate the set just done by reps left in reserve: 0 · 1 · 2+. 1 sits in the middle: it's the target. 0 is a set to failure, 2+ a lighter set. Nothing above 2 on purpose: no one should have more than 2 left in the tank (Laurin, 4 Nov 2026).
 
 **Use it** in the resting Action bar, for the set just logged. It is optional: skipping it logs nothing.
 
-**You provide** the current value (or none) and a change handler. It stores reps in reserve on the set; RPE from older logs and Strong imports maps to it (RPE 10 = 0 left, 9 = 1, 8 = 2, 7 and below = 3+).
+**You provide** the current value (or none) and a change handler. It stores reps in reserve on the set (0, 1, or 2 for "2 or more"); RPE from older logs and Strong imports maps to it (RPE 10 = 0 left, 9 and 9.5 = 1, 8.5 and below = 2+), and older sets rated 3 read as 2+.
 
 **Rules**
 - One tap, no confirmation, changeable until the next set is logged.
+- 0 is failure: rating a working set 0 makes it a failure set, and choosing Failure as the set type sets 0 left, so the two never disagree. Rating a failure set 1 or 2+ makes it a working set again. The set menu offers the same three.
 - The chosen option is `ink` with a `paper` label; the others `paper-3`.
 - The coach uses it (effort rules E1–E4); without it the coach falls back to weight and reps.
 
@@ -185,8 +186,10 @@ One set: its stroke, weight × reps (or the exercise's own fields: reps only, ti
 **Rules**
 - The leading stroke logs and un-logs the set. There is no checkmark column and no "Previous" column.
 - Pending sets show the target as ghost text (`ink-3`). The set being logged shows `paper-3` fields filled with those values; tapping a field opens the Keypad; logging with untouched fields logs the ghost values.
-- Chips: "Warm-up", "Drop", "Failure" for set types; "2 left" for reps in reserve; the `signal` "Record" chip when the set beat a record.
-- Swipe left to delete, with Undo. Tap the set type chip to change the type.
+- Every field box says what it holds in a small caption (`t-caption`, `ink-2`) inside the box, above the number: "Weight", "Reps", or the exercise's own fields ("Time", "Distance"). The ghost value stays the placeholder under it. Boxes are on the set being logged, the Keypad's field and every set in the editors; a row is as tall with boxes as without, so nothing moves.
+- Chips: "Warm-up", "Drop", "Failure" for set types; "1 left" or "2+ left" for reps in reserve (a failure set's chip already says 0); the `signal` "Record" chip when the set beat a record.
+- A small ⋯ in `ink-3` at the trailing end of every row opens the set's menu (type, reps left, delete), so a plain working set has something to tap. The chips open it too, and so does pressing and holding the row.
+- Swipe left to delete, with Undo.
 - `row-h` tall, hairline between rows, values aligned on the screen margin.
 
 ## StatStrip
@@ -297,8 +300,8 @@ export type ActionBarState =
   | { kind: 'finish'; onFinish: () => void };
 export interface ActionBarProps { state: ActionBarState }
 
-/** Reps left in reserve: 0, 1, 2 or 3 (shown "3+"). */
-export interface EffortPickerProps { value?: 0 | 1 | 2 | 3; onChange: (rir: 0 | 1 | 2 | 3) => void }
+/** Reps left in reserve: 0 (failure), 1 (the target) or 2 (shown "2+"). */
+export interface EffortPickerProps { value?: 0 | 1 | 2; onChange: (rir: 0 | 1 | 2) => void }
 
 export interface KeypadProps {
   field: 'w' | 'r' | 'd' | 't';

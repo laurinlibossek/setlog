@@ -74,18 +74,22 @@ test('drafts keep stored numbers when the text is untouched (no lb/mi drift)', (
 });
 
 // ---------- effort: reps in reserve ----------
-test('reps in reserve: stored on the set, RPE reads as it, survives drafts and the CSV', () => {
-  // RPE 10 → 0, 9 → 1, 8 → 2, 7 and below → 3+; half points count towards failure
-  assert.deepEqual([10, 9.5, 9, 8.5, 8, 7.5, 7, 6, 1].map(core.rirFromRpe), [0, 0, 1, 1, 2, 2, 3, 3, 3]);
-  assert.equal(core.rirFromRpe('8,5'), 1, 'a draft keeps RPE as text');
+test('reps in reserve: 0 · 1 · 2+, stored on the set, RPE reads as it, survives drafts and the CSV', () => {
+  assert.deepEqual(core.RIR_CHOICES, [0, 1, 2]);
+  // RPE 10 → 0, 9 and 9.5 → 1, 8.5 and below → 2+
+  assert.deepEqual([10, 9.5, 9, 8.5, 8, 7.5, 7, 6, 1].map(core.rirFromRpe), [0, 1, 1, 2, 2, 2, 2, 2, 2]);
+  assert.equal(core.rirFromRpe('9,5'), 1, 'a draft keeps RPE as text');
   assert.equal(core.rirFromRpe(''), null);
   assert.equal(core.rirFromRpe(undefined), null);
-  assert.deepEqual([0, 1, 2, 3, 5, '2', -1, null, '', 'x'].map(core.normRir), [0, 1, 2, 3, 3, 2, null, null, null, null]);
-  assert.deepEqual([0, 1, 2, 3].map(core.rpeFromRir), [10, 9, 8, 7]);
+  // nothing above 2: older sets with 3 read as 2+
+  assert.deepEqual([0, 1, 2, 3, 5, '2', -1, null, '', 'x'].map(core.normRir), [0, 1, 2, 2, 2, 2, null, null, null, null]);
+  assert.equal(core.setRir({ type: 'normal', rir: 3 }), 2);
+  assert.deepEqual([0, 1, 2, 3].map(core.rpeFromRir), [10, 9, 8, 8]);
   assert.equal(core.rpeFromRir(null), null);
-  // a set's own rating wins over its RPE
+  // a set's own rating wins over its RPE; a failure set has 0 left
   assert.equal(core.setRir({ rir: 1, rpe: 8 }), 1);
   assert.equal(core.setRir({ rpe: 8 }), 2);
+  assert.equal(core.setRir({ type: 'failure', w: 60, r: 8 }), 0);
   assert.equal(core.setRir({ type: 'normal', w: 60, r: 8 }), null);
   assert.equal(core.setRir(null), null);
   // drafts carry it both ways; rating clears the RPE
@@ -93,23 +97,60 @@ test('reps in reserve: stored on the set, RPE reads as it, survives drafts and t
   const d = core.setToDraft({ id: 's', type: 'normal', w: 80, r: 8, rir: 2 }, st);
   assert.equal(d.rir, 2);
   assert.equal(core.draftToSet(d, st).rir, 2);
+  assert.equal(core.draftToSet(core.setToDraft({ id: 's', type: 'normal', w: 80, r: 8, rir: 3 }, st), st).rir, 2, 'an older 3 is saved as 2+');
   assert.equal('rir' in core.draftToSet(core.setToDraft({ id: 's', type: 'normal', w: 80, r: 8 }, st), st), false);
   const draft = core.newSetDraft('normal', { w: '80', r: '8', rpe: '8.5' });
-  core.rateSet(draft, 3);
-  assert.equal(draft.rir, 3);
+  core.rateSet(draft, 2);
+  assert.equal(draft.rir, 2);
   assert.equal(draft.rpe, '');
-  assert.deepEqual(core.draftToSet(draft, st), { id: draft.id, type: 'normal', w: 80, r: 8, rir: 3 });
+  assert.deepEqual(core.draftToSet(draft, st), { id: draft.id, type: 'normal', w: 80, r: 8, rir: 2 });
   core.rateSet(draft, null);
   assert.equal('rir' in draft, false);
   // templates don't take a set's rating as a target
   const tpl = core.applyWorkoutToTemplate([E('a', [S('normal', 60, 8)])], { exercises: [E('a', [S('normal', 62.5, 8, { rir: 1 })])] }, { valuesOnly: true });
   assert.equal('rir' in tpl[0].sets[0], false);
-  // Strong's CSV only knows RPE
+  // Strong's CSV only knows RPE: 10 − reps left, 2+ → 8
   const exercises = new Map([['x', { id: 'x', name: 'Bench Press (Barbell)', category: 'barbell' }]]);
-  const csv = core.exportCSV({ workouts: [{ id: 'w', name: 'Push', startedAt: Date.UTC(2026, 10, 3, 9), endedAt: Date.UTC(2026, 10, 3, 10), exercises: [E('x', [S('normal', 80, 8, { rir: 1 }), S('normal', 80, 8, { rpe: 8.5 }), S('normal', 80, 8)])] }], exercises });
-  assert.deepEqual(csv.trim().split('\n').slice(1).map((l) => l.split(',').pop()), ['9', '8.5', '']);
+  const csv = core.exportCSV({ workouts: [{ id: 'w', name: 'Push', startedAt: Date.UTC(2026, 10, 3, 9), endedAt: Date.UTC(2026, 10, 3, 10), exercises: [E('x', [S('normal', 80, 8, { rir: 1 }), S('normal', 80, 8, { rir: 2 }), S('normal', 80, 8, { rir: 0 }), S('normal', 80, 8, { rpe: 8.5 }), S('normal', 80, 8)])] }], exercises });
+  assert.deepEqual(csv.trim().split('\n').slice(1).map((l) => l.split(',').pop()), ['9', '8', '10', '8.5', '']);
 });
 
+test('reps in reserve: 0 is failure, both ways', () => {
+  // rating 0 makes a working set a failure set
+  const set = core.newSetDraft('normal', { w: '80', r: '8' });
+  core.rateSet(set, 0);
+  assert.equal(set.type, 'failure');
+  assert.equal(set.rir, 0);
+  // another rating, or none, makes it a working set again
+  core.rateSet(set, 1);
+  assert.deepEqual([set.type, set.rir], ['normal', 1]);
+  core.rateSet(set, 0);
+  core.rateSet(set, null);
+  assert.equal(set.type, 'normal');
+  assert.equal('rir' in set, false);
+  // choosing Failure sets 0 left (and the RPE gives way)
+  const f = core.newSetDraft('normal', { w: '80', r: '8', rpe: '8', rir: 2 });
+  core.setSetType(f, 'failure');
+  assert.deepEqual([f.type, f.rir, f.rpe], ['failure', 0, '']);
+  // leaving Failure drops the 0, so a working set isn't left at 0
+  core.setSetType(f, 'normal');
+  assert.equal(f.type, 'normal');
+  assert.equal('rir' in f, false);
+  // other ratings survive a type change; warm-ups and drop sets keep their type when rated 0
+  const g = core.newSetDraft('normal', { rir: 1 });
+  core.setSetType(g, 'drop');
+  assert.deepEqual([g.type, g.rir], ['drop', 1]);
+  core.rateSet(g, 0);
+  assert.deepEqual([g.type, g.rir], ['drop', 0]);
+  const w = core.newSetDraft('warmup');
+  core.rateSet(w, 0);
+  assert.equal(w.type, 'warmup');
+  // a failure set is saved with 0 left
+  const st = { unit: 'kg', distUnit: 'km' };
+  const h = core.newSetDraft('normal', { w: '100', r: '5' });
+  core.setSetType(h, 'failure');
+  assert.deepEqual(core.draftToSet(h, st), { id: h.id, type: 'failure', w: 100, r: 5, rir: 0 });
+});
 // ---------- the session ----------
 test('session: units keep supersets together, rounds alternate, the next set follows the person', () => {
   const set = (id, done = false) => ({ id, type: 'normal', w: '', r: '', d: '', t: '', rpe: '', done });

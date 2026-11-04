@@ -35,8 +35,8 @@ Owns: `src/app/active.tsx`, `src/ui/workout/`, a new `src/ui/tally/Keypad.tsx`.
 - Set rows as in `components.md` → SetRow: stroke, weight × reps with ghost values from last time, chips for set type and reps left; no PREVIOUS column, no header row, no field boxes except on the set being logged.
 - Header: minimize, ⋯, workout name, elapsed time, the hero tally of the whole session, "4 of 22 sets · 1 record".
 - Up next: the remaining exercises as rows with their own tally; drag to reorder.
-- Action bar: Log (logs the next set with its shown values) → Rest (countdown, −15, +15, Skip, drain bar, "Reps left?" 0 · 1 · 2 · 3+) → "Finish workout" after the last set. Finish leaves the top corner.
-- Store reps in reserve on the set (`rir`, core); RPE stays readable and maps to it (10 → 0, 9 → 1, 8 → 2, 7 and below → 3+).
+- Action bar: Log (logs the next set with its shown values) → Rest (countdown, −15, +15, Skip, drain bar, "Reps left?" 0 · 1 · 2+, since 4 Nov 2026) → "Finish workout" after the last set. Finish leaves the top corner.
+- Store reps in reserve on the set (`rir`, core); RPE stays readable and maps to it (since 4 Nov 2026: 10 → 0, 9 and 9.5 → 1, 8.5 and below → 2+; 0 is a failure set).
 - The keypad sheet for weights, reps and times, with the exercise's real step and plates per side.
 - Rest drawn by the system: one Reanimated animation for the drain bar, the text updated once a second (replaces `useNow(250)` and `useNow(200)`).
 - `keepAwake` off by default in the store app (the web app keeps it on).

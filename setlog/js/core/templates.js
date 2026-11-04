@@ -139,8 +139,8 @@ export function applyWorkoutToTemplate(templateExercises, workout, { valuesOnly 
 
 // ---------- progressive overload ----------
 // What "better" means per kind of exercise, compared key by key: more weight
-// (or, for assisted exercises, less assistance), then more reps; for timed
-// exercises more time; for cardio more distance, then more time.
+// (or, for assisted exercises, less assistance), then more reps; for
+// time-only exercises (planks, holds) more time. Cardio is compareCardio.
 const BETTER = {
   barbell: [['w', 1], ['r', 1]],
   dumbbell: [['w', 1], ['r', 1]],
@@ -149,21 +149,38 @@ const BETTER = {
   assisted_bw: [['w', -1], ['r', 1]],
   reps: [['r', 1]],
   duration: [['t', 1]],
-  cardio: [['d', 1], ['t', 1]],
 };
 const valueOf = (s, k) => (Number.isFinite(Number(s[k])) && s[k] !== null && s[k] !== '' ? Number(s[k]) : 0);
 const hasNumbers = (s) => VALUE_KEYS.some((k) => valueOf(s, k) !== 0);
+
+const sign = (d) => (d > 1e-6 ? 1 : d < -1e-6 ? -1 : 0);
+
+/**
+ * Cardio (distance and time): more distance, or the same distance in less
+ * time (faster). A set without a time can't be faster; sets without any
+ * distance are compared like a time-only exercise (more time).
+ */
+function compareCardio(routineSet, doneSet) {
+  const rd = valueOf(routineSet, 'd'), dd = valueOf(doneSet, 'd');
+  const rt = valueOf(routineSet, 't'), dt = valueOf(doneSet, 't');
+  if (!rd && !dd) return sign(dt - rt);
+  const further = sign(dd - rd);
+  if (further) return further;
+  return rt > 0 && dt > 0 ? sign(rt - dt) : 0;
+}
 
 /**
  * Compares a done set with the routine's set for an exercise of `category`:
  * 1 when the done set is better, 0 when it's as good, -1 when it's worse.
  * More weight wins, or the same weight and more reps; for assisted exercises
- * less assistance; for time and distance, more. A routine set without numbers
+ * less assistance; for time-only exercises more time; for cardio more
+ * distance, or the same distance in less time. A routine set without numbers
  * is beaten by any done set that has some.
  */
 export function compareSets(routineSet, doneSet, category) {
   if (!hasNumbers(doneSet)) return hasNumbers(routineSet) ? -1 : 0;
   if (!hasNumbers(routineSet)) return 1;
+  if (category === 'cardio') return compareCardio(routineSet, doneSet);
   for (const [k, dir] of BETTER[category] || BETTER.barbell) {
     const d = (valueOf(doneSet, k) - valueOf(routineSet, k)) * dir;
     if (d > 1e-6) return 1;

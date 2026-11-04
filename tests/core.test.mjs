@@ -232,7 +232,7 @@ test('applyWorkoutToTemplate: values only vs. the new structure; RPE is kept', (
   assert.equal(clean.length, 1);
 });
 
-test('compareSets: more weight, or the same weight and more reps; less assistance; more time and distance', () => {
+test('compareSets: more weight, or the same weight and more reps; less assistance; more time; cardio further or faster', () => {
   const c = (r, d, cat) => core.compareSets(r, d, cat);
   // weight first, then reps
   assert.equal(c({ w: 60, r: 8 }, { w: 62.5, r: 5 }, 'barbell'), 1);
@@ -249,12 +249,20 @@ test('compareSets: more weight, or the same weight and more reps; less assistanc
   assert.equal(c({ w: 20, r: 8 }, { r: 5 }, 'assisted_bw'), 1, 'no assistance at all');
   assert.equal(c({ w: 20, r: 8 }, { w: 20, r: 10 }, 'assisted_bw'), 1);
   assert.equal(c({ w: 20, r: 8 }, { w: 25, r: 12 }, 'assisted_bw'), -1);
-  // time, and distance then time
+  // time-only exercises (planks, holds): more time
   assert.equal(c({ t: 60 }, { t: 75 }, 'duration'), 1);
+  assert.equal(c({ t: 60 }, { t: 60 }, 'duration'), 0);
   assert.equal(c({ t: 60 }, { t: 45 }, 'duration'), -1);
-  assert.equal(c({ d: 5, t: 1500 }, { d: 5.2, t: 1700 }, 'cardio'), 1);
-  assert.equal(c({ d: 5, t: 1500 }, { d: 4.8, t: 1800 }, 'cardio'), -1);
-  assert.equal(c({ t: 1200 }, { t: 1500 }, 'cardio'), 1, 'cardio logged by time only');
+  // cardio: more distance, or the same distance in less time
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5.2, t: 1700 }, 'cardio'), 1, 'further, even if it took longer');
+  assert.equal(c({ d: 5, t: 1500 }, { d: 4.8, t: 1400 }, 'cardio'), -1, 'shorter, even if quicker');
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5, t: 1440 }, 'cardio'), 1, 'the same distance, faster');
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5, t: 1560 }, 'cardio'), -1, 'the same distance, slower');
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5, t: 1500 }, 'cardio'), 0);
+  assert.equal(c({ d: 5, t: 1500 }, { d: 5 }, 'cardio'), 0, 'no time logged is not faster');
+  assert.equal(c({ d: 5 }, { d: 5, t: 1500 }, 'cardio'), 0, 'a first time at the same distance is not faster either');
+  assert.equal(c({ t: 1200 }, { t: 1500 }, 'cardio'), 1, 'cardio logged by time only: more time');
+  assert.equal(c({ t: 1200 }, { d: 3, t: 900 }, 'cardio'), 1, 'a distance where there was none');
   // a routine set without numbers takes any done numbers; an empty done set never wins
   assert.equal(c({ type: 'normal' }, { w: 40, r: 10 }, 'barbell'), 1);
   assert.equal(c({ w: 60, r: 8 }, { type: 'normal' }, 'barbell'), -1);

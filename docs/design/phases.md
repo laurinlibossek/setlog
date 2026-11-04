@@ -42,7 +42,7 @@ Owns: `src/app/active.tsx`, `src/ui/workout/`, a new `src/ui/tally/Keypad.tsx`.
 - `keepAwake` off by default in the store app (the web app keeps it on).
 - Tests: `app-logging` changes most; keep its checks (rest ±15, skip, set types, supersets, minimize, reorder, finish rules).
 
-## 4. Summary and exercise page
+## 4. Summary and exercise page (done in `claude/tally-summary`)
 
 Owns: `src/app/summary/[id].tsx`, `src/app/exercise/[id].tsx`, `src/app/workout/[id].tsx`.
 

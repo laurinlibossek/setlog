@@ -1,20 +1,31 @@
+// A finished workout from History (docs/design/navigation.md, Detail): back and
+// ⋯ in the bar, the name with its date and times, Time · Volume · Sets, its
+// tally (records in signal), the notes, then every exercise with its sets
+// (records marked), and "Do this workout again". ⋯ edits, repeats, saves as a
+// template, shares as text or deletes (with Undo).
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  workoutVolume, est1RM, hasLoadRecords, PR_LABEL,
+  Pressable, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
+import {
+  workoutVolume, est1RM, hasLoadRecords, kgTo, PR_LABEL,
 } from '@setlog/core';
 
 import {
   deleteWorkout, saveWorkout, stats, useAppState, type State,
 } from '@/data/store';
 import type { Workout } from '@/data/types';
+import { SPACE, TYPE } from '@/design/tally';
 import { setLabels, useFormat, type Format } from '@/lib/format';
 import type { Tr } from '@/lib/i18n';
 import { openTemplateEditor, shareText } from '@/lib/templates';
 import { beginWorkout } from '@/lib/workout';
-import { useColors } from '@/lib/theme';
+import { useTally } from '@/lib/theme';
 import {
-  Button, Card, Empty, Icon, IconButton, Page, Txt,
+  hm, Mark, MARGIN, StatStrip, tnum, workoutStrokes, WorkoutTally,
+} from '@/ui/facts';
+import {
+  Button, Empty, Icon, IconButton, Page,
 } from '@/ui/kit';
 import { actionSheet, ask, toast } from '@/ui/overlay';
 
@@ -40,15 +51,18 @@ export default function WorkoutDetail() {
   const s = useAppState();
   const f = useFormat();
   const { tr } = f;
-  const c = useColors();
+  const { colors: t } = useTally();
   const w = s.workouts.find((x) => x.id === id);
   if (!w) return <Page><Empty title={tr('Workout not found')} text={tr('It may have been deleted.')} /></Page>;
 
   const st = stats(s);
-  const vol = workoutVolume(w, s.exercises);
+  const vol = workoutVolume(w, s.exercises) as number;
   const prs = st.prsByWorkout.get(w.id) || [];
+  const recordSets = new Set<string>(prs.map((p: { setId: string }) => p.setId));
   const sets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+  const shown = kgTo(vol || 0, f.unit);
   const label = (k: string) => tr((PR_LABEL as Record<string, string>)[k] || k);
+  const tallyLine = [f.plural(sets, 'set'), recordSets.size ? f.plural(recordSets.size, 'record') : ''].filter(Boolean).join(' · ');
   const menu = async () => {
     const c = await actionSheet<string>({
       title: w.name,
@@ -76,69 +90,74 @@ export default function WorkoutDetail() {
   };
 
   return (
-    <Page>
+    <ScrollView style={{ flex: 1, backgroundColor: t.paper }} contentContainerStyle={{ paddingTop: SPACE.s1, paddingBottom: SPACE.s12 }} contentInsetAdjustmentBehavior="automatic">
       <Stack.Screen options={{
-        title: w.name,
+        title: '',
         headerRight: () => <IconButton icon="more" label={tr('Workout options')} onPress={menu} testID="workout-options" />,
       }} />
-      <Txt style={{ fontSize: 28, fontWeight: '800' }}>{w.name}</Txt>
-      <Txt tone="ink3" style={{ fontSize: 14, marginTop: 2, marginBottom: 12 }}>
-        {`${f.date.full(w.startedAt)} · ${f.date.time(w.startedAt)}–${f.date.time(w.endedAt)}`}
-      </Txt>
-      <View style={styles.facts}>
-        <Fact k={tr('Duration')} v={f.dur(w.endedAt - w.startedAt)} />
-        <Fact k={tr('Volume')} v={vol ? f.volume(vol) : '—'} />
-        <Fact k={prs.length ? tr('Records') : tr('Sets')} v={String(prs.length || sets)} gold={prs.length > 0} />
+      <View style={{ paddingHorizontal: MARGIN }}>
+        <Text style={{ ...TYPE.title1, color: t.ink }} accessibilityRole="header" testID="workout-title">{w.name}</Text>
+        <Text style={{ ...TYPE.footnote, color: t.ink2 }}>
+          {`${f.date.full(w.startedAt)} · ${f.date.time(w.startedAt)}–${f.date.time(w.endedAt)}`}
+        </Text>
+        <StatStrip style={{ marginTop: SPACE.s5 }} stats={[
+          { label: tr('Time'), value: hm(w.endedAt - w.startedAt) },
+          vol ? { label: tr('Volume'), value: shown >= 100000 ? f.compact(shown) : f.num(shown, 0), unit: f.unit } : { label: tr('Volume'), value: '—' },
+          { label: tr('Sets'), value: f.num(sets, 0) },
+        ]} />
+        <View style={{ marginTop: SPACE.s5 }}>
+          <WorkoutTally groups={workoutStrokes(w, recordSets)} size="regular" label={tallyLine} testID="workout-tally" />
+        </View>
+        <Text style={{ ...TYPE.footnote, color: t.ink2, marginTop: SPACE.s2 }}>{tallyLine}</Text>
+        {!!w.notes && <Text style={{ ...TYPE.subhead, color: t.ink, marginTop: SPACE.s4 }}>{w.notes}</Text>}
       </View>
-      {!!w.notes && <Card style={{ marginTop: 10 }}><Txt tone="ink2" style={{ fontSize: 15 }}>{w.notes}</Txt></Card>}
+
       {w.exercises.map((e) => {
         const ex = s.exercises.get(e.exerciseId);
         const labels = setLabels(e.sets);
         return (
-          <View key={e.id} style={{ marginTop: 18 }}>
-            <Pressable onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: e.exerciseId } })} accessibilityRole="link" testID={`ex-link-${e.exerciseId}`}>
-              <Txt tone="accent" style={{ fontSize: 17, fontWeight: '700', marginBottom: 4 }}>{f.exName(ex) || tr('Unknown exercise')}</Txt>
-            </Pressable>
-            {!!e.notes && <Txt tone="ink3" style={{ fontSize: 14, marginBottom: 4 }}>{e.notes}</Txt>}
+          <View key={e.id}>
+            <SectionHeadLink title={f.exName(ex) || tr('Unknown exercise')} testID={`ex-link-${e.exerciseId}`}
+              onPress={() => router.push({ pathname: '/exercise/[id]', params: { id: e.exerciseId } })} />
+            {!!e.notes && <Text style={{ ...TYPE.footnote, color: t.ink2, paddingHorizontal: MARGIN, marginBottom: SPACE.s1 }}>{e.notes}</Text>}
             {e.sets.map((x, i) => {
               const flags: string[] | undefined = st.prSets.get(x.id);
               const oneRm = ex && hasLoadRecords(ex.category) && x.type !== 'warmup' ? est1RM(x.w, x.r, s.settings.formula) : 0;
               return (
-                <View key={x.id || i} style={[styles.set, { borderTopColor: c.line }]}>
-                  <Txt style={[styles.n, { color: x.type === 'warmup' ? c.warm : x.type === 'drop' ? c.drop : x.type === 'failure' ? c.danger : c.ink2 }]}>{labels[i]}</Txt>
-                  <Txt style={{ flex: 1, fontSize: 15, fontVariant: ['tabular-nums'] }}>{f.setText(x, ex?.category)}</Txt>
-                  {flags ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
-                      <Icon name="trophy" size={12} color={c.gold} />
-                      <Txt tone="gold" style={{ fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{flags.map(label).join(' · ')}</Txt>
-                    </View>
-                  ) : oneRm ? <Txt tone="ink3" style={{ fontSize: 13 }}>{`1RM ${f.w(oneRm, 1)}`}</Txt> : null}
+                <View key={x.id || i} style={[styles.set, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.line }]}>
+                  <Text style={[styles.n, { color: x.type === 'warmup' ? t.ink3 : t.ink2 }]}>{labels[i]}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[{ ...TYPE.body, color: x.type === 'warmup' ? t.ink2 : t.ink }, tnum]} numberOfLines={1}>{f.setText(x, ex?.category)}</Text>
+                    {!!flags && <Text style={{ ...TYPE.footnote, color: t.ink2 }} numberOfLines={1}>{flags.map(label).join(' · ')}</Text>}
+                  </View>
+                  {flags ? <View><Mark style={{ ...TYPE.footnote, fontWeight: '600' }} testID={`record-${x.id}`}>{tr('Record')}</Mark></View>
+                    : oneRm ? <Text style={[{ ...TYPE.footnote, color: t.ink2 }, tnum]}>{`1RM ${f.w(oneRm, 1)}`}</Text> : null}
                 </View>
               );
             })}
           </View>
         );
       })}
-      <View style={{ marginTop: 24 }}>
-        <Button kind="tinted" icon="repeat" title={tr('Do this workout again')} onPress={() => beginWorkout({ fromWorkout: w }, f)} testID="do-again" />
+      <View style={{ paddingHorizontal: MARGIN, marginTop: SPACE.s8 }}>
+        <Button large title={tr('Do this workout again')} onPress={() => beginWorkout({ fromWorkout: w }, f)} testID="do-again" />
       </View>
-    </Page>
+    </ScrollView>
   );
 }
 
-function Fact({ k, v, gold }: { k: string; v: string; gold?: boolean }) {
-  const c = useColors();
+/** An exercise's name as a section header that opens its page. */
+function SectionHeadLink({ title, onPress, testID }: { title: string; onPress: () => void; testID?: string }) {
+  const { colors: t } = useTally();
   return (
-    <View style={[styles.fact, { backgroundColor: c.surface }]}>
-      <Txt tone="ink3" style={{ fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 }}>{k}</Txt>
-      <Txt style={{ fontSize: 18, fontWeight: '700', marginTop: 2, color: gold ? c.gold : c.ink }}>{v}</Txt>
-    </View>
+    <Pressable onPress={onPress} accessibilityRole="link" testID={testID}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: MARGIN, marginTop: SPACE.s6, marginBottom: SPACE.s1, opacity: pressed ? 0.6 : 1 })}>
+      <Text style={{ ...TYPE.title3, color: t.ink, flexShrink: 1 }} numberOfLines={1}>{title}</Text>
+      <Icon name="chevron" size={13} color={t.ink3} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  facts: { flexDirection: 'row', gap: 8 },
-  fact: { flex: 1, borderRadius: 12, padding: 10 },
-  set: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: StyleSheet.hairlineWidth },
-  n: { width: 22, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  set: { flexDirection: 'row', alignItems: 'center', gap: SPACE.s3, minHeight: 44, paddingVertical: 6, marginHorizontal: MARGIN },
+  n: { width: 22, fontSize: 15, fontWeight: '600', textAlign: 'center' },
 });

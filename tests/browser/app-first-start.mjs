@@ -95,20 +95,23 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await first.click();
   await page.waitForTimeout(400);
   const detail = await text(page);
-  assert.ok(detail.includes(name) && /Dauer/i.test(detail) && /× \d/.test(detail), 'workout detail with sets');
+  assert.ok(detail.includes(name) && /Zeit/.test(detail) && /Volumen/.test(detail) && /× \d/.test(detail), 'workout detail with Zeit · Volumen · Sätze and its sets');
+  // its tally: one stroke per set, read out as one element ("18 Sätze · 2 Rekorde")
+  const tally = await page.getByTestId('workout-tally').evaluate((el) => ({ label: el.getAttribute('aria-label'), strokes: [...el.children].reduce((n, t) => n + t.firstElementChild.children.length, 0) }));
+  assert.equal(tally.strokes, Number(tally.label.match(/^(\d+) Sätze?/)[1]), JSON.stringify(tally));
   await page.screenshot({ path: `${OUT}/05-workout-detail.png` });
   ok('History lists the workouts by month (German), a workout opens with its sets');
 
   // exercise page from the workout
   await page.locator('[data-testid^="ex-link-"]').nth(3).click();
   await page.waitForTimeout(400);
+  // one page, no tabs: the chart, Best set (or Most reps, Longest) · Sessions · Last, History
   const exPage = await text(page);
-  assert.ok(/Verlauf/i.test(exPage) && /Rekorde/i.test(exPage));
-  await page.getByRole('tablist').getByText('Rekorde').click();
-  await page.waitForTimeout(200);
-  assert.ok(/Geschätztes 1RM|Meiste Wdh\.|Längste|Sätze/i.test(await text(page)), (await text(page)).slice(-600));
-  await page.screenshot({ path: `${OUT}/06-exercise-records.png` });
-  ok('an exercise page shows its history and records');
+  assert.equal(await page.getByRole('tablist').count(), 0, 'no inner tabs');
+  assert.ok(/Einheiten/.test(exPage) && /Zuletzt/.test(exPage) && /Bester Satz|Meiste Wdh\.|Längste/.test(exPage), exPage.slice(0, 600));
+  assert.ok(/Verlauf/.test(exPage) && await page.locator('[data-testid^="ex-session-"]').count() >= 1);
+  await page.screenshot({ path: `${OUT}/06-exercise.png` });
+  ok('an exercise page shows its numbers and its history on one page');
 
   await page.goBack(); await page.goBack(); await page.goBack();
   await tab(page, 'search');

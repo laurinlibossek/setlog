@@ -69,7 +69,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'new-template').click();
   await id(page, 'tpl-name').waitFor();
   await id(page, 'template-save').click();
-  assert.equal(await toastText(page), 'Give the template a name');
+  assert.equal(await toastText(page), 'Give the routine a name');
   await id(page, 'tpl-name').fill('Upper A');
   await id(page, 'tpl-folder').fill('Upper / Lower');
   await id(page, 'template-save').click();
@@ -101,7 +101,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   assert.equal(t.exercises[0].sets.length, 3);
   assert.equal(data.exercises.find((e) => e.id === BENCH).restSec, 90, 'saved with the template');
   assert.equal(await id(page, `template-${t.id}`).count(), 1);
-  ok('+ Template: name and folder, exercises with targets; Save checks the name and exercises; the rest timer is saved with it');
+  ok('+ → New routine: name and folder, exercises with targets; Save checks the name and exercises; the rest timer is saved with it');
 
   // edit it: Cancel with changes asks first
   await id(page, `template-menu-${t.id}`).click();
@@ -118,10 +118,10 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   assert.equal(await id(page, 'tpl-name').isVisible(), true, 'Keep editing stays');
   await id(page, 'template-save').click();
   await wait(page, 600);
-  assert.match(await toastText(page), /Template saved/);
+  assert.match(await toastText(page), /Routine saved/);
   data = await store(page);
   assert.equal(data.templates.find((x) => x.id === t.id).exercises[0].sets[1].w, 85);
-  ok('Edit template opens it with its values; Cancel with changes asks; Save keeps the new target');
+  ok('Edit routine opens it with its values; Cancel with changes asks; Save keeps the new target');
 
   // rename, duplicate, archive with undo, move to a new folder, delete with undo
   await id(page, `template-menu-${t.id}`).click();
@@ -132,7 +132,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, `template-menu-${t.id}`).click();
   await id(page, 'tpl-menu-dup').click();
   await wait(page, 300);
-  assert.match(await toastText(page), /Template duplicated/);
+  assert.match(await toastText(page), /Routine duplicated/);
   data = await store(page);
   assert.ok(data.templates.some((x) => x.name === 'Upper A1 (copy)'));
   await id(page, `template-menu-${t.id}`).click();
@@ -155,13 +155,13 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'tpl-menu-delete').click();
   await id(page, 'confirm-delete').click();
   await wait(page, 300);
-  assert.match(await toastText(page), /Template deleted/);
+  assert.match(await toastText(page), /Routine deleted/);
   assert.equal(await id(page, `template-${t.id}`).count(), 0);
   await id(page, 'toast-action').click();
   await wait(page, 300);
   assert.equal(await id(page, `template-${t.id}`).count(), 1);
   await page.screenshot({ path: `${OUT}/02-templates.png`, fullPage: true });
-  ok('template ⋯: rename, duplicate, archive with undo, move to a new folder, delete with undo');
+  ok('routine ⋯: rename, duplicate, archive with undo, move to a new folder, delete with undo');
 
   // folder menu: remove the folder (the template moves out)
   await id(page, 'folder-menu-Push / Pull').click();
@@ -169,7 +169,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'dialog-ok').click();
   await wait(page, 300);
   assert.equal((await store(page)).templates.find((x) => x.id === t.id).folder, '');
-  ok('Remove folder moves its template to My templates');
+  ok('Remove folder moves its routine to My routines');
 
   // a shared template link (made the way the web app makes them)
   const shared = { name: 'Arms', notes: 'Superset everything', exercises: [
@@ -184,7 +184,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'add-shared').click();
   await id(page, 'prompt-input').fill('not a link');
   await id(page, 'prompt-ok').click();
-  assert.match(await toastText(page), /doesn’t look like a Setlog template link/);
+  assert.match(await toastText(page), /doesn’t look like a Setlog routine link/);
   await id(page, 'templates-menu').click();
   await id(page, 'add-shared').click();
   await id(page, 'prompt-input').fill(link);
@@ -197,21 +197,21 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   const arms = data.templates.find((x) => x.name === 'Arms');
   assert.ok(arms && arms.exercises.length === 3 && arms.exercises[0].supersetId && arms.exercises[0].supersetId === arms.exercises[1].supersetId);
   assert.ok(data.exercises.some((e) => e.name === 'Zottman Curl'));
-  ok('Templates ⋯ → Add shared template reads a web app link, creates missing exercises and keeps the superset');
+  ok('Routines ⋯ → Add shared routine reads a web app link, creates missing exercises and keeps the superset');
 
   // examples: add one to my templates, hide them with undo
   const ex = core.EXAMPLE_TEMPLATES[0];
   await id(page, `template-${ex.id}`).click();
   await id(page, 'add-example').click();
   await wait(page, 600);
-  assert.match(await toastText(page), /added to your templates/);
+  assert.match(await toastText(page), /added to your routines/);
   assert.equal(await id(page, 'template-options').count(), 1, 'now the preview of my copy');
   await page.goBack();
   await wait(page, 300);
   await id(page, 'hide-examples').click();
   assert.match(await toastText(page), /Examples hidden/);
   assert.equal(await id(page, `template-${ex.id}`).count(), 0);
-  ok('an example becomes my template; examples hide with undo');
+  ok('an example becomes my routine; examples hide with undo');
   assert.deepEqual(errors, []);
   await ctx.close();
 }
@@ -391,7 +391,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('inc
   await id(page, 'template-save').click();
   await wait(page, 600);
   assert.ok((await store(page)).templates.some((x) => x.name === 'Montag schwer'));
-  ok('Als Vorlage speichern opens the editor filled from the workout and saves it');
+  ok('Als Routine speichern opens the editor filled from the workout and saves it');
 
   // delete with undo
   await id(page, 'workout-options').click();

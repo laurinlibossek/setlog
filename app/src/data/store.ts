@@ -6,7 +6,7 @@ import { AppState } from 'react-native';
 import {
   SEED_EXERCISES, SEED_VERSION, withDefaults, buildStats, sessionsByExercise, configureCalc, bodyweightFrom,
   parseBackup, parseStrongCSV, suggestTemplate, previousSetsFrom, newActiveWorkout, finishWorkout, prsForNewWorkout,
-  workoutVolume, applyWorkoutToTemplate, makeBackup, uid,
+  workoutVolume, makeBackup, uid,
   templateFromDraft, workoutFromEditDraft, copyTemplateRecord, folderNames, findExerciseByName, newExerciseRecord,
   exerciseInDraft, patchDraftExercise, changeSetting, convertDraftUnits, mergeExercisePatch, moveExerciseEntries,
 } from '@setlog/core';
@@ -445,15 +445,6 @@ export async function removeFolder(name: string) {
   setState({ templates });
   await db.putMany('templates', changed);
   await setMeta({ folders: (state.meta.folders || []).filter((f) => f !== name) });
-}
-
-/** Save a finished workout into its template. Returns the template's previous exercises, for undo. */
-export async function updateTemplateFromWorkout(templateId: string, workout: Workout, valuesOnly: boolean): Promise<TemplateEntry[] | null> {
-  const t = state.templates.find((x) => x.id === templateId);
-  if (!t) return null;
-  const before = clone(t.exercises);
-  await saveTemplate({ ...t, exercises: applyWorkoutToTemplate(clone(t.exercises), workout, { valuesOnly }) as TemplateEntry[] });
-  return before;
 }
 
 export async function restoreTemplateExercises(templateId: string, exercises: TemplateEntry[]) {

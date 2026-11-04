@@ -61,9 +61,9 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByTestId('restore').click()]);
   await chooser.setFiles(BACKUP);
   for (let i = 0; i < 50 && dialogs.length < 2; i++) await page.waitForTimeout(100);
-  assert.match(dialogs[0], /Replace all data\?[\s\S]*86 workouts, 1 template and 2 measurements/);
+  assert.match(dialogs[0], /Replace all data\?[\s\S]*86 workouts, 1 routine and 2 measurements/);
   assert.match(dialogs[1], /Backup restored/);
-  ok('restore asks first (86 workouts, 1 template, 2 measurements), then restores');
+  ok('restore asks first (86 workouts, 1 routine, 2 measurements), then restores');
 
   // the backup brought German and Intense Red along
   await page.waitForTimeout(400);
@@ -140,7 +140,7 @@ const has = async (page, re) => (typeof re === 'string' ? new RegExp(re.replace(
   await page.getByTestId('discard-workout').click();
   await page.getByTestId('confirm-discard').click();
   await page.waitForTimeout(600);
-  ok('Plan shows the template in its folder; the preview lists targets; Start opens the workout');
+  ok('Plan shows the routine in its folder; the preview lists targets; Start opens the workout');
 
   await page.goBack();
   await tab(page, 'progress');

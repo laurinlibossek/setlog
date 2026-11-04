@@ -42,7 +42,7 @@ When you update Playwright, change the version in `package.json` here; the suite
 | `app-editing` | 22 | template editor and menus on Plan, folders, shared links, Edit workout, focus metric, plates and 1RM, start time, new exercises, the exercise page (hero number, chart, range, rep maxes, history), Body, Progress and backups, settings |
 | `web-privacy` | 4 | the privacy pages (light and dark, both languages, contact link), the Settings link to them, and that they load as themselves with the service worker running |
 | `app-parity` | 13 | History calendar (light, dark, German), Merge into another exercise, Warm-up sets and ⋯ → Add warm-up sets, the name row, Delete all data, template links that open the app, Settings → Privacy policy |
-| `app-tabs` | 7 | the tabs with the store demo data: Today (Up next, week strip and sets per muscle against the core), Now Lifting (rest, Skip, every tab), Plan's + menu, the Progress hub and its pages, Search focused on open, the Account sheet, German and dark |
+| `app-tabs` | 9 | the tabs with the store demo data: Today (Up next, week strip and sets per muscle against the core), Now Lifting (rest, Skip, every tab), Plan's + menu, the Progress hub and its pages, Search focused on open, the Account sheet, German and dark, and "routine" instead of "template" everywhere the app says it, in English and German |
 
 `make-backup.mjs` is a helper, not a suite: it imports the sample export into the web app, adds a "Pull" template in an "Upper / Lower" folder, two body weights, Intense Red, German and the name "Laurin", and saves `data/setlog-backup.json` through the app's own backup code. The app suites restore it (`restore(page, dialogs, { english: true })` in `app-editing.mjs` switches to English afterwards).
 

@@ -280,7 +280,7 @@ async function exerciseMenu(ex: Exercise, sessions: number, f: ReturnType<typeof
     }
     const ok = await ask({
       title: tr('Delete “{name}”?', { name: f.exName(ex) }),
-      message: u.templates ? tr('It will also be removed from {n}.', { n: f.plural(u.templates, 'template') }) : tr('It has never been used.'),
+      message: u.templates ? tr('It will also be removed from {n}.', { n: f.plural(u.templates, 'routine') }) : tr('It has never been used.'),
       ok: tr('Delete'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete',
     });
     if (!ok) return;

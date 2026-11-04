@@ -58,7 +58,7 @@ export default function AccountSheet() {
   const doDeleteAll = async () => {
     const ok = await ask({
       title: tr('Delete all data?'),
-      message: tr('Every workout, template, measurement and custom exercise on this phone will be erased. Your settings, name, folders and changes to built-in exercises are reset too.'),
+      message: tr('Every workout, routine, measurement and custom exercise on this phone will be erased. Your settings, name, folders and changes to built-in exercises are reset too.'),
       ok: tr('Continue'), cancel: tr('Cancel'), destructive: true, testID: 'confirm-delete-all',
     });
     if (!ok) return;
@@ -83,7 +83,7 @@ export default function AccountSheet() {
     const { counts, exportedAt } = preview;
     const ok = await confirm(tr('Replace all data?'), tr('The backup{from} has {workouts}, {templates} and {measurements}. Everything currently in the app is replaced.', {
       from: exportedAt ? ` ${tr('from {date}', { date: f.date.short(exportedAt) })}` : '',
-      workouts: f.plural(counts.workouts, 'workout'), templates: f.plural(counts.templates, 'template'), measurements: f.plural(counts.measurements, 'measurement'),
+      workouts: f.plural(counts.workouts, 'workout'), templates: f.plural(counts.templates, 'routine'), measurements: f.plural(counts.measurements, 'measurement'),
     }), tr('Replace'), tr('Cancel'), true);
     if (!ok) return;
     setBusy(true);
@@ -200,12 +200,12 @@ export default function AccountSheet() {
         <SwitchCell title={tr('Rest timer alerts')} sub={tr('A notification when rest is over, also with the phone locked')} value={st.restAlert !== false}
           onChange={(v) => set('restAlert', v)} testID="set-rest-alert" />
         <SwitchCell title={tr('Keep screen on')} sub={tr('While a workout is running')} value={st.appKeepAwake === true} onChange={(v) => set('appKeepAwake', v)} testID="set-keep-awake" />
-        <Cell title={tr('Previous values')} value={st.prevSource === 'template' ? tr('Same template') : tr('Any workout')}
-          onPress={() => pick(tr('Previous values'), [{ value: 'any', label: tr('Any workout') }, { value: 'template', label: tr('Same template') }], st.prevSource, (v) => set('prevSource', v as Settings['prevSource']))} />
+        <Cell title={tr('Previous values')} value={st.prevSource === 'template' ? tr('Same routine') : tr('Any workout')}
+          onPress={() => pick(tr('Previous values'), [{ value: 'any', label: tr('Any workout') }, { value: 'template', label: tr('Same routine') }], st.prevSource, (v) => set('prevSource', v as Settings['prevSource']))} />
         <Cell title={tr('Warm-up sets')} value={warmupText} onPress={() => router.push('/warmup')} testID="set-warmup" />
         <SwitchCell title={tr('Update routines after workouts')} sub={tr('Better numbers go in by themselves; you’re asked when exercises or sets changed')} value={st.askTemplateUpdate !== false}
           onChange={(v) => set('askTemplateUpdate', v)} testID="set-ask-template" />
-        <SwitchCell title={tr('Example templates')} value={st.showExamples !== false} onChange={(v) => set('showExamples', v)} testID="set-examples" />
+        <SwitchCell title={tr('Example routines')} value={st.showExamples !== false} onChange={(v) => set('showExamples', v)} testID="set-examples" />
         <Cell title={tr('Weekly goal')} value={tr('{n} per week', { n: st.weeklyGoal || 3 })}
           onPress={() => pick(tr('Weekly goal'), [1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: tr('{n} per week', { n }) })), st.weeklyGoal, (v) => set('weeklyGoal', v))} />
         <Cell title={tr('Week starts on')} value={weekdays.find((x) => x.value === st.weekStart)?.label || tr('Monday')}

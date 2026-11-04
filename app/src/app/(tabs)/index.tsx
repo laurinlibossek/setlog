@@ -86,7 +86,7 @@ export default function TodayTab() {
   } else {
     card = (
       <RoutineCard testID="up-next" context={tr('Up next')} name={tr('Empty workout')}
-        facts={tr('Add exercises as you go, or start a template from Plan.')}
+        facts={tr('Add exercises as you go, or start a routine from Plan.')}
         start={{ title: tr('Start an empty workout'), onPress: () => beginWorkout({}, f), testID: 'start-empty' }} />
     );
   }

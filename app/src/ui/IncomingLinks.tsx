@@ -20,7 +20,7 @@ export function IncomingLinks() {
       if (!url) return;
       busy = true;
       try {
-        if (!(await offerSharedTemplate(url, fmt.current))) toast(fmt.current.tr('That doesn’t look like a Setlog template link'));
+        if (!(await offerSharedTemplate(url, fmt.current))) toast(fmt.current.tr('That doesn’t look like a Setlog routine link'));
       } finally {
         busy = false;
         next(); // one that arrived meanwhile
